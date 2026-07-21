@@ -293,6 +293,9 @@ export default function ScannerScreen() {
               allCodes={allCodes}
               holidays={holidays}
               onChangeCode={(colIndex, value) => updateCell(editingRow, colIndex, value)}
+              onSave={async () => {
+                await persistScan();
+              }}
               onClose={handleClosePersonEditor}
             />
           ) : (
