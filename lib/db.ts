@@ -100,8 +100,13 @@ export function saveEmployeeRoster(entries: RosterEntry[]): Promise<void> {
 }
 
 /** Codes habituels par salarié (ex: "DURAND CLAIRE" -> ["E2"]), pour proposer des boutons rapides à la saisie. */
-export function getEmployeeCodeOptions(): Promise<Record<string, string[]>> {
-	return readJson(KEYS.codeOptions, {});
+export async function getEmployeeCodeOptions(): Promise<Record<string, string[]>> {
+	const options = await readJson(KEYS.codeOptions, {} as Record<string, string[]>);
+	const sorted: Record<string, string[]> = {};
+	for (const name of Object.keys(options)) {
+		sorted[name] = [...options[name]].sort();
+	}
+	return sorted;
 }
 
 export function saveEmployeeCodeOptions(options: Record<string, string[]>): Promise<void> {

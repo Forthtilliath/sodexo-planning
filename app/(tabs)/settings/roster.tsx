@@ -100,7 +100,7 @@ export default function RosterScreen() {
   function toggleCodeForEmployee(name: string, code: string) {
     setCodeOptions((prev) => {
       const current = prev[name] ?? [];
-      const nextCodes = current.includes(code) ? current.filter((c) => c !== code) : [...current, code];
+      const nextCodes = current.includes(code) ? current.filter((c) => c !== code) : [...current, code].sort();
       const next = { ...prev };
       if (nextCodes.length === 0) delete next[name];
       else next[name] = nextCodes;
