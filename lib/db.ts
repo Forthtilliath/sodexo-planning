@@ -15,8 +15,8 @@ const DEFAULT_SETTINGS: Settings = { myName: "" };
 const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
 	// Couleur "chef" pour l'encadrement.
 	{ id: "e1-e3", label: "E1-E3", codes: ["E1", "E2", "E3"], color: "#c9a227" },
-	// Plonge du matin (rose, bien distinct du vert de la chaîne) / plonge du soir.
-	{ id: "d1-d2", label: "D1-D2", codes: ["D1", "D2"], color: "#c2185b" },
+	// Plonge du matin (violet clair, distinct du vert de la chaîne et du rouge) / plonge du soir.
+	{ id: "d1-d2", label: "D1-D2", codes: ["D1", "D2"], color: "#ab47bc" },
 	{ id: "d3-d4", label: "D3-D4", codes: ["D3", "D4"], color: "#5e35b1" },
 	// Chaud / froid.
 	{ id: "c2-C3", label: "C2-C3", codes: ["C2", "C3"], color: "#e53935" },
@@ -25,7 +25,7 @@ const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
 	{ id: "c6-c8", label: "C6-C8", codes: ["C6", "C7", "C8"], color: "#43a047" },
 	// F1-F3 comme C6-C8, F4-F5 comme D1-D2.
 	{ id: "f1-f3", label: "F1-F3", codes: ["F1", "F2", "F3"], color: "#43a047" },
-	{ id: "f4-f5", label: "F4-F5", codes: ["F4", "F5"], color: "#c2185b" },
+	{ id: "f4-f5", label: "F4-F5", codes: ["F4", "F5"], color: "#ab47bc" },
 	// Bleu foncé, distinct du bleu plus clair de C4-C5.
 	{ id: "b1", label: "B1", codes: ["B1"], color: "#0d47a1" },
 ];
