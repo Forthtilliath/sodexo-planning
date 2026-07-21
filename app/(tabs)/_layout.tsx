@@ -31,6 +31,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Réglages',
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon emoji="⚙️" color={color} />,
         }}
       />

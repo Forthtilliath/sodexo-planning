@@ -1,22 +1,20 @@
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { getSettings, getTeamGroups, saveSettings, saveTeamGroups } from '@/lib/db';
+
+import { getTeamGroups, saveTeamGroups } from '@/lib/db';
 import type { TeamGroup } from '@/types';
 
 function randomId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export default function SettingsScreen() {
-  const [myName, setMyName] = useState('');
+export default function GroupsScreen() {
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    const [settings, teamGroups] = await Promise.all([getSettings(), getTeamGroups()]);
-    setMyName(settings.myName);
-    setGroups(teamGroups);
+    setGroups(await getTeamGroups());
     setLoaded(true);
   }, []);
 
@@ -25,11 +23,6 @@ export default function SettingsScreen() {
       load();
     }, [load])
   );
-
-  useEffect(() => {
-    if (!loaded) return;
-    saveSettings({ myName });
-  }, [myName, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -58,26 +51,9 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Réglages</Text>
-
-      <Text style={styles.label}>Mon nom</Text>
       <Text style={styles.hint}>
-        Doit correspondre au nom tel qu'il apparaît dans le tableau scanné (pour retrouver ta ligne).
-      </Text>
-      <TextInput
-        style={styles.nameInput}
-        value={myName}
-        onChangeText={setMyName}
-        placeholder="ex: PETIT HUGO"
-        autoCapitalize="characters"
-      />
-
-      <View style={styles.separator} />
-
-      <Text style={styles.label}>Groupes d'équipe</Text>
-      <Text style={styles.hint}>
-        Un groupe = les codes de poste qui font équipe ensemble (ex: D1, D2, D3, D4). Seul toi connais le mapping
-        complet — ajoute autant de groupes que nécessaire.
+        Un groupe = les codes de poste qui vont ensemble (ex: D1, D2, D3, D4). Seul toi connais le mapping complet —
+        ajoute autant de groupes que nécessaire. Ces codes serviront aussi de boutons rapides dans "Salariés".
       </Text>
 
       {groups.map((group) => (
@@ -118,31 +94,10 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 48,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
   hint: {
     fontSize: 13,
     opacity: 0.7,
-    marginBottom: 8,
-  },
-  nameInput: {
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 10,
-  },
-  separator: {
-    height: 1,
-    marginVertical: 20,
-    backgroundColor: 'rgba(128,128,128,0.3)',
+    marginBottom: 12,
   },
   groupCard: {
     borderWidth: 1,
@@ -166,6 +121,8 @@ const styles = StyleSheet.create({
   },
   removeText: {
     color: '#d33',
+    fontWeight: '700',
+    fontSize: 16,
   },
   codesInput: {
     borderWidth: 1,
