@@ -5,12 +5,12 @@ type Props = {
   employees: string[];
   grid: string[][];
   onRemoveRow: (rowIndex: number) => void;
-  onAddRow: () => void;
+  onAddEmployee: () => void;
   onOpenRow: (rowIndex: number) => void;
 };
 
 /** Liste des salariés du scan : un par ligne, avec un résumé de remplissage et un accès à l'éditeur par personne. */
-export default function GridEditor({ days, employees, grid, onRemoveRow, onAddRow, onOpenRow }: Props) {
+export default function GridEditor({ days, employees, grid, onRemoveRow, onAddEmployee, onOpenRow }: Props) {
   function confirmRemove(rowIndex: number, name: string) {
     Alert.alert(
       'Supprimer cette ligne ?',
@@ -44,8 +44,8 @@ export default function GridEditor({ days, employees, grid, onRemoveRow, onAddRo
         );
       })}
 
-      <Pressable style={styles.addButton} onPress={onAddRow}>
-        <Text style={styles.addButtonText}>+ Ajouter une ligne</Text>
+      <Pressable style={styles.addButton} onPress={onAddEmployee}>
+        <Text style={styles.addButtonText}>+ Ajouter un salarié</Text>
       </Pressable>
     </View>
   );

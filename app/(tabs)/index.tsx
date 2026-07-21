@@ -161,9 +161,11 @@ export default function ScannerScreen() {
     );
   }
 
-  function addRow() {
-    setEmployees((prev) => [...prev, '']);
-    setGrid((prev) => [...prev, Array(days.length).fill('')]);
+  // Les noms viennent du roster (Réglages) et se synchronisent automatiquement
+  // dans le planning ouvert : "+ Ajouter" y redirige plutôt que de créer une
+  // ligne sans nom.
+  function goToRoster() {
+    router.push('/settings/roster');
   }
 
   function removeRow(rowIndex: number) {
@@ -319,7 +321,7 @@ export default function ScannerScreen() {
                 days={days}
                 employees={employees}
                 grid={grid}
-                onAddRow={addRow}
+                onAddEmployee={goToRoster}
                 onRemoveRow={removeRow}
                 onOpenRow={setEditingRow}
               />
