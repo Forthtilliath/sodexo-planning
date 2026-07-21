@@ -194,11 +194,13 @@ export default function PlanningScreen() {
                   <View style={styles.dayInfo}>
                     <Text style={styles.dayCode}>
                       {day.code || '—'}
-                      {day.group && <Text style={styles.dayGroup}> · {day.group.label || day.group.codes.join('/')}</Text>}
+                      {day.teammates.length > 0 && (
+                        <Text style={styles.dayTeammates}>
+                          {' '}
+                          · {day.teammates.map((t) => `${t.code} ${t.name}`).join(', ')}
+                        </Text>
+                      )}
                     </Text>
-                    {day.teammates.length > 0 && (
-                      <Text style={styles.dayTeammates}>Avec {day.teammates.map((t) => t.name).join(', ')}</Text>
-                    )}
                   </View>
                   {isHoliday && <Text style={styles.dayHolidayTag}>Férié</Text>}
                 </View>
@@ -321,11 +323,6 @@ const styles = StyleSheet.create({
   viewModeTextActive: {
     color: '#fff',
   },
-  dayGroup: {
-    fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.6,
-  },
   dayRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -356,8 +353,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   dayTeammates: {
-    marginTop: 2,
     fontSize: 13,
+    fontWeight: '400',
     opacity: 0.8,
   },
   exportButton: {
