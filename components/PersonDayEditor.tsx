@@ -170,30 +170,33 @@ export default function PersonDayEditor({
 
       <Text style={styles.hint}>Touche un ou plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
 
-      {selected.size > 0 && (
-        <View style={styles.bulkBar}>
-          <Text style={styles.bulkLabel}>{selected.size} jour(s) sélectionné(s)</Text>
-          {quickCodes.length > 0 && (
-            <View style={styles.chipsRow}>
-              {quickCodes.map((code) => (
-                <Pressable key={code} style={styles.chip} onPress={() => applyQuickCode(code)}>
-                  <Text style={styles.chipText}>{code}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-          <View style={styles.bulkRow}>
-            {otherCodes.length > 0 && (
-              <Pressable style={styles.otherCodeButton} onPress={() => setOtherCodeModalOpen(true)}>
-                <Text style={styles.otherCodeButtonText}>Autre poste ▾</Text>
+      {/* Toujours montée (jamais démontée) pour ne pas décaler le calendrier
+          à chaque sélection/désélection : juste grisée quand rien n'est
+          sélectionné, plutôt que de disparaître. */}
+      <View style={[styles.bulkBar, selected.size === 0 && styles.bulkBarDisabled]}>
+        {quickCodes.length > 0 && (
+          <View style={styles.chipsRow}>
+            {quickCodes.map((code) => (
+              <Pressable key={code} style={styles.chip} disabled={selected.size === 0} onPress={() => applyQuickCode(code)}>
+                <Text style={styles.chipText}>{code}</Text>
               </Pressable>
-            )}
-            <Pressable style={styles.bulkClearButton} onPress={clearSelection}>
-              <Text style={styles.bulkClearText}>Annuler</Text>
-            </Pressable>
+            ))}
           </View>
+        )}
+        <View style={styles.bulkRow}>
+          {otherCodes.length > 0 && (
+            <Pressable
+              style={styles.otherCodeButton}
+              disabled={selected.size === 0}
+              onPress={() => setOtherCodeModalOpen(true)}>
+              <Text style={styles.otherCodeButtonText}>Autre poste ▾</Text>
+            </Pressable>
+          )}
+          <Pressable style={styles.bulkClearButton} disabled={selected.size === 0} onPress={clearSelection}>
+            <Text style={styles.bulkClearText}>Annuler</Text>
+          </Pressable>
         </View>
-      )}
+      </View>
 
       {holidays.size > 0 && <Text style={styles.holidayLegend}>🟧 Bordure orange = jour férié</Text>}
 
@@ -377,10 +380,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(47,149,220,0.1)',
   },
-  bulkLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 6,
+  bulkBarDisabled: {
+    opacity: 0.4,
   },
   chipsRow: {
     flexDirection: 'row',
