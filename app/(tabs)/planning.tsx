@@ -2,11 +2,14 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
+import MonthCalendarView from '@/components/MonthCalendarView';
 import { getScans, getSettings, getTeamGroups } from '@/lib/db';
 import { shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
 import { computeMonthPlanning, findMyRowIndex, type DayPlanning } from '@/lib/teams';
 import type { ScanRecord, Settings, TeamGroup } from '@/types';
+
+type ViewMode = 'list' | 'calendar';
 
 const MONTH_NAMES = [
   'janvier',
@@ -38,6 +41,7 @@ export default function PlanningScreen() {
   const [viewingIndex, setViewingIndex] = useState<number | null>(null);
   const [colleaguePickerOpen, setColleaguePickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   useFocusEffect(
     useCallback(() => {
@@ -164,23 +168,45 @@ export default function PlanningScreen() {
 
       {selectedScan && displayRowIndex >= 0 && (
         <>
-          {planning.map((day) => {
-            const isHoliday = selectedScan?.holidays?.includes(day.date) ?? false;
-            return (
-              <View key={day.date} style={[styles.dayRow, isHoliday && styles.dayRowHoliday]}>
-                <View style={styles.dayDate}>
-                  <Text style={styles.dayDateText}>{formatDate(day.date)}</Text>
+          <View style={styles.viewModeRow}>
+            <Pressable
+              style={[styles.viewModeButton, viewMode === 'list' && styles.viewModeButtonActive]}
+              onPress={() => setViewMode('list')}>
+              <Text style={[styles.viewModeText, viewMode === 'list' && styles.viewModeTextActive]}>📋 Liste</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.viewModeButton, viewMode === 'calendar' && styles.viewModeButtonActive]}
+              onPress={() => setViewMode('calendar')}>
+              <Text style={[styles.viewModeText, viewMode === 'calendar' && styles.viewModeTextActive]}>
+                📅 Calendrier
+              </Text>
+            </Pressable>
+          </View>
+
+          {viewMode === 'list' ? (
+            planning.map((day) => {
+              const isHoliday = selectedScan?.holidays?.includes(day.date) ?? false;
+              return (
+                <View key={day.date} style={[styles.dayRow, isHoliday && styles.dayRowHoliday]}>
+                  <View style={styles.dayDate}>
+                    <Text style={styles.dayDateText}>{formatDate(day.date)}</Text>
+                  </View>
+                  <View style={styles.dayInfo}>
+                    <Text style={styles.dayCode}>
+                      {day.code || '—'}
+                      {day.group && <Text style={styles.dayGroup}> · {day.group.label || day.group.codes.join('/')}</Text>}
+                    </Text>
+                    {day.teammates.length > 0 && (
+                      <Text style={styles.dayTeammates}>Avec {day.teammates.map((t) => t.name).join(', ')}</Text>
+                    )}
+                  </View>
+                  {isHoliday && <Text style={styles.dayHolidayTag}>Férié</Text>}
                 </View>
-                <View style={styles.dayInfo}>
-                  <Text style={styles.dayCode}>{day.code || '—'}</Text>
-                  {day.teammates.length > 0 && (
-                    <Text style={styles.dayTeammates}>Avec {day.teammates.map((t) => t.name).join(', ')}</Text>
-                  )}
-                </View>
-                {isHoliday && <Text style={styles.dayHolidayTag}>Férié</Text>}
-              </View>
-            );
-          })}
+              );
+            })
+          ) : (
+            <MonthCalendarView planning={planning} holidays={selectedScan?.holidays ?? []} />
+          )}
 
           {viewingSomeoneElse ? (
             <Text style={styles.exportHint}>L'export en agenda concerne uniquement ton propre planning.</Text>
@@ -272,6 +298,33 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: '#ccc',
+  },
+  viewModeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  viewModeButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#999',
+  },
+  viewModeButtonActive: {
+    backgroundColor: '#2f95dc',
+    borderColor: '#2f95dc',
+  },
+  viewModeText: {
+    fontWeight: '600',
+  },
+  viewModeTextActive: {
+    color: '#fff',
+  },
+  dayGroup: {
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.6,
   },
   dayRow: {
     flexDirection: 'row',
