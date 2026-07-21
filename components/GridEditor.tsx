@@ -1,17 +1,16 @@
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   days: string[]; // dates ISO, une par colonne
   employees: string[];
   grid: string[][];
-  onChangeEmployee: (rowIndex: number, value: string) => void;
   onRemoveRow: (rowIndex: number) => void;
   onAddRow: () => void;
   onOpenRow: (rowIndex: number) => void;
 };
 
 /** Liste des salariés du scan : un par ligne, avec un résumé de remplissage et un accès à l'éditeur par personne. */
-export default function GridEditor({ days, employees, grid, onChangeEmployee, onRemoveRow, onAddRow, onOpenRow }: Props) {
+export default function GridEditor({ days, employees, grid, onRemoveRow, onAddRow, onOpenRow }: Props) {
   function confirmRemove(rowIndex: number, name: string) {
     Alert.alert(
       'Supprimer cette ligne ?',
@@ -33,12 +32,7 @@ export default function GridEditor({ days, employees, grid, onChangeEmployee, on
               <Text style={styles.deleteText}>×</Text>
             </Pressable>
             <View style={styles.nameColumn}>
-              <TextInput
-                style={styles.nameInput}
-                value={name}
-                onChangeText={(value) => onChangeEmployee(rowIndex, value)}
-                placeholder={`Employé ${rowIndex + 1}`}
-              />
+              <Text style={styles.nameText}>{name || `Employé ${rowIndex + 1}`}</Text>
               <Text style={styles.summaryText}>
                 {filledCount} / {days.length} jours renseignés
               </Text>
@@ -80,11 +74,9 @@ const styles = StyleSheet.create({
   nameColumn: {
     flex: 1,
   },
-  nameInput: {
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 6,
-    padding: 8,
+  nameText: {
+    fontSize: 15,
+    fontWeight: '600',
     marginBottom: 4,
   },
   summaryText: {

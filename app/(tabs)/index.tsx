@@ -155,10 +155,6 @@ export default function ScannerScreen() {
     setStep('review');
   }
 
-  function updateEmployee(rowIndex: number, value: string) {
-    setEmployees((prev) => prev.map((e, i) => (i === rowIndex ? value : e)));
-  }
-
   function updateCell(rowIndex: number, colIndex: number, value: string) {
     setGrid((prev) =>
       prev.map((row, r) => (r === rowIndex ? row.map((c, cI) => (cI === colIndex ? value : c)) : row))
@@ -323,7 +319,6 @@ export default function ScannerScreen() {
                 days={days}
                 employees={employees}
                 grid={grid}
-                onChangeEmployee={updateEmployee}
                 onAddRow={addRow}
                 onRemoveRow={removeRow}
                 onOpenRow={setEditingRow}
