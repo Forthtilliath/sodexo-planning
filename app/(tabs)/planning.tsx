@@ -135,11 +135,11 @@ export default function PlanningScreen() {
       )}
 
       {colleaguePickerOpen && selectedScan && (
-        <View style={styles.notFoundBox}>
+        <View style={styles.pickerBox}>
           {selectedScan.employees.map((name, index) => (
             <Pressable
               key={index}
-              style={styles.employeeRow}
+              style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
               onPress={() => {
                 setViewingIndex(index);
                 setColleaguePickerOpen(false);
@@ -159,7 +159,10 @@ export default function PlanningScreen() {
             Nom "{settings.myName || '(non renseigné)'}" introuvable dans ce scan. Choisis ta ligne :
           </Text>
           {selectedScan.employees.map((name, index) => (
-            <Pressable key={index} style={styles.employeeRow} onPress={() => setManualRowIndex(index)}>
+            <Pressable
+              key={index}
+              style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
+              onPress={() => setManualRowIndex(index)}>
               <Text>{name || `Ligne ${index + 1}`}</Text>
             </Pressable>
           ))}
@@ -288,17 +291,27 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     fontSize: 13,
   },
+  pickerBox: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.3)',
+    marginBottom: 16,
+  },
   notFoundBox: {
     padding: 12,
     borderRadius: 8,
     backgroundColor: 'rgba(200,50,50,0.08)',
+    marginBottom: 16,
   },
   notFoundText: {
     marginBottom: 8,
   },
   employeeRow: {
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 10,
+  },
+  employeeRowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: '#ccc',
   },
   viewModeRow: {
