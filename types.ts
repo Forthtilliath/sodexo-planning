@@ -6,6 +6,7 @@ export type TeamGroup = {
   id: string;
   label?: string;
   codes: string[];
+  color?: string; // couleur hex, pour repérer le type de poste en un coup d'œil
 };
 
 export type RosterEntry = {

@@ -29,8 +29,11 @@ export default function GroupsScreen() {
         <Text style={styles.hint}>Aucun groupe configuré.</Text>
       ) : (
         groups.map((group) => (
-          <View key={group.id} style={styles.groupCard}>
-            <Text style={styles.groupLabel}>{group.label || 'Groupe sans nom'}</Text>
+          <View key={group.id} style={[styles.groupCard, group.color && { borderLeftColor: group.color, borderLeftWidth: 4 }]}>
+            <View style={styles.groupHeader}>
+              {group.color && <View style={[styles.colorDot, { backgroundColor: group.color }]} />}
+              <Text style={styles.groupLabel}>{group.label || 'Groupe sans nom'}</Text>
+            </View>
             <Text style={styles.groupCodes}>{group.codes.join(', ')}</Text>
           </View>
         ))
@@ -59,9 +62,19 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  colorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
   groupLabel: {
     fontWeight: '700',
-    marginBottom: 4,
   },
   groupCodes: {
     opacity: 0.8,

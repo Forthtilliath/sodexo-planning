@@ -204,18 +204,21 @@ export default function PlanningScreen() {
                     <Text style={styles.dayDateText}>{formatDate(day.date)}</Text>
                   </View>
                   <View style={styles.dayInfo}>
-                    <Text style={styles.dayCode}>
-                      {day.code || '—'}
-                      {showHours && day.schedule && (
-                        <Text style={styles.daySchedule}> ({formatScheduleHours(day.schedule)})</Text>
-                      )}
-                      {day.teammates.length > 0 && (
-                        <Text style={styles.dayTeammates}>
-                          {' '}
-                          · {day.teammates.map((t) => `${t.code} ${t.name}`).join(', ')}
-                        </Text>
-                      )}
-                    </Text>
+                    <View style={styles.dayCodeRow}>
+                      {day.group?.color && <View style={[styles.groupDot, { backgroundColor: day.group.color }]} />}
+                      <Text style={styles.dayCode}>
+                        {day.code || '—'}
+                        {showHours && day.schedule && (
+                          <Text style={styles.daySchedule}> ({formatScheduleHours(day.schedule)})</Text>
+                        )}
+                        {day.teammates.length > 0 && (
+                          <Text style={styles.dayTeammates}>
+                            {' '}
+                            · {day.teammates.map((t) => `${t.code} ${t.name}`).join(', ')}
+                          </Text>
+                        )}
+                      </Text>
+                    </View>
                   </View>
                   {isHoliday && <Text style={styles.dayHolidayTag}>Férié</Text>}
                 </View>
@@ -383,6 +386,16 @@ const styles = StyleSheet.create({
   },
   dayInfo: {
     flex: 1,
+  },
+  dayCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  groupDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   dayCode: {
     fontWeight: 'bold',

@@ -55,18 +55,25 @@ export default function MonthCalendarView({ planning, holidays, showHours }: Pro
         {Array.from({ length: leadingBlanks }).map((_, i) => (
           <View key={`blank-${i}`} style={styles.cell} />
         ))}
-        {planning.map((day) => (
-          <View key={day.date} style={styles.cell}>
-            <Pressable
-              style={[styles.dayBox, holidaySet.has(day.date) && styles.dayBoxHoliday]}
-              onPress={() => showDayInfo(day)}>
-              <Text style={styles.dayLabel}>{dayNumber(day.date)}</Text>
-              <Text style={styles.dayCode} numberOfLines={1}>
-                {day.code || '—'}
-              </Text>
-            </Pressable>
-          </View>
-        ))}
+        {planning.map((day) => {
+          const isHoliday = holidaySet.has(day.date);
+          return (
+            <View key={day.date} style={styles.cell}>
+              <Pressable
+                style={[
+                  styles.dayBox,
+                  day.group?.color && !isHoliday && { borderColor: day.group.color, borderWidth: 2 },
+                  isHoliday && styles.dayBoxHoliday,
+                ]}
+                onPress={() => showDayInfo(day)}>
+                <Text style={styles.dayLabel}>{dayNumber(day.date)}</Text>
+                <Text style={styles.dayCode} numberOfLines={1}>
+                  {day.code || '—'}
+                </Text>
+              </Pressable>
+            </View>
+          );
+        })}
       </View>
     </View>
   );

@@ -13,14 +13,19 @@ const KEYS = {
 const DEFAULT_SETTINGS: Settings = { myName: "" };
 
 const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
-	{ id: "e1-e3", label: "E1-E3", codes: ["E1", "E2", "E3"] },
-	{ id: "d1-d2", label: "D1-D2", codes: ["D1", "D2"] },
-	{ id: "d3-d4", label: "D3-D4", codes: ["D3", "D4"] },
-	{ id: "c2-C3", label: "C2-C3", codes: ["C2", "C3"] },
-	{ id: "c4-c5", label: "C4-C5", codes: ["C4", "C5"] },
-	{ id: "c6-c8", label: "C6-C8", codes: ["C6", "C7", "C8"] },
-	{ id: "f1-f3", label: "F1-F3", codes: ["F1", "F2", "F3"] },
-	{ id: "f4-f5", label: "F4-F5", codes: ["F4", "F5"] },
+	// Couleur "chef" pour l'encadrement.
+	{ id: "e1-e3", label: "E1-E3", codes: ["E1", "E2", "E3"], color: "#c9a227" },
+	// Plonge du matin / plonge du soir : même thème (eau), teintes différentes.
+	{ id: "d1-d2", label: "D1-D2", codes: ["D1", "D2"], color: "#00838f" },
+	{ id: "d3-d4", label: "D3-D4", codes: ["D3", "D4"], color: "#5e35b1" },
+	// Chaud / froid.
+	{ id: "c2-C3", label: "C2-C3", codes: ["C2", "C3"], color: "#e53935" },
+	{ id: "c4-c5", label: "C4-C5", codes: ["C4", "C5"], color: "#1e88e5" },
+	// Self, chaîne, allotissement.
+	{ id: "c6-c8", label: "C6-C8", codes: ["C6", "C7", "C8"], color: "#43a047" },
+	// F1-F3 comme C6-C8, F4-F5 comme D1-D2.
+	{ id: "f1-f3", label: "F1-F3", codes: ["F1", "F2", "F3"], color: "#43a047" },
+	{ id: "f4-f5", label: "F4-F5", codes: ["F4", "F5"], color: "#00838f" },
 	{ id: "b1", label: "B1", codes: ["B1"] },
 ];
 
