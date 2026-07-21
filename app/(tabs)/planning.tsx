@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import MonthCalendarView from '@/components/MonthCalendarView';
@@ -43,6 +43,7 @@ export default function PlanningScreen() {
   const [colleaguePickerOpen, setColleaguePickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showHours, setShowHours] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -189,6 +190,11 @@ export default function PlanningScreen() {
             </Pressable>
           </View>
 
+          <View style={styles.hoursToggleRow}>
+            <Text style={styles.hoursToggleLabel}>🕐 Afficher les horaires</Text>
+            <Switch value={showHours} onValueChange={setShowHours} />
+          </View>
+
           {viewMode === 'list' ? (
             planning.map((day) => {
               const isHoliday = selectedScan?.holidays?.includes(day.date) ?? false;
@@ -200,7 +206,9 @@ export default function PlanningScreen() {
                   <View style={styles.dayInfo}>
                     <Text style={styles.dayCode}>
                       {day.code || '—'}
-                      {day.schedule && <Text style={styles.daySchedule}> ({formatScheduleHours(day.schedule)})</Text>}
+                      {showHours && day.schedule && (
+                        <Text style={styles.daySchedule}> ({formatScheduleHours(day.schedule)})</Text>
+                      )}
                       {day.teammates.length > 0 && (
                         <Text style={styles.dayTeammates}>
                           {' '}
@@ -214,7 +222,7 @@ export default function PlanningScreen() {
               );
             })
           ) : (
-            <MonthCalendarView planning={planning} holidays={selectedScan?.holidays ?? []} />
+            <MonthCalendarView planning={planning} holidays={selectedScan?.holidays ?? []} showHours={showHours} />
           )}
 
           {viewingSomeoneElse ? (
@@ -339,6 +347,16 @@ const styles = StyleSheet.create({
   },
   viewModeTextActive: {
     color: '#fff',
+  },
+  hoursToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  hoursToggleLabel: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   dayRow: {
     flexDirection: 'row',

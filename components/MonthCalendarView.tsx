@@ -5,6 +5,7 @@ import { formatScheduleHours, type DayPlanning } from '@/lib/teams';
 type Props = {
   planning: DayPlanning[]; // un élément par jour du mois, dans l'ordre
   holidays: string[]; // dates ISO fériées du mois
+  showHours: boolean;
 };
 
 const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -25,13 +26,13 @@ function formatFullDate(iso: string): string {
 }
 
 /** Vue calendrier en lecture seule : touche un jour pour voir le détail (code + coéquipiers). */
-export default function MonthCalendarView({ planning, holidays }: Props) {
+export default function MonthCalendarView({ planning, holidays, showHours }: Props) {
   const leadingBlanks = planning.length > 0 ? mondayFirstWeekday(planning[0].date) : 0;
   const holidaySet = new Set(holidays);
 
   function showDayInfo(day: DayPlanning) {
     const lines = [`Code : ${day.code || '—'}`];
-    if (day.schedule) {
+    if (showHours && day.schedule) {
       lines.push(`Horaire : ${formatScheduleHours(day.schedule)}`);
     }
     if (day.teammates.length > 0) {
