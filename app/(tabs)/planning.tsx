@@ -164,19 +164,23 @@ export default function PlanningScreen() {
 
       {selectedScan && displayRowIndex >= 0 && (
         <>
-          {planning.map((day) => (
-            <View key={day.date} style={styles.dayRow}>
-              <View style={styles.dayDate}>
-                <Text style={styles.dayDateText}>{formatDate(day.date)}</Text>
+          {planning.map((day) => {
+            const isHoliday = selectedScan?.holidays?.includes(day.date) ?? false;
+            return (
+              <View key={day.date} style={[styles.dayRow, isHoliday && styles.dayRowHoliday]}>
+                <View style={styles.dayDate}>
+                  <Text style={styles.dayDateText}>{formatDate(day.date)}</Text>
+                </View>
+                <View style={styles.dayInfo}>
+                  <Text style={styles.dayCode}>{day.code || '—'}</Text>
+                  {day.teammates.length > 0 && (
+                    <Text style={styles.dayTeammates}>Avec {day.teammates.map((t) => t.name).join(', ')}</Text>
+                  )}
+                </View>
+                {isHoliday && <Text style={styles.dayHolidayTag}>Férié</Text>}
               </View>
-              <View style={styles.dayInfo}>
-                <Text style={styles.dayCode}>{day.code || '—'}</Text>
-                {day.teammates.length > 0 && (
-                  <Text style={styles.dayTeammates}>Avec {day.teammates.map((t) => t.name).join(', ')}</Text>
-                )}
-              </View>
-            </View>
-          ))}
+            );
+          })}
 
           {viewingSomeoneElse ? (
             <Text style={styles.exportHint}>L'export en agenda concerne uniquement ton propre planning.</Text>
@@ -271,9 +275,20 @@ const styles = StyleSheet.create({
   },
   dayRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: '#ccc',
+  },
+  dayRowHoliday: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#e08a00',
+    paddingLeft: 8,
+  },
+  dayHolidayTag: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#e08a00',
   },
   dayDate: {
     width: 64,
