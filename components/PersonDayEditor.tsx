@@ -215,12 +215,6 @@ export default function PersonDayEditor({
         {cells.map((cell) => {
           const isWeekend = cell.kind === 'weekend';
           const primaryIndex = cell.kind === 'day' ? cell.index : cell.kind === 'weekend' ? cell.satIndex : -1;
-          // L'en-tête de colonne dit déjà "WE" ; dans la case, on affiche les
-          // vrais numéros de jour (ex: "11 12"), plus utiles au quotidien.
-          const label =
-            cell.kind === 'weekend'
-              ? `${dayNumber(days[cell.satIndex])} ${dayNumber(days[cell.sunIndex])}`
-              : String(dayNumber(days[primaryIndex]));
           const value = codes[primaryIndex] ?? '';
           const indices = cellIndices(cell);
           const isSelected = indices.length > 0 && indices.every((i) => selected.has(i));
@@ -232,7 +226,24 @@ export default function PersonDayEditor({
               <Pressable
                 style={[styles.daySelectBox, isHoliday && styles.daySelectBoxHoliday, isSelected && styles.dayCellSelected]}
                 onPress={() => toggleCell(cell)}>
-                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>{label}</Text>
+                {cell.kind === 'weekend' ? (
+                  // L'en-tête dit déjà "WE" : ici on montre les deux jours
+                  // comme s'ils étaient dans deux cases séparées par une
+                  // ligne, même si le poste reste commun aux deux.
+                  <View style={styles.weekendLabelRow}>
+                    <Text style={[styles.weekendDayText, isSelected && styles.dayLabelSelected]}>
+                      {dayNumber(days[cell.satIndex])}
+                    </Text>
+                    <View style={[styles.weekendDivider, isSelected && styles.weekendDividerSelected]} />
+                    <Text style={[styles.weekendDayText, isSelected && styles.dayLabelSelected]}>
+                      {dayNumber(days[cell.sunIndex])}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                    {dayNumber(days[cell.index])}
+                  </Text>
+                )}
                 <Text style={[styles.dayValue, isSelected && styles.dayValueSelected]}>{value || '—'}</Text>
               </Pressable>
             </View>
@@ -367,6 +378,24 @@ const styles = StyleSheet.create({
   dayLabelSelected: {
     color: '#fff',
     opacity: 0.9,
+  },
+  weekendLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  weekendDayText: {
+    fontSize: 11,
+    opacity: 0.7,
+  },
+  weekendDivider: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  weekendDividerSelected: {
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
   dayValue: {
     fontSize: 14,
