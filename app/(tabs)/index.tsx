@@ -1,21 +1,53 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 
-import CornerPicker from '@/components/CornerPicker';
 import GridEditor from '@/components/GridEditor';
-import { saveScan } from '@/lib/db';
-import { assignBlocksToGrid, recognizeWords, type Point } from '@/lib/ocr';
-import type { ScanRecord } from '@/types';
+import HolidayPicker from '@/components/HolidayPicker';
+import PersonDayEditor from '@/components/PersonDayEditor';
+import { getEmployeeCodeOptions, getEmployeeRoster, getScans, getSettings, saveScan } from '@/lib/db';
+import type { RosterEntry, ScanRecord } from '@/types';
+
+/** Fait remonter "Mon nom" en tête de liste, sans changer l'ordre des autres. */
+function putMyNameFirst(names: string[], myName: string): string[] {
+  const trimmed = myName.trim().toLowerCase();
+  if (!trimmed) return names;
+  const index = names.findIndex((n) => n.trim().toLowerCase() === trimmed);
+  if (index <= 0) return names;
+  const next = [...names];
+  const [mine] = next.splice(index, 1);
+  next.unshift(mine);
+  return next;
+}
+
+const MONTH_NAMES = [
+  'Janvier',
+  'Février',
+  'Mars',
+  'Avril',
+  'Mai',
+  'Juin',
+  'Juillet',
+  'Août',
+  'Septembre',
+  'Octobre',
+  'Novembre',
+  'Décembre',
+];
 
 function randomId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function buildDays(year: number, month: number, startDay: number, count: number): string[] {
+function daysInMonth(year: number, month: number): number {
+  // Jour 0 du mois suivant = dernier jour du mois courant.
+  return new Date(year, month, 0).getDate();
+}
+
+function buildDays(year: number, month: number): string[] {
+  const count = daysInMonth(year, month);
   const days: string[] = [];
-  const date = new Date(Date.UTC(year, month - 1, startDay));
+  const date = new Date(Date.UTC(year, month - 1, 1));
   for (let i = 0; i < count; i++) {
     days.push(date.toISOString().slice(0, 10));
     date.setUTCDate(date.getUTCDate() + 1);
@@ -23,95 +55,69 @@ function buildDays(year: number, month: number, startDay: number, count: number)
   return days;
 }
 
-type Step = 'photo' | 'setup' | 'corners' | 'review';
+type Step = 'home' | 'review';
 
 export default function ScannerScreen() {
-  const [step, setStep] = useState<Step>('photo');
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>('home');
 
   const now = new Date();
-  const [year, setYear] = useState(String(now.getFullYear()));
-  const [month, setMonth] = useState(String(now.getMonth() + 1));
-  const [startDay, setStartDay] = useState('1');
-  const [dayCount, setDayCount] = useState('31');
-  const [employeesText, setEmployeesText] = useState('');
-
-  const [corners, setCorners] = useState<{ topLeft: Point; bottomRight: Point } | null>(null);
-  const [ocrRunning, setOcrRunning] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   const [employees, setEmployees] = useState<string[]>([]);
   const [days, setDays] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
+  const [lastEmployees, setLastEmployees] = useState<string[]>([]);
+  const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [myName, setMyName] = useState('');
+  const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
+  const [holidays, setHolidays] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [editingRow, setEditingRow] = useState<number | null>(null);
 
-  const employeesPreview = useMemo(
-    () =>
-      employeesText
-        .split('\n')
-        .map((e) => e.trim())
-        .filter(Boolean),
-    [employeesText]
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const [scans, employeeRoster, options, settings] = await Promise.all([
+          getScans(),
+          getEmployeeRoster(),
+          getEmployeeCodeOptions(),
+          getSettings(),
+        ]);
+        setLastEmployees(scans[0]?.employees ?? []);
+        setRoster(employeeRoster);
+        setCodeOptions(options);
+        setMyName(settings.myName);
+      })();
+    }, [])
   );
 
-  async function pickImage() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission requise', "Autorise l'accès aux photos pour scanner le tableau.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      setStep('setup');
-    }
+  function toggleHoliday(iso: string) {
+    setHolidays((prev) => {
+      const next = new Set(prev);
+      if (next.has(iso)) next.delete(iso);
+      else next.add(iso);
+      return next;
+    });
   }
 
-  async function takePhoto() {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission requise', "Autorise l'accès à l'appareil photo pour scanner le tableau.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 1 });
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      setStep('setup');
-    }
+  // La liste des salariés actifs gérée dans Réglages prime ; à défaut, celle du dernier scan.
+  // Dans tous les cas, "Mon nom" remonte en tête pour se retrouver plus vite.
+  function defaultEmployees(): string[] {
+    const activeNames = roster.filter((r) => r.active).map((r) => r.name);
+    if (activeNames.length > 0) return putMyNameFirst(activeNames, myName);
+    if (lastEmployees.length > 0) return putMyNameFirst(lastEmployees, myName);
+    return Array(5).fill('');
   }
 
-  function confirmSetup() {
-    if (employeesPreview.length === 0) {
-      Alert.alert('Employés manquants', "Ajoute au moins un nom d'employé (un par ligne).");
-      return;
-    }
-    const count = Number(dayCount);
-    if (!count || count <= 0) {
-      Alert.alert('Nombre de jours invalide', 'Indique un nombre de jours (colonnes) supérieur à 0.');
-      return;
-    }
-    setEmployees(employeesPreview);
-    setDays(buildDays(Number(year), Number(month), Number(startDay), count));
-    setGrid(employeesPreview.map(() => Array(count).fill('')));
-    setCorners(null);
-    setStep('corners');
-  }
-
-  async function runOcr() {
-    if (!imageUri || !corners) return;
-    setOcrRunning(true);
-    setOcrError(null);
-    try {
-      const words = await recognizeWords(imageUri);
-      const prefilled = assignBlocksToGrid(words, corners.topLeft, corners.bottomRight, employees.length, days.length);
-      setGrid(prefilled);
-    } catch {
-      setOcrError(
-        "OCR indisponible sur ce build (Expo Go ne supporte pas ML Kit). Remplis la grille manuellement ci-dessous, ou utilise un build avec dev client."
-      );
-    } finally {
-      setOcrRunning(false);
-      setStep('review');
-    }
+  function createManualPlanning() {
+    const monthDays = buildDays(year, month);
+    const fill = defaultEmployees();
+    setDays(monthDays);
+    setEmployees(fill);
+    setGrid(fill.map(() => Array(monthDays.length).fill('')));
+    setStep('review');
   }
 
   function updateEmployee(rowIndex: number, value: string) {
@@ -124,151 +130,167 @@ export default function ScannerScreen() {
     );
   }
 
+  function addRow() {
+    setEmployees((prev) => [...prev, '']);
+    setGrid((prev) => [...prev, Array(days.length).fill('')]);
+  }
+
+  function removeRow(rowIndex: number) {
+    setEmployees((prev) => prev.filter((_, i) => i !== rowIndex));
+    setGrid((prev) => prev.filter((_, i) => i !== rowIndex));
+    setEditingRow(null);
+  }
+
   async function handleSave() {
-    const scan: ScanRecord = {
-      id: randomId(),
-      year: Number(year),
-      month: Number(month),
-      createdAt: Date.now(),
-      days,
-      employees,
-      grid: grid.map((row) => row.map((cell) => cell.trim().toUpperCase())),
-    };
-    await saveScan(scan);
-    Alert.alert('Scan enregistré', 'Tu peux le consulter dans "Mon planning".', [
-      {
-        text: 'OK',
-        onPress: () => {
-          reset();
-          router.push('/planning');
+    if (saving) return;
+    setSaving(true);
+    try {
+      const scan: ScanRecord = {
+        id: randomId(),
+        year,
+        month,
+        createdAt: Date.now(),
+        days,
+        employees,
+        grid: grid.map((row) => row.map((cell) => cell.trim().toUpperCase())),
+      };
+      await saveScan(scan);
+      Alert.alert('Planning enregistré', 'Tu peux le consulter dans "Mon planning".', [
+        {
+          text: 'OK',
+          onPress: () => {
+            reset();
+            router.push('/planning');
+          },
         },
-      },
-    ]);
+      ]);
+    } catch (err) {
+      console.error('handleSave failed', err);
+      Alert.alert("Échec de l'enregistrement", err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function reset() {
-    setStep('photo');
-    setImageUri(null);
-    setCorners(null);
-    setEmployeesText('');
+    setStep('home');
     setEmployees([]);
     setDays([]);
     setGrid([]);
-    setOcrError(null);
+    setEditingRow(null);
+    setHolidays(new Set());
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Scanner un planning</Text>
+      <Text style={styles.title}>Planning</Text>
 
-      {step === 'photo' && (
-        <View style={styles.buttonRow}>
-          <Pressable style={styles.button} onPress={takePhoto}>
-            <Text style={styles.buttonText}>📷 Prendre une photo</Text>
+      {step === 'home' && (
+        <>
+          <View style={styles.row}>
+            <SelectField
+              label="Mois"
+              valueLabel={MONTH_NAMES[month - 1]}
+              options={MONTH_NAMES.map((name, i) => ({ value: i + 1, label: name }))}
+              onSelect={setMonth}
+            />
+            <SelectField
+              label="Année"
+              valueLabel={String(year)}
+              options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
+              onSelect={setYear}
+            />
+          </View>
+
+          <Pressable style={styles.primaryButton} onPress={createManualPlanning}>
+            <Text style={styles.primaryButtonText}>✏️ Créer le planning</Text>
           </Pressable>
-          <Pressable style={styles.button} onPress={pickImage}>
-            <Text style={styles.buttonText}>🖼️ Choisir dans la galerie</Text>
-          </Pressable>
-        </View>
+          <Text style={styles.hint}>
+            Grille pré-remplie avec ta liste de salariés (Réglages) ; complète-la avec le mode sélection multiple.
+          </Text>
+        </>
       )}
 
-      {imageUri && step !== 'photo' && (
+      {step === 'review' && (
         <>
-          <Text style={styles.sectionTitle}>1. Informations du mois</Text>
-          <View style={styles.row}>
-            <LabeledInput label="Année" value={year} onChangeText={setYear} />
-            <LabeledInput label="Mois" value={month} onChangeText={setMonth} />
-          </View>
-          <View style={styles.row}>
-            <LabeledInput label="Jour de départ" value={startDay} onChangeText={setStartDay} />
-            <LabeledInput label="Nb de jours" value={dayCount} onChangeText={setDayCount} />
-          </View>
-
-          <Text style={styles.sectionTitle}>
-            2. Employés (un nom par ligne, dans l'ordre des lignes de la photo)
-          </Text>
-          <TextInput
-            style={styles.employeesInput}
-            value={employeesText}
-            onChangeText={setEmployeesText}
-            multiline
-            placeholder={'PETIT HUGO\nLEROY PAUL\n...'}
-          />
-          <Text style={styles.hint}>{employeesPreview.length} employé(s) détecté(s)</Text>
-
-          {step === 'setup' && (
-            <Pressable style={styles.primaryButton} onPress={confirmSetup}>
-              <Text style={styles.primaryButtonText}>Valider et caler la grille</Text>
-            </Pressable>
-          )}
-
-          {(step === 'corners' || step === 'review') && (
+          {editingRow !== null ? (
+            <PersonDayEditor
+              employeeName={employees[editingRow] ?? ''}
+              days={days}
+              codes={grid[editingRow] ?? []}
+              codeOptions={codeOptions[employees[editingRow] ?? ''] ?? []}
+              holidays={holidays}
+              onChangeCode={(colIndex, value) => updateCell(editingRow, colIndex, value)}
+              onClose={() => setEditingRow(null)}
+            />
+          ) : (
             <>
-              <Text style={styles.sectionTitle}>3. Calage de la grille sur la photo</Text>
-              <CornerPicker
-                imageUri={imageUri}
-                onConfirm={(topLeft, bottomRight) => setCorners({ topLeft, bottomRight })}
-              />
-
-              {step === 'corners' && (
-                <View style={styles.buttonRow}>
-                  <Pressable
-                    style={[styles.primaryButton, !corners && styles.buttonDisabled]}
-                    disabled={!corners || ocrRunning}
-                    onPress={runOcr}>
-                    {ocrRunning ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.primaryButtonText}>Lancer l'OCR</Text>
-                    )}
-                  </Pressable>
-                  <Pressable style={styles.button} onPress={() => setStep('review')}>
-                    <Text style={styles.buttonText}>Remplir à la main</Text>
-                  </Pressable>
-                </View>
-              )}
-            </>
-          )}
-
-          {step === 'review' && (
-            <>
-              {ocrError && <Text style={styles.errorText}>{ocrError}</Text>}
-              <Text style={styles.sectionTitle}>4. Vérifie / corrige la grille</Text>
+              <Text style={styles.sectionTitle}>
+                {MONTH_NAMES[month - 1]} {year} — {employees.length} ligne(s)
+              </Text>
+              <HolidayPicker days={days} holidays={holidays} onToggle={toggleHoliday} />
               <GridEditor
                 days={days}
                 employees={employees}
                 grid={grid}
                 onChangeEmployee={updateEmployee}
-                onChangeCell={updateCell}
+                onAddRow={addRow}
+                onRemoveRow={removeRow}
+                onOpenRow={setEditingRow}
               />
-              <Pressable style={styles.primaryButton} onPress={handleSave}>
-                <Text style={styles.primaryButtonText}>Enregistrer ce scan</Text>
+              <Pressable style={[styles.primaryButton, saving && styles.buttonDisabled]} disabled={saving} onPress={handleSave}>
+                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Enregistrer le planning</Text>}
+              </Pressable>
+              <Pressable style={styles.resetButton} onPress={reset}>
+                <Text style={styles.resetButtonText}>Recommencer</Text>
               </Pressable>
             </>
           )}
-
-          <Pressable style={styles.resetButton} onPress={reset}>
-            <Text style={styles.resetButtonText}>Recommencer</Text>
-          </Pressable>
         </>
       )}
     </ScrollView>
   );
 }
 
-function LabeledInput({
+function SelectField({
   label,
-  value,
-  onChangeText,
+  valueLabel,
+  options,
+  onSelect,
 }: {
   label: string;
-  value: string;
-  onChangeText: (v: string) => void;
+  valueLabel: string;
+  options: { value: number; label: string }[];
+  onSelect: (value: number) => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
     <View style={styles.labeledInput}>
       <Text style={styles.inputLabel}>{label}</Text>
-      <TextInput style={styles.input} value={value} onChangeText={onChangeText} keyboardType="number-pad" />
+      <Pressable style={styles.selectButton} onPress={() => setOpen(true)}>
+        <Text style={styles.selectButtonText}>{valueLabel}</Text>
+        <Text style={styles.selectChevron}>▾</Text>
+      </Pressable>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setOpen(false)}>
+          <View style={styles.modalCard}>
+            <ScrollView>
+              {options.map((opt) => (
+                <Pressable
+                  key={opt.value}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    onSelect(opt.value);
+                    setOpen(false);
+                  }}>
+                  <Text style={styles.modalOptionText}>{opt.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -290,7 +312,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginTop: 20,
+    marginTop: 8,
     marginBottom: 8,
   },
   row: {
@@ -305,44 +327,47 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginBottom: 4,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 8,
-  },
-  employeesInput: {
+  selectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#999',
     borderRadius: 8,
     padding: 10,
-    minHeight: 100,
-    textAlignVertical: 'top',
+  },
+  selectButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  selectChevron: {
+    opacity: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxHeight: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 8,
+  },
+  modalOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  modalOptionText: {
+    fontSize: 16,
   },
   hint: {
     fontSize: 12,
     opacity: 0.7,
     marginTop: 4,
-  },
-  errorText: {
-    color: '#a33',
-    marginTop: 8,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 8,
-  },
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#999',
-  },
-  buttonText: {
-    fontWeight: '600',
   },
   buttonDisabled: {
     opacity: 0.4,

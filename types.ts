@@ -8,6 +8,13 @@ export type TeamGroup = {
   codes: string[];
 };
 
+export type RosterEntry = {
+  name: string;
+  // Un salarié inactif n'apparaît plus en tête de liste ni comme proposition
+  // par défaut dans un nouveau planning, sans perdre ses codes habituels.
+  active: boolean;
+};
+
 export type ScanRecord = {
   id: string;
   year: number;

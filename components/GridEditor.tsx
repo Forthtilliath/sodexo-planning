@@ -1,76 +1,117 @@
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 type Props = {
   days: string[]; // dates ISO, une par colonne
   employees: string[];
   grid: string[][];
   onChangeEmployee: (rowIndex: number, value: string) => void;
-  onChangeCell: (rowIndex: number, colIndex: number, value: string) => void;
+  onRemoveRow: (rowIndex: number) => void;
+  onAddRow: () => void;
+  onOpenRow: (rowIndex: number) => void;
 };
 
-const NAME_WIDTH = 140;
-const CELL_WIDTH = 46;
+/** Liste des salariés du scan : un par ligne, avec un résumé de remplissage et un accès à l'éditeur par personne. */
+export default function GridEditor({ days, employees, grid, onChangeEmployee, onRemoveRow, onAddRow, onOpenRow }: Props) {
+  function confirmRemove(rowIndex: number, name: string) {
+    Alert.alert(
+      'Supprimer cette ligne ?',
+      `"${name || `Employé ${rowIndex + 1}`}" et son planning seront retirés de ce scan.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: () => onRemoveRow(rowIndex) },
+      ]
+    );
+  }
 
-/** Tableau éditable (lignes = employés, colonnes = jours) pour corriger les valeurs devinées par l'OCR. */
-export default function GridEditor({ days, employees, grid, onChangeEmployee, onChangeCell }: Props) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator>
-      <View>
-        <View style={styles.row}>
-          <View style={[styles.cell, styles.headerCell, { width: NAME_WIDTH }]} />
-          {days.map((day, i) => (
-            <View key={`${day}-${i}`} style={[styles.cell, styles.headerCell, { width: CELL_WIDTH }]}>
-              <Text style={styles.headerText}>{new Date(day).getDate() || i + 1}</Text>
-            </View>
-          ))}
-        </View>
-
-        <ScrollView>
-          {employees.map((name, rowIndex) => (
-            <View key={rowIndex} style={styles.row}>
+    <View>
+      {employees.map((name, rowIndex) => {
+        const filledCount = (grid[rowIndex] ?? []).filter((c) => c.trim()).length;
+        return (
+          <View key={rowIndex} style={styles.row}>
+            <Pressable style={styles.deleteButton} onPress={() => confirmRemove(rowIndex, name)}>
+              <Text style={styles.deleteText}>×</Text>
+            </Pressable>
+            <View style={styles.nameColumn}>
               <TextInput
-                style={[styles.cell, styles.input, { width: NAME_WIDTH, textAlign: 'left' }]}
+                style={styles.nameInput}
                 value={name}
                 onChangeText={(value) => onChangeEmployee(rowIndex, value)}
                 placeholder={`Employé ${rowIndex + 1}`}
               />
-              {days.map((_, colIndex) => (
-                <TextInput
-                  key={colIndex}
-                  style={[styles.cell, styles.input, { width: CELL_WIDTH }]}
-                  value={grid[rowIndex]?.[colIndex] ?? ''}
-                  onChangeText={(value) => onChangeCell(rowIndex, colIndex, value)}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                />
-              ))}
+              <Text style={styles.summaryText}>
+                {filledCount} / {days.length} jours renseignés
+              </Text>
             </View>
-          ))}
-        </ScrollView>
-      </View>
-    </ScrollView>
+            <Pressable style={styles.openButton} onPress={() => onOpenRow(rowIndex)}>
+              <Text style={styles.openButtonText}>Planning →</Text>
+            </Pressable>
+          </View>
+        );
+      })}
+
+      <Pressable style={styles.addButton} onPress={onAddRow}>
+        <Text style={styles.addButtonText}>+ Ajouter une ligne</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.3)',
+    borderRadius: 8,
+    padding: 8,
   },
-  cell: {
-    height: 40,
-    borderWidth: StyleSheet.hairlineWidth,
+  deleteButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+  },
+  deleteText: {
+    color: '#a33',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  nameColumn: {
+    flex: 1,
+  },
+  nameInput: {
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 4,
+  },
+  summaryText: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  openButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#2f95dc',
+  },
+  openButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  addButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
     borderColor: '#999',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  headerCell: {
-    backgroundColor: 'rgba(128,128,128,0.15)',
-  },
-  headerText: {
-    fontWeight: 'bold',
-  },
-  input: {
-    textAlign: 'center',
-    fontSize: 13,
+  addButtonText: {
+    fontWeight: '600',
   },
 });
