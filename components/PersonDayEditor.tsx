@@ -247,7 +247,7 @@ const WEEKEND_WIDTH = '28.56%';
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 8,
+    marginTop: 0,
   },
   hint: {
     fontSize: 12,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   bulkBar: {
-    marginTop: 16,
+    marginTop: 4,
     padding: 10,
     borderRadius: 8,
     backgroundColor: 'rgba(47,149,220,0.1)',
