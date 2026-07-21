@@ -215,7 +215,12 @@ export default function PersonDayEditor({
         {cells.map((cell) => {
           const isWeekend = cell.kind === 'weekend';
           const primaryIndex = cell.kind === 'day' ? cell.index : cell.kind === 'weekend' ? cell.satIndex : -1;
-          const label = isWeekend ? 'WE' : String(dayNumber(days[primaryIndex]));
+          // L'en-tête de colonne dit déjà "WE" ; dans la case, on affiche les
+          // vrais numéros de jour (ex: "11 12"), plus utiles au quotidien.
+          const label =
+            cell.kind === 'weekend'
+              ? `${dayNumber(days[cell.satIndex])} ${dayNumber(days[cell.sunIndex])}`
+              : String(dayNumber(days[primaryIndex]));
           const value = codes[primaryIndex] ?? '';
           const indices = cellIndices(cell);
           const isSelected = indices.length > 0 && indices.every((i) => selected.has(i));
