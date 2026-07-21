@@ -127,8 +127,6 @@ export default function PersonDayEditor({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.hint}>Touche un ou plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
-
       {/* Toujours montée (jamais démontée) pour ne pas décaler le calendrier
           à chaque sélection/désélection : juste grisée quand rien n'est
           sélectionné, plutôt que de disparaître. */}
@@ -162,8 +160,6 @@ export default function PersonDayEditor({
           </Pressable>
         </View>
       </View>
-
-      {holidays.size > 0 && <Text style={styles.holidayLegend}>🟧 Bordure orange = jour férié</Text>}
 
       <View style={styles.weekdayRow}>
         {WEEKDAY_HEADERS.map((w, i) => (
@@ -216,6 +212,9 @@ export default function PersonDayEditor({
         })}
       </View>
 
+      <Text style={styles.hint}>Touche un ou plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
+      {holidays.size > 0 && <Text style={styles.holidayLegend}>🟧 Bordure orange = jour férié</Text>}
+
       <Modal
         visible={otherCodeModalOpen}
         transparent
@@ -253,12 +252,12 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 12,
     opacity: 0.7,
-    marginBottom: 8,
+    marginTop: 12,
   },
   holidayLegend: {
     fontSize: 12,
     opacity: 0.7,
-    marginBottom: 4,
+    marginTop: 4,
   },
   weekdayRow: {
     flexDirection: 'row',
