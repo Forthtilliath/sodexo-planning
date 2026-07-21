@@ -237,7 +237,11 @@ export default function ScannerScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.headerArea}>
-        <Text style={styles.title}>Planning</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {step === 'review' && editingRow !== null
+            ? `Planning de ${employees[editingRow] || 'Employé sans nom'}`
+            : 'Planning'}
+        </Text>
         {step === 'review' && (
           <View style={styles.topActionBar}>
             {editingRow !== null && (
@@ -312,7 +316,6 @@ export default function ScannerScreen() {
         <>
           {editingRow !== null ? (
             <PersonDayEditor
-              employeeName={employees[editingRow] ?? ''}
               days={days}
               codes={grid[editingRow] ?? []}
               codeOptions={codeOptions[employees[editingRow] ?? ''] ?? []}

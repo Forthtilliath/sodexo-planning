@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
-  employeeName: string;
   days: string[]; // dates ISO, une par colonne
   codes: string[]; // un code par jour, pour cette seule personne
   codeOptions: string[]; // codes habituels de cette personne (Réglages), proposés en boutons rapides
@@ -63,7 +62,6 @@ function buildCells(days: string[]): Cell[] {
  * liste qui défile.
  */
 export default function PersonDayEditor({
-  employeeName,
   days,
   codes,
   codeOptions,
@@ -129,10 +127,6 @@ export default function PersonDayEditor({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.name} numberOfLines={1}>
-        {employeeName || 'Employé sans nom'}
-      </Text>
-
       <Text style={styles.hint}>Touche un ou plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
 
       {/* Toujours montée (jamais démontée) pour ne pas décaler le calendrier
@@ -255,11 +249,6 @@ const WEEKEND_WIDTH = '28.56%';
 const styles = StyleSheet.create({
   container: {
     marginTop: 8,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
   },
   hint: {
     fontSize: 12,
