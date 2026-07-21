@@ -26,7 +26,8 @@ const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
 	// F1-F3 comme C6-C8, F4-F5 comme D1-D2.
 	{ id: "f1-f3", label: "F1-F3", codes: ["F1", "F2", "F3"], color: "#43a047" },
 	{ id: "f4-f5", label: "F4-F5", codes: ["F4", "F5"], color: "#c2185b" },
-	{ id: "b1", label: "B1", codes: ["B1"] },
+	// Bleu foncé, distinct du bleu plus clair de C4-C5.
+	{ id: "b1", label: "B1", codes: ["B1"], color: "#0d47a1" },
 ];
 
 const DEFAULT_CODE_SCHEDULES: CodeSchedule[] = [
