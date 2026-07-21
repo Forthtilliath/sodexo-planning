@@ -7,9 +7,7 @@ type Props = {
   holidays: string[]; // dates ISO fériées du mois
 };
 
-const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'WE'];
-
-type Cell = { kind: 'day'; index: number } | { kind: 'weekend'; satIndex: number; sunIndex: number };
+const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 function mondayFirstWeekday(iso: string): number {
   const jsDay = new Date(`${iso}T00:00:00`).getDay();
@@ -26,31 +24,9 @@ function formatFullDate(iso: string): string {
   return `${weekday} ${date.getDate()}`;
 }
 
-/** Même regroupement samedi+dimanche que dans l'éditeur, pour une mise en page familière. */
-function buildCells(days: string[]): Cell[] {
-  const cells: Cell[] = [];
-  let i = 0;
-  while (i < days.length) {
-    const weekday = new Date(`${days[i]}T00:00:00`).getDay();
-    if (weekday === 6 && i + 1 < days.length) {
-      const nextWeekday = new Date(`${days[i + 1]}T00:00:00`).getDay();
-      if (nextWeekday === 0) {
-        cells.push({ kind: 'weekend', satIndex: i, sunIndex: i + 1 });
-        i += 2;
-        continue;
-      }
-    }
-    cells.push({ kind: 'day', index: i });
-    i += 1;
-  }
-  return cells;
-}
-
-/** Vue calendrier en lecture seule (même mise en page à 7 colonnes que la saisie manuelle) : touche un jour pour voir le détail. */
+/** Vue calendrier en lecture seule : touche un jour pour voir le détail (code + coéquipiers). */
 export default function MonthCalendarView({ planning, holidays }: Props) {
-  const days = planning.map((p) => p.date);
-  const cells = buildCells(days);
-  const leadingBlanks = days.length > 0 ? mondayFirstWeekday(days[0]) : 0;
+  const leadingBlanks = planning.length > 0 ? mondayFirstWeekday(planning[0].date) : 0;
   const holidaySet = new Set(holidays);
 
   function showDayInfo(day: DayPlanning) {
@@ -65,7 +41,7 @@ export default function MonthCalendarView({ planning, holidays }: Props) {
     <View>
       <View style={styles.weekdayRow}>
         {WEEKDAY_HEADERS.map((w, i) => (
-          <View key={i} style={[styles.cell, i === 5 && styles.weekendCell]}>
+          <View key={i} style={styles.cell}>
             <Text style={styles.weekdayText}>{w}</Text>
           </View>
         ))}
@@ -75,36 +51,24 @@ export default function MonthCalendarView({ planning, holidays }: Props) {
         {Array.from({ length: leadingBlanks }).map((_, i) => (
           <View key={`blank-${i}`} style={styles.cell} />
         ))}
-        {cells.map((cell) => {
-          const isWeekend = cell.kind === 'weekend';
-          const primaryIndex = cell.kind === 'day' ? cell.index : cell.satIndex;
-          const label = isWeekend ? 'WE' : String(dayNumber(days[primaryIndex]));
-          const day = planning[primaryIndex];
-          const isHoliday =
-            cell.kind === 'day'
-              ? holidaySet.has(days[cell.index])
-              : holidaySet.has(days[cell.satIndex]) || holidaySet.has(days[cell.sunIndex]);
-          const key = isWeekend ? `we-${cell.satIndex}` : `d-${cell.index}`;
-
-          return (
-            <View key={key} style={[styles.cell, isWeekend && styles.weekendCell]}>
-              <Pressable style={[styles.dayBox, isHoliday && styles.dayBoxHoliday]} onPress={() => showDayInfo(day)}>
-                <Text style={styles.dayLabel}>{label}</Text>
-                <Text style={styles.dayCode} numberOfLines={1}>
-                  {day.code || '—'}
-                </Text>
-                {day.teammates.length > 0 && <View style={styles.teammateDot} />}
-              </Pressable>
-            </View>
-          );
-        })}
+        {planning.map((day) => (
+          <View key={day.date} style={styles.cell}>
+            <Pressable
+              style={[styles.dayBox, holidaySet.has(day.date) && styles.dayBoxHoliday]}
+              onPress={() => showDayInfo(day)}>
+              <Text style={styles.dayLabel}>{dayNumber(day.date)}</Text>
+              <Text style={styles.dayCode} numberOfLines={1}>
+                {day.code || '—'}
+              </Text>
+            </Pressable>
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
 const COLUMN_WIDTH = '14.28%';
-const WEEKEND_WIDTH = '28.56%';
 
 const styles = StyleSheet.create({
   weekdayRow: {
@@ -124,9 +88,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     paddingHorizontal: 2,
-  },
-  weekendCell: {
-    width: WEEKEND_WIDTH,
   },
   dayBox: {
     width: '100%',
@@ -148,12 +109,5 @@ const styles = StyleSheet.create({
   dayCode: {
     fontSize: 13,
     fontWeight: '700',
-  },
-  teammateDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#2f95dc',
-    marginTop: 4,
   },
 });
