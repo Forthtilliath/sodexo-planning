@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   employeeName: string;
@@ -73,7 +73,6 @@ export default function PersonDayEditor({
   onChangeCode,
   onClose,
 }: Props) {
-  const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [otherCodeModalOpen, setOtherCodeModalOpen] = useState(false);
 
@@ -101,11 +100,6 @@ export default function PersonDayEditor({
     [allCodes, quickCodes]
   );
 
-  function toggleSelectionMode() {
-    setSelectionMode((v) => !v);
-    setSelected(new Set());
-  }
-
   function cellIndices(cell: Cell): number[] {
     return cell.kind === 'day' ? [cell.index] : [cell.satIndex, cell.sunIndex];
   }
@@ -121,16 +115,6 @@ export default function PersonDayEditor({
       });
       return next;
     });
-  }
-
-  function setCellValue(cell: Cell, value: string) {
-    cellIndices(cell).forEach((i) => {
-      onChangeCode(i, value);
-    });
-  }
-
-  function selectAll() {
-    setSelected(new Set(days.map((_, i) => i)));
   }
 
   function clearSelection() {
@@ -155,23 +139,9 @@ export default function PersonDayEditor({
         </Text>
       </View>
 
-      <View style={styles.modeRow}>
-        <Pressable style={styles.modeButton} onPress={toggleSelectionMode}>
-          <Text style={styles.modeButtonText}>
-            {selectionMode ? '✓ Sélection multiple active' : '🔲 Sélection multiple'}
-          </Text>
-        </Pressable>
-        {selectionMode && (
-          <Pressable style={styles.modeButton} onPress={selectAll}>
-            <Text style={styles.modeButtonText}>Tout sélectionner</Text>
-          </Pressable>
-        )}
-      </View>
-      {selectionMode && (
-        <Text style={styles.hint}>Touche plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
-      )}
+      <Text style={styles.hint}>Touche un ou plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
 
-      {selectionMode && selected.size > 0 && (
+      {selected.size > 0 && (
         <View style={styles.bulkBar}>
           <Text style={styles.bulkLabel}>{selected.size} jour(s) sélectionné(s)</Text>
           {quickCodes.length > 0 && (
@@ -219,21 +189,6 @@ export default function PersonDayEditor({
           const isSelected = indices.length > 0 && indices.every((i) => selected.has(i));
           const isHoliday = indices.some((i) => holidays.has(days[i]));
           const key = cell.kind === 'weekend' ? `we-${cell.satIndex}` : `d-${cell.index}`;
-
-          if (!selectionMode) {
-            return (
-              <View key={key} style={[styles.dayCell, isWeekend && styles.weekendCell]}>
-                <Text style={styles.dayLabel}>{label}</Text>
-                <TextInput
-                  style={[styles.dayInput, isHoliday && styles.dayInputHoliday]}
-                  value={value}
-                  onChangeText={(v) => setCellValue(cell, v)}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                />
-              </View>
-            );
-          }
 
           return (
             <View key={key} style={[styles.dayCell, isWeekend && styles.weekendCell]}>
@@ -293,24 +248,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  modeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 4,
-  },
-  modeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#2f95dc',
-  },
-  modeButtonText: {
-    color: '#2f95dc',
-    fontWeight: '600',
-    fontSize: 13,
   },
   hint: {
     fontSize: 12,
@@ -376,19 +313,6 @@ const styles = StyleSheet.create({
   },
   dayValueSelected: {
     color: '#fff',
-  },
-  dayInput: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 6,
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  dayInputHoliday: {
-    borderColor: '#e08a00',
-    borderWidth: 2,
   },
   daySelectBoxHoliday: {
     borderColor: '#e08a00',
