@@ -166,6 +166,8 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
         </Text>
       )}
 
+      {holidays.size > 0 && <Text style={styles.holidayLegend}>🟧 Bordure orange = jour férié</Text>}
+
       <View style={styles.weekdayRow}>
         {WEEKDAY_HEADERS.map((w, i) => (
           <View key={i} style={[styles.weekdayCell, i === 5 && styles.weekendCell]}>
@@ -185,6 +187,7 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
           const value = codes[primaryIndex] ?? '';
           const indices = cellIndices(cell);
           const isSelected = indices.length > 0 && indices.every((i) => selected.has(i));
+          const isHoliday = indices.some((i) => holidays.has(days[i]));
           const key = cell.kind === 'weekend' ? `we-${cell.satIndex}` : `d-${cell.index}`;
 
           if (!selectionMode) {
@@ -192,7 +195,7 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
               <View key={key} style={[styles.dayCell, isWeekend && styles.weekendCell]}>
                 <Text style={styles.dayLabel}>{label}</Text>
                 <TextInput
-                  style={styles.dayInput}
+                  style={[styles.dayInput, isHoliday && styles.dayInputHoliday]}
                   value={value}
                   onChangeText={(v) => setCellValue(cell, v)}
                   autoCapitalize="characters"
@@ -205,7 +208,7 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
           return (
             <View key={key} style={[styles.dayCell, isWeekend && styles.weekendCell]}>
               <Pressable
-                style={[styles.daySelectBox, isSelected && styles.dayCellSelected]}
+                style={[styles.daySelectBox, isHoliday && styles.daySelectBoxHoliday, isSelected && styles.dayCellSelected]}
                 onPress={() => toggleCell(cell)}>
                 <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>{label}</Text>
                 <Text style={[styles.dayValue, isSelected && styles.dayValueSelected]}>{value || '—'}</Text>
@@ -291,6 +294,11 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginBottom: 8,
   },
+  holidayLegend: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 4,
+  },
   weekdayRow: {
     flexDirection: 'row',
     marginTop: 8,
@@ -354,6 +362,14 @@ const styles = StyleSheet.create({
     padding: 6,
     textAlign: 'center',
     fontSize: 12,
+  },
+  dayInputHoliday: {
+    borderColor: '#e08a00',
+    borderWidth: 2,
+  },
+  daySelectBoxHoliday: {
+    borderColor: '#e08a00',
+    borderWidth: 2,
   },
   bulkBar: {
     marginTop: 16,

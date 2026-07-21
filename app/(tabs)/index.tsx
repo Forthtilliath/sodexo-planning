@@ -68,7 +68,9 @@ export default function ScannerScreen() {
   const [employees, setEmployees] = useState<string[]>([]);
   const [days, setDays] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
-  const [lastEmployees, setLastEmployees] = useState<string[]>([]);
+  const [scans, setScans] = useState<ScanRecord[]>([]);
+  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
+  const existingScan = scans.find((s) => s.year === year && s.month === month) ?? null;
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [myName, setMyName] = useState('');
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
@@ -79,13 +81,13 @@ export default function ScannerScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [scans, employeeRoster, options, settings] = await Promise.all([
+        const [loadedScans, employeeRoster, options, settings] = await Promise.all([
           getScans(),
           getEmployeeRoster(),
           getEmployeeCodeOptions(),
           getSettings(),
         ]);
-        setLastEmployees(scans[0]?.employees ?? []);
+        setScans(loadedScans);
         setRoster(employeeRoster);
         setCodeOptions(options);
         setMyName(settings.myName);
@@ -102,12 +104,12 @@ export default function ScannerScreen() {
     });
   }
 
-  // La liste des salariés actifs gérée dans Réglages prime ; à défaut, celle du dernier scan.
+  // La liste des salariés actifs gérée dans Réglages prime ; à défaut, celle du dernier planning.
   // Dans tous les cas, "Mon nom" remonte en tête pour se retrouver plus vite.
   function defaultEmployees(): string[] {
     const activeNames = roster.filter((r) => r.active).map((r) => r.name);
     if (activeNames.length > 0) return putMyNameFirst(activeNames, myName);
-    if (lastEmployees.length > 0) return putMyNameFirst(lastEmployees, myName);
+    if (scans[0]?.employees.length) return putMyNameFirst(scans[0].employees, myName);
     return Array(5).fill('');
   }
 
@@ -117,6 +119,21 @@ export default function ScannerScreen() {
     setDays(monthDays);
     setEmployees(fill);
     setGrid(fill.map(() => Array(monthDays.length).fill('')));
+    setCurrentScanId(null);
+    setHolidays(new Set());
+    setStep('review');
+  }
+
+  /** Reprend un planning déjà enregistré (même en plusieurs fois, sur plusieurs jours). */
+  function openScanForEditing(scan: ScanRecord) {
+    setYear(scan.year);
+    setMonth(scan.month);
+    setDays(scan.days);
+    setEmployees(scan.employees);
+    setGrid(scan.grid.map((row) => [...row]));
+    setHolidays(new Set(scan.holidays ?? []));
+    setCurrentScanId(scan.id);
+    setEditingRow(null);
     setStep('review');
   }
 
@@ -145,19 +162,34 @@ export default function ScannerScreen() {
     if (saving) return;
     setSaving(true);
     try {
+      const existing = scans.find((s) => s.id === currentScanId);
       const scan: ScanRecord = {
-        id: randomId(),
+        id: currentScanId ?? randomId(),
         year,
         month,
-        createdAt: Date.now(),
+        createdAt: existing?.createdAt ?? Date.now(),
         days,
         employees,
         grid: grid.map((row) => row.map((cell) => cell.trim().toUpperCase())),
+        holidays: Array.from(holidays),
       };
       await saveScan(scan);
-      Alert.alert('Planning enregistré', 'Tu peux le consulter dans "Mon planning".', [
+      setCurrentScanId(scan.id);
+      setScans((prev) => {
+        const index = prev.findIndex((s) => s.id === scan.id);
+        if (index >= 0) {
+          const next = [...prev];
+          next[index] = scan;
+          return next;
+        }
+        return [scan, ...prev];
+      });
+      // Pas toujours le temps de tout saisir d'un coup : on propose de
+      // continuer sur place plutôt que de forcer une sortie de l'écran.
+      Alert.alert('Planning enregistré', 'Tu peux continuer la saisie ou t\'arrêter là — rien n\'est perdu.', [
+        { text: 'Continuer la saisie', style: 'cancel' },
         {
-          text: 'OK',
+          text: 'Terminer',
           onPress: () => {
             reset();
             router.push('/planning');
@@ -179,6 +211,7 @@ export default function ScannerScreen() {
     setGrid([]);
     setEditingRow(null);
     setHolidays(new Set());
+    setCurrentScanId(null);
   }
 
   return (
@@ -202,12 +235,34 @@ export default function ScannerScreen() {
             />
           </View>
 
-          <Pressable style={styles.primaryButton} onPress={createManualPlanning}>
-            <Text style={styles.primaryButtonText}>✏️ Créer le planning</Text>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => (existingScan ? openScanForEditing(existingScan) : createManualPlanning())}>
+            <Text style={styles.primaryButtonText}>{existingScan ? '✏️ Modifier ce planning' : '✏️ Créer le planning'}</Text>
           </Pressable>
           <Text style={styles.hint}>
-            Grille pré-remplie avec ta liste de salariés (Réglages) ; complète-la avec le mode sélection multiple.
+            {existingScan
+              ? `Un planning existe déjà pour ${MONTH_NAMES[month - 1]} ${year} (${existingScan.employees.length} salarié(s)).`
+              : 'Grille pré-remplie avec ta liste de salariés (Réglages) ; complète-la avec le mode sélection multiple.'}
           </Text>
+
+          {scans.length > 0 && (
+            <>
+              <View style={styles.separator} />
+              <Text style={styles.sectionTitle}>Reprendre un planning</Text>
+              {scans.map((scan) => (
+                <Pressable key={scan.id} style={styles.savedRow} onPress={() => openScanForEditing(scan)}>
+                  <View>
+                    <Text style={styles.savedRowTitle}>
+                      {MONTH_NAMES[scan.month - 1]} {scan.year}
+                    </Text>
+                    <Text style={styles.savedRowHint}>{scan.employees.length} salarié(s)</Text>
+                  </View>
+                  <Text style={styles.savedRowAction}>Modifier →</Text>
+                </Pressable>
+              ))}
+            </>
+          )}
         </>
       )}
 
@@ -227,6 +282,7 @@ export default function ScannerScreen() {
             <>
               <Text style={styles.sectionTitle}>
                 {MONTH_NAMES[month - 1]} {year} — {employees.length} ligne(s)
+                {currentScanId ? ' · modification' : ''}
               </Text>
               <HolidayPicker days={days} holidays={holidays} onToggle={toggleHoliday} />
               <GridEditor
@@ -368,6 +424,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.7,
     marginTop: 4,
+  },
+  separator: {
+    height: 1,
+    marginVertical: 20,
+    backgroundColor: 'rgba(128,128,128,0.3)',
+  },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.3)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  savedRowTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  savedRowHint: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginTop: 2,
+  },
+  savedRowAction: {
+    color: '#2f95dc',
+    fontWeight: '600',
   },
   buttonDisabled: {
     opacity: 0.4,

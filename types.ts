@@ -23,4 +23,5 @@ export type ScanRecord = {
   days: string[]; // dates ISO (yyyy-mm-dd), une par colonne
   employees: string[]; // noms, un par ligne, dans l'ordre de la photo
   grid: string[][]; // grid[ligne][colonne] = code brut (trim + uppercase)
+  holidays?: string[]; // dates ISO marquées fériées ; absent sur les scans créés avant cet ajout
 };
