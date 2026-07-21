@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 type Props = {
   employeeName: string;
   days: string[]; // dates ISO, une par colonne
   codes: string[]; // un code par jour, pour cette seule personne
   codeOptions: string[]; // codes habituels de cette personne (Réglages), proposés en boutons rapides
+  allCodes: string[]; // tous les codes connus (groupes de postes), pour affecter autre chose que les codes habituels
   holidays: Set<string>; // dates ISO fériées du mois
   onChangeCode: (colIndex: number, value: string) => void;
   onClose: () => void;
@@ -62,10 +63,19 @@ function buildCells(days: string[]): Cell[] {
  * alignés sous leur vrai jour de la semaine, plus simple à repérer qu'une
  * liste qui défile.
  */
-export default function PersonDayEditor({ employeeName, days, codes, codeOptions, holidays, onChangeCode, onClose }: Props) {
+export default function PersonDayEditor({
+  employeeName,
+  days,
+  codes,
+  codeOptions,
+  allCodes,
+  holidays,
+  onChangeCode,
+  onClose,
+}: Props) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [bulkValue, setBulkValue] = useState('');
+  const [otherCodeModalOpen, setOtherCodeModalOpen] = useState(false);
 
   const cells = useMemo(() => buildCells(days), [days]);
   const leadingBlanks = days.length > 0 ? mondayFirstWeekday(days[0]) : 0;
@@ -84,10 +94,16 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
     return Array.from(new Set([...codeOptions, ...HOLIDAY_CODES]));
   }, [selected, days, holidays, codeOptions]);
 
+  // Le reste des codes connus, pour affecter un poste qui n'est pas habituel
+  // à cette personne (couvre-poste, remplacement...).
+  const otherCodes = useMemo(
+    () => allCodes.filter((c) => !quickCodes.includes(c)),
+    [allCodes, quickCodes]
+  );
+
   function toggleSelectionMode() {
     setSelectionMode((v) => !v);
     setSelected(new Set());
-    setBulkValue('');
   }
 
   function cellIndices(cell: Cell): number[] {
@@ -119,15 +135,6 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
 
   function clearSelection() {
     setSelected(new Set());
-    setBulkValue('');
-  }
-
-  function applyBulkValue() {
-    const value = bulkValue.trim().toUpperCase();
-    selected.forEach((col) => {
-      onChangeCode(col, value);
-    });
-    clearSelection();
   }
 
   function applyQuickCode(code: string) {
@@ -161,9 +168,32 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
         )}
       </View>
       {selectionMode && (
-        <Text style={styles.hint}>
-          Touche plusieurs jours, tape un code, "Appliquer" — ça remplit tous les jours sélectionnés d'un coup.
-        </Text>
+        <Text style={styles.hint}>Touche plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
+      )}
+
+      {selectionMode && selected.size > 0 && (
+        <View style={styles.bulkBar}>
+          <Text style={styles.bulkLabel}>{selected.size} jour(s) sélectionné(s)</Text>
+          {quickCodes.length > 0 && (
+            <View style={styles.chipsRow}>
+              {quickCodes.map((code) => (
+                <Pressable key={code} style={styles.chip} onPress={() => applyQuickCode(code)}>
+                  <Text style={styles.chipText}>{code}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+          <View style={styles.bulkRow}>
+            {otherCodes.length > 0 && (
+              <Pressable style={styles.otherCodeButton} onPress={() => setOtherCodeModalOpen(true)}>
+                <Text style={styles.otherCodeButtonText}>Autre poste ▾</Text>
+              </Pressable>
+            )}
+            <Pressable style={styles.bulkClearButton} onPress={clearSelection}>
+              <Text style={styles.bulkClearText}>Annuler</Text>
+            </Pressable>
+          </View>
+        </View>
       )}
 
       {holidays.size > 0 && <Text style={styles.holidayLegend}>🟧 Bordure orange = jour férié</Text>}
@@ -218,36 +248,29 @@ export default function PersonDayEditor({ employeeName, days, codes, codeOptions
         })}
       </View>
 
-      {selectionMode && selected.size > 0 && (
-        <View style={styles.bulkBar}>
-          <Text style={styles.bulkLabel}>{selected.size} jour(s) sélectionné(s)</Text>
-          {quickCodes.length > 0 && (
-            <View style={styles.chipsRow}>
-              {quickCodes.map((code) => (
-                <Pressable key={code} style={styles.chip} onPress={() => applyQuickCode(code)}>
-                  <Text style={styles.chipText}>{code}</Text>
+      <Modal
+        visible={otherCodeModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOtherCodeModalOpen(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setOtherCodeModalOpen(false)}>
+          <View style={styles.modalCard}>
+            <ScrollView>
+              {otherCodes.map((code) => (
+                <Pressable
+                  key={code}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    applyQuickCode(code);
+                    setOtherCodeModalOpen(false);
+                  }}>
+                  <Text style={styles.modalOptionText}>{code}</Text>
                 </Pressable>
               ))}
-            </View>
-          )}
-          <View style={styles.bulkRow}>
-            <TextInput
-              style={styles.bulkInput}
-              value={bulkValue}
-              onChangeText={setBulkValue}
-              placeholder="Code (ex: D1)"
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            <Pressable style={styles.bulkApplyButton} onPress={applyBulkValue}>
-              <Text style={styles.bulkApplyText}>Appliquer</Text>
-            </Pressable>
-            <Pressable style={styles.bulkClearButton} onPress={clearSelection}>
-              <Text style={styles.bulkClearText}>Annuler</Text>
-            </Pressable>
+            </ScrollView>
           </View>
-        </View>
-      )}
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -404,23 +427,18 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: 'center',
   },
-  bulkInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 8,
-    backgroundColor: '#fff',
-  },
-  bulkApplyButton: {
+  otherCodeButton: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: '#2f95dc',
+    borderWidth: 1,
+    borderColor: '#2f95dc',
+    backgroundColor: '#fff',
   },
-  bulkApplyText: {
-    color: '#fff',
+  otherCodeButtonText: {
+    color: '#2f95dc',
     fontWeight: '700',
+    fontSize: 13,
   },
   bulkClearButton: {
     paddingVertical: 8,
@@ -428,5 +446,27 @@ const styles = StyleSheet.create({
   },
   bulkClearText: {
     color: '#a33',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxHeight: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 8,
+  },
+  modalOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -5,8 +5,8 @@ import { router, useFocusEffect } from 'expo-router';
 import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
 import PersonDayEditor from '@/components/PersonDayEditor';
-import { getEmployeeCodeOptions, getEmployeeRoster, getScans, getSettings, saveScan } from '@/lib/db';
-import type { RosterEntry, ScanRecord } from '@/types';
+import { getEmployeeCodeOptions, getEmployeeRoster, getScans, getSettings, getTeamGroups, saveScan } from '@/lib/db';
+import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 /** Fait remonter "Mon nom" en tête de liste, sans changer l'ordre des autres. */
 function putMyNameFirst(names: string[], myName: string): string[] {
@@ -72,6 +72,8 @@ export default function ScannerScreen() {
   const [currentScanId, setCurrentScanId] = useState<string | null>(null);
   const existingScan = scans.find((s) => s.year === year && s.month === month) ?? null;
   const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [groups, setGroups] = useState<TeamGroup[]>([]);
+  const allCodes = Array.from(new Set(groups.flatMap((g) => g.codes))).sort();
   const [myName, setMyName] = useState('');
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
@@ -81,16 +83,18 @@ export default function ScannerScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [loadedScans, employeeRoster, options, settings] = await Promise.all([
+        const [loadedScans, employeeRoster, options, settings, teamGroups] = await Promise.all([
           getScans(),
           getEmployeeRoster(),
           getEmployeeCodeOptions(),
           getSettings(),
+          getTeamGroups(),
         ]);
         setScans(loadedScans);
         setRoster(employeeRoster);
         setCodeOptions(options);
         setMyName(settings.myName);
+        setGroups(teamGroups);
       })();
     }, [])
   );
@@ -158,32 +162,38 @@ export default function ScannerScreen() {
     setEditingRow(null);
   }
 
+  /** Enregistre l'état courant sans confirmation ; réutilisé par le bouton "Enregistrer" et l'auto-save. */
+  async function persistScan(): Promise<ScanRecord> {
+    const existing = scans.find((s) => s.id === currentScanId);
+    const scan: ScanRecord = {
+      id: currentScanId ?? randomId(),
+      year,
+      month,
+      createdAt: existing?.createdAt ?? Date.now(),
+      days,
+      employees,
+      grid: grid.map((row) => row.map((cell) => cell.trim().toUpperCase())),
+      holidays: Array.from(holidays),
+    };
+    await saveScan(scan);
+    setCurrentScanId(scan.id);
+    setScans((prev) => {
+      const index = prev.findIndex((s) => s.id === scan.id);
+      if (index >= 0) {
+        const next = [...prev];
+        next[index] = scan;
+        return next;
+      }
+      return [scan, ...prev];
+    });
+    return scan;
+  }
+
   async function handleSave() {
     if (saving) return;
     setSaving(true);
     try {
-      const existing = scans.find((s) => s.id === currentScanId);
-      const scan: ScanRecord = {
-        id: currentScanId ?? randomId(),
-        year,
-        month,
-        createdAt: existing?.createdAt ?? Date.now(),
-        days,
-        employees,
-        grid: grid.map((row) => row.map((cell) => cell.trim().toUpperCase())),
-        holidays: Array.from(holidays),
-      };
-      await saveScan(scan);
-      setCurrentScanId(scan.id);
-      setScans((prev) => {
-        const index = prev.findIndex((s) => s.id === scan.id);
-        if (index >= 0) {
-          const next = [...prev];
-          next[index] = scan;
-          return next;
-        }
-        return [scan, ...prev];
-      });
+      await persistScan();
       // Pas toujours le temps de tout saisir d'un coup : on propose de
       // continuer sur place plutôt que de forcer une sortie de l'écran.
       Alert.alert('Planning enregistré', 'Tu peux continuer la saisie ou t\'arrêter là — rien n\'est perdu.', [
@@ -202,6 +212,12 @@ export default function ScannerScreen() {
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Retour à la liste des salariés depuis l'éditeur d'une personne : enregistre automatiquement, sans alerte. */
+  function handleClosePersonEditor() {
+    setEditingRow(null);
+    persistScan().catch((err) => console.error('auto-save failed', err));
   }
 
   function reset() {
@@ -274,9 +290,10 @@ export default function ScannerScreen() {
               days={days}
               codes={grid[editingRow] ?? []}
               codeOptions={codeOptions[employees[editingRow] ?? ''] ?? []}
+              allCodes={allCodes}
               holidays={holidays}
               onChangeCode={(colIndex, value) => updateCell(editingRow, colIndex, value)}
-              onClose={() => setEditingRow(null)}
+              onClose={handleClosePersonEditor}
             />
           ) : (
             <>
