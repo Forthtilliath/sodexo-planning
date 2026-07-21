@@ -184,6 +184,12 @@ export default function PersonDayEditor({
           </View>
         )}
         <View style={styles.bulkRow}>
+          <Pressable
+            style={styles.emptyCodeButton}
+            disabled={selected.size === 0}
+            onPress={() => applyQuickCode('')}>
+            <Text style={styles.emptyCodeButtonText}>✕ Vider</Text>
+          </Pressable>
           {otherCodes.length > 0 && (
             <Pressable
               style={styles.otherCodeButton}
@@ -438,6 +444,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  emptyCodeButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#a33',
+    backgroundColor: '#fff',
+  },
+  emptyCodeButtonText: {
+    color: '#a33',
+    fontWeight: '700',
+    fontSize: 13,
   },
   otherCodeButton: {
     paddingVertical: 8,
