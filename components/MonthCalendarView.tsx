@@ -25,6 +25,15 @@ function formatFullDate(iso: string): string {
   return `${weekday} ${date.getDate()}`;
 }
 
+/** Teinte légère (fond) plutôt que la couleur pleine, pour ne pas gêner la lecture du texte. */
+function hexToSoftBackground(hex: string): string {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.22)`;
+}
+
 /** Vue calendrier en lecture seule : touche un jour pour voir le détail (code + coéquipiers). */
 export default function MonthCalendarView({ planning, holidays, showHours }: Props) {
   const leadingBlanks = planning.length > 0 ? mondayFirstWeekday(planning[0].date) : 0;
@@ -62,7 +71,7 @@ export default function MonthCalendarView({ planning, holidays, showHours }: Pro
               <Pressable
                 style={[
                   styles.dayBox,
-                  day.group?.color && !isHoliday && { borderColor: day.group.color, borderWidth: 2 },
+                  day.group?.color && { backgroundColor: hexToSoftBackground(day.group.color) },
                   isHoliday && styles.dayBoxHoliday,
                 ]}
                 onPress={() => showDayInfo(day)}>
