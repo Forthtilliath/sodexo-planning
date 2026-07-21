@@ -1,6 +1,6 @@
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { DayPlanning } from '@/lib/teams';
+import { formatScheduleHours, type DayPlanning } from '@/lib/teams';
 
 type Props = {
   planning: DayPlanning[]; // un élément par jour du mois, dans l'ordre
@@ -31,6 +31,9 @@ export default function MonthCalendarView({ planning, holidays }: Props) {
 
   function showDayInfo(day: DayPlanning) {
     const lines = [`Code : ${day.code || '—'}`];
+    if (day.schedule) {
+      lines.push(`Horaire : ${formatScheduleHours(day.schedule)}`);
+    }
     if (day.teammates.length > 0) {
       lines.push(`Avec ${day.teammates.map((t) => t.name).join(', ')}`);
     }

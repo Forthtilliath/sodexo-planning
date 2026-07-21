@@ -3,11 +3,11 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useFocusEffect } from 'expo-router';
 
 import MonthCalendarView from '@/components/MonthCalendarView';
-import { getScans, getSettings, getTeamGroups } from '@/lib/db';
+import { getCodeSchedules, getScans, getSettings, getTeamGroups } from '@/lib/db';
 import { shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
-import { computeMonthPlanning, findMyRowIndex, type DayPlanning } from '@/lib/teams';
-import type { ScanRecord, Settings, TeamGroup } from '@/types';
+import { computeMonthPlanning, findMyRowIndex, formatScheduleHours, type DayPlanning } from '@/lib/teams';
+import type { CodeSchedule, ScanRecord, Settings, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
 
@@ -36,6 +36,7 @@ export default function PlanningScreen() {
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [settings, setSettings] = useState<Settings>({ myName: '' });
   const [groups, setGroups] = useState<TeamGroup[]>([]);
+  const [schedules, setSchedules] = useState<CodeSchedule[]>([]);
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [manualRowIndex, setManualRowIndex] = useState<number | null>(null);
   const [viewingIndex, setViewingIndex] = useState<number | null>(null);
@@ -46,14 +47,16 @@ export default function PlanningScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [loadedScans, loadedSettings, loadedGroups] = await Promise.all([
+        const [loadedScans, loadedSettings, loadedGroups, loadedSchedules] = await Promise.all([
           getScans(),
           getSettings(),
           getTeamGroups(),
+          getCodeSchedules(),
         ]);
         setScans(loadedScans);
         setSettings(loadedSettings);
         setGroups(loadedGroups);
+        setSchedules(loadedSchedules);
         setSelectedScanId((prev) => prev ?? loadedScans[0]?.id ?? null);
         setManualRowIndex(null);
       })();
@@ -73,14 +76,14 @@ export default function PlanningScreen() {
 
   const planning: DayPlanning[] = useMemo(() => {
     if (!selectedScan || displayRowIndex < 0) return [];
-    return computeMonthPlanning(selectedScan, displayRowIndex, groups);
-  }, [selectedScan, displayRowIndex, groups]);
+    return computeMonthPlanning(selectedScan, displayRowIndex, groups, schedules);
+  }, [selectedScan, displayRowIndex, groups, schedules]);
 
   async function handleExport() {
     if (!selectedScan || myRowIndex < 0) return;
     setExporting(true);
     try {
-      const ics = buildIcs(selectedScan, groups, myRowIndex);
+      const ics = buildIcs(selectedScan, groups, myRowIndex, schedules);
       const filename = `planning-${selectedScan.year}-${String(selectedScan.month).padStart(2, '0')}.ics`;
       await shareIcs(filename, ics);
     } catch (err) {
@@ -197,6 +200,7 @@ export default function PlanningScreen() {
                   <View style={styles.dayInfo}>
                     <Text style={styles.dayCode}>
                       {day.code || '—'}
+                      {day.schedule && <Text style={styles.daySchedule}> ({formatScheduleHours(day.schedule)})</Text>}
                       {day.teammates.length > 0 && (
                         <Text style={styles.dayTeammates}>
                           {' '}
@@ -364,6 +368,11 @@ const styles = StyleSheet.create({
   },
   dayCode: {
     fontWeight: 'bold',
+  },
+  daySchedule: {
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.7,
   },
   dayTeammates: {
     fontSize: 13,

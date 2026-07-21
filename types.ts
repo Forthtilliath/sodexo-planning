@@ -15,6 +15,12 @@ export type RosterEntry = {
   active: boolean;
 };
 
+export type CodeSchedule = {
+  codes: string[]; // codes de poste concernés (ex: ["C6", "C7", "C8"])
+  start: string; // heure de début, format "HH:MM"
+  end: string; // heure de fin, format "HH:MM"
+};
+
 export type ScanRecord = {
   id: string;
   year: number;

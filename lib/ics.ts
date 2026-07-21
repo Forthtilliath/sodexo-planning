@@ -1,8 +1,13 @@
-import type { ScanRecord, TeamGroup } from '@/types';
+import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 import { computeMonthPlanning } from '@/lib/teams';
 
 function toIcsDate(isoDate: string): string {
   return isoDate.replace(/-/g, '');
+}
+
+function toIcsDateTime(isoDate: string, hhmm: string): string {
+  const [h, m] = hhmm.split(':');
+  return `${toIcsDate(isoDate)}T${h.padStart(2, '0')}${m.padStart(2, '0')}00`;
 }
 
 function nextDay(isoDate: string): string {
@@ -33,12 +38,18 @@ function dtstamp(): string {
 }
 
 /**
- * Génère un fichier .ics avec un événement journée entière par jour du scan,
- * pour la ligne de l'utilisateur (myRowIndex). La description liste les
+ * Génère un fichier .ics avec un événement par jour du scan, pour la ligne de
+ * l'utilisateur (myRowIndex). Évènement avec heure réelle quand l'horaire du
+ * code est connu (Réglages), sinon journée entière. La description liste les
  * coéquipiers détectés (même groupe de code ce jour-là).
  */
-export function buildIcs(scan: ScanRecord, groups: TeamGroup[], myRowIndex: number): string {
-  const planning = computeMonthPlanning(scan, myRowIndex, groups);
+export function buildIcs(
+  scan: ScanRecord,
+  groups: TeamGroup[],
+  myRowIndex: number,
+  schedules: CodeSchedule[] = []
+): string {
+  const planning = computeMonthPlanning(scan, myRowIndex, groups, schedules);
   const stamp = dtstamp();
 
   const events = planning
@@ -52,14 +63,15 @@ export function buildIcs(scan: ScanRecord, groups: TeamGroup[], myRowIndex: numb
           ? `Équipe : ${day.teammates.map((t) => `${t.name} (${t.code})`).join(', ')}`
           : '';
 
-      const lines = [
-        'BEGIN:VEVENT',
-        `UID:${scan.id}-${day.date}-${index}@rn-planning`,
-        `DTSTAMP:${stamp}`,
-        `DTSTART;VALUE=DATE:${toIcsDate(day.date)}`,
-        `DTEND;VALUE=DATE:${toIcsDate(nextDay(day.date))}`,
-        `SUMMARY:${escapeIcsText(summary)}`,
-      ];
+      const lines = ['BEGIN:VEVENT', `UID:${scan.id}-${day.date}-${index}@rn-planning`, `DTSTAMP:${stamp}`];
+      if (day.schedule) {
+        lines.push(`DTSTART:${toIcsDateTime(day.date, day.schedule.start)}`);
+        lines.push(`DTEND:${toIcsDateTime(day.date, day.schedule.end)}`);
+      } else {
+        lines.push(`DTSTART;VALUE=DATE:${toIcsDate(day.date)}`);
+        lines.push(`DTEND;VALUE=DATE:${toIcsDate(nextDay(day.date))}`);
+      }
+      lines.push(`SUMMARY:${escapeIcsText(summary)}`);
       if (description) {
         lines.push(`DESCRIPTION:${escapeIcsText(description)}`);
       }

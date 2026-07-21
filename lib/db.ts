@@ -1,4 +1,4 @@
-import type { RosterEntry, ScanRecord, Settings, TeamGroup } from "@/types";
+import type { CodeSchedule, RosterEntry, ScanRecord, Settings, TeamGroup } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const KEYS = {
@@ -7,6 +7,7 @@ const KEYS = {
 	scans: "@rn-planning/scans",
 	roster: "@rn-planning/roster",
 	codeOptions: "@rn-planning/codeOptions",
+	codeSchedules: "@rn-planning/codeSchedules",
 };
 
 const DEFAULT_SETTINGS: Settings = { myName: "" };
@@ -21,6 +22,23 @@ const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
 	{ id: "f1-f3", label: "F1-F3", codes: ["F1", "F2", "F3"] },
 	{ id: "f4-f5", label: "F4-F5", codes: ["F4", "F5"] },
 	{ id: "b1", label: "B1", codes: ["B1"] },
+];
+
+const DEFAULT_CODE_SCHEDULES: CodeSchedule[] = [
+	{ codes: ["E1"], start: "08:00", end: "16:24" },
+	{ codes: ["E2"], start: "08:30", end: "16:54" },
+	{ codes: ["E3"], start: "08:00", end: "16:07" },
+	{ codes: ["C2"], start: "06:45", end: "14:45" },
+	{ codes: ["C3"], start: "07:00", end: "15:00" },
+	{ codes: ["C4"], start: "06:45", end: "14:45" },
+	{ codes: ["C5"], start: "08:00", end: "16:00" },
+	{ codes: ["C6", "C7", "C8"], start: "09:00", end: "17:00" },
+	{ codes: ["D1"], start: "08:00", end: "15:00" },
+	{ codes: ["D2"], start: "09:00", end: "16:00" },
+	{ codes: ["D3", "D4"], start: "13:30", end: "21:00" },
+	{ codes: ["B1"], start: "08:00", end: "16:17" },
+	{ codes: ["F1", "F2", "F3"], start: "06:45", end: "17:26" },
+	{ codes: ["F4", "F5"], start: "09:19", end: "20:00" },
 ];
 
 // Filet de sécurité : si le stockage est vide (réinstallation, mise à jour
@@ -113,6 +131,15 @@ export function saveEmployeeCodeOptions(options: Record<string, string[]>): Prom
 	return writeJson(KEYS.codeOptions, options);
 }
 
+/** Horaires (début/fin) par code de poste, pour les afficher et générer des évènements .ics avec heure. */
+export function getCodeSchedules(): Promise<CodeSchedule[]> {
+	return readJson(KEYS.codeSchedules, DEFAULT_CODE_SCHEDULES);
+}
+
+export function saveCodeSchedules(schedules: CodeSchedule[]): Promise<void> {
+	return writeJson(KEYS.codeSchedules, schedules);
+}
+
 export function getScans(): Promise<ScanRecord[]> {
 	return readJson(KEYS.scans, []);
 }
@@ -149,19 +176,21 @@ export type BackupData = {
 	teamGroups: TeamGroup[];
 	roster: RosterEntry[];
 	codeOptions: Record<string, string[]>;
+	codeSchedules?: CodeSchedule[]; // absent sur les sauvegardes créées avant cet ajout
 	scans: ScanRecord[];
 };
 
 /** Regroupe toutes les données de l'app pour l'export/partage (survivre à une réinstallation ou un changement de version). */
 export async function exportAllData(): Promise<BackupData> {
-	const [settings, teamGroups, roster, codeOptions, scans] = await Promise.all([
+	const [settings, teamGroups, roster, codeOptions, codeSchedules, scans] = await Promise.all([
 		getSettings(),
 		getTeamGroups(),
 		getEmployeeRoster(),
 		getEmployeeCodeOptions(),
+		getCodeSchedules(),
 		getScans(),
 	]);
-	return { version: 1, exportedAt: Date.now(), settings, teamGroups, roster, codeOptions, scans };
+	return { version: 1, exportedAt: Date.now(), settings, teamGroups, roster, codeOptions, codeSchedules, scans };
 }
 
 /** Écrase toutes les données locales avec celles d'une sauvegarde importée. */
@@ -171,6 +200,7 @@ export async function importAllData(data: BackupData): Promise<void> {
 		saveTeamGroups(data.teamGroups),
 		saveEmployeeRoster(data.roster),
 		saveEmployeeCodeOptions(data.codeOptions),
+		...(data.codeSchedules ? [saveCodeSchedules(data.codeSchedules)] : []),
 		writeJson(KEYS.scans, data.scans),
 	]);
 }
