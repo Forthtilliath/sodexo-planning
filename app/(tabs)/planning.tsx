@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useNavigation } from 'expo-router';
 
 import MonthCalendarView from '@/components/MonthCalendarView';
 import { getCodeSchedules, getScans, getSettings, getTeamGroups } from '@/lib/db';
@@ -33,6 +33,7 @@ function formatDate(iso: string): string {
 }
 
 export default function PlanningScreen() {
+  const navigation = useNavigation();
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [settings, setSettings] = useState<Settings>({ myName: '' });
   const [groups, setGroups] = useState<TeamGroup[]>([]);
@@ -75,6 +76,14 @@ export default function PlanningScreen() {
   const viewingSomeoneElse = viewingIndex !== null && viewingIndex !== myRowIndex;
   const displayRowIndex = viewingSomeoneElse ? viewingIndex : myRowIndex;
 
+  // Le titre natif de l'écran affiche "Planning de X" quand on consulte un
+  // collègue, plutôt qu'un second titre en double dans la page.
+  useEffect(() => {
+    navigation.setOptions({
+      title: viewingSomeoneElse ? `Planning de ${selectedScan?.employees[viewingIndex!] || '—'}` : 'Mon planning',
+    });
+  }, [navigation, viewingSomeoneElse, selectedScan, viewingIndex]);
+
   const planning: DayPlanning[] = useMemo(() => {
     if (!selectedScan || displayRowIndex < 0) return [];
     return computeMonthPlanning(selectedScan, displayRowIndex, groups, schedules);
@@ -105,8 +114,6 @@ export default function PlanningScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{viewingSomeoneElse ? `Planning de ${selectedScan?.employees[viewingIndex!] || '—'}` : 'Mon planning'}</Text>
-
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scanPicker}>
         {scans.map((scan) => (
           <Pressable
@@ -251,11 +258,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 48,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 12,
   },
   scanPicker: {
     marginBottom: 16,

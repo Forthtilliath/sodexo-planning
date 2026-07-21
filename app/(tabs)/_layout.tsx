@@ -17,7 +17,6 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Planning',
-          headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
         }}
       />
@@ -25,7 +24,6 @@ export default function TabLayout() {
         name="planning"
         options={{
           title: 'Mon planning',
-          headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon emoji="📅" color={color} />,
         }}
       />

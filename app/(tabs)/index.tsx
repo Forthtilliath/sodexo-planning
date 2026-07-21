@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
 
 import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
@@ -58,6 +58,7 @@ function buildDays(year: number, month: number): string[] {
 type Step = 'home' | 'review';
 
 export default function ScannerScreen() {
+  const navigation = useNavigation();
   const [step, setStep] = useState<Step>('home');
 
   const now = new Date();
@@ -112,6 +113,14 @@ export default function ScannerScreen() {
     setEmployees((prev) => [...prev, ...missing]);
     setGrid((prev) => [...prev, ...missing.map(() => Array(days.length).fill(''))]);
   }, [roster, step, employees, days.length]);
+
+  // Le titre natif de l'écran affiche directement "Planning de X" quand on
+  // édite une personne, plutôt qu'un second titre en double dans la page.
+  useEffect(() => {
+    navigation.setOptions({
+      title: step === 'review' && editingRow !== null ? `Planning de ${employees[editingRow] || 'Employé sans nom'}` : 'Planning',
+    });
+  }, [navigation, step, editingRow, employees]);
 
   function toggleHoliday(iso: string) {
     setHolidays((prev) => {
@@ -237,11 +246,6 @@ export default function ScannerScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.headerArea}>
-        <Text style={styles.title} numberOfLines={1}>
-          {step === 'review' && editingRow !== null
-            ? `Planning de ${employees[editingRow] || 'Employé sans nom'}`
-            : 'Planning'}
-        </Text>
         {step === 'review' && (
           <View style={styles.topActionBar}>
             {editingRow !== null && (
@@ -401,11 +405,6 @@ const styles = StyleSheet.create({
   headerArea: {
     paddingTop: 16,
     paddingHorizontal: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 12,
   },
   topActionBar: {
     flexDirection: 'row',
