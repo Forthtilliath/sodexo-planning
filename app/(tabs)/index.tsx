@@ -79,9 +79,6 @@ export default function ScannerScreen() {
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [editingRow, setEditingRow] = useState<number | null>(null);
-  // Noms retirés à la main de ce planning : la synchro auto du roster ne doit
-  // pas les réinjecter tant qu'on reste sur ce planning.
-  const [removedNames, setRemovedNames] = useState<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -104,22 +101,17 @@ export default function ScannerScreen() {
 
   // Un salarié ajouté (ou réactivé) dans Réglages pendant qu'un planning est
   // déjà ouvert doit y apparaître directement, sans passer par "+ Ajouter une
-  // ligne" à la main — sauf s'il vient d'être retiré à la main de CE planning.
+  // ligne" à la main.
   useEffect(() => {
     if (step !== 'review') return;
-    const activeNames = roster
-      .filter((r) => r.active)
-      .map((r) => r.name.trim())
-      .filter((name) => name && !removedNames.has(name.toLowerCase()));
-    setEmployees((prevEmployees) => {
-      const missing = activeNames.filter(
-        (name) => !prevEmployees.some((e) => e.trim().toLowerCase() === name.toLowerCase())
-      );
-      if (missing.length === 0) return prevEmployees;
-      setGrid((prevGrid) => [...prevGrid, ...missing.map(() => Array(days.length).fill(''))]);
-      return [...prevEmployees, ...missing];
-    });
-  }, [roster, step, removedNames, days.length]);
+    const activeNames = roster.filter((r) => r.active).map((r) => r.name.trim()).filter(Boolean);
+    const missing = activeNames.filter(
+      (name) => !employees.some((e) => e.trim().toLowerCase() === name.toLowerCase())
+    );
+    if (missing.length === 0) return;
+    setEmployees((prev) => [...prev, ...missing]);
+    setGrid((prev) => [...prev, ...missing.map(() => Array(days.length).fill(''))]);
+  }, [roster, step, employees, days.length]);
 
   function toggleHoliday(iso: string) {
     setHolidays((prev) => {
@@ -147,7 +139,6 @@ export default function ScannerScreen() {
     setGrid(fill.map(() => Array(monthDays.length).fill('')));
     setCurrentScanId(null);
     setHolidays(new Set());
-    setRemovedNames(new Set());
     setStep('review');
   }
 
@@ -161,7 +152,6 @@ export default function ScannerScreen() {
     setHolidays(new Set(scan.holidays ?? []));
     setCurrentScanId(scan.id);
     setEditingRow(null);
-    setRemovedNames(new Set());
     setStep('review');
   }
 
@@ -179,13 +169,9 @@ export default function ScannerScreen() {
   }
 
   function removeRow(rowIndex: number) {
-    const name = employees[rowIndex]?.trim().toLowerCase();
     setEmployees((prev) => prev.filter((_, i) => i !== rowIndex));
     setGrid((prev) => prev.filter((_, i) => i !== rowIndex));
     setEditingRow(null);
-    if (name) {
-      setRemovedNames((prev) => new Set(prev).add(name));
-    }
   }
 
   /** Enregistre l'état courant sans confirmation ; réutilisé par le bouton "Enregistrer" et l'auto-save. */
@@ -246,7 +232,6 @@ export default function ScannerScreen() {
     setEditingRow(null);
     setHolidays(new Set());
     setCurrentScanId(null);
-    setRemovedNames(new Set());
   }
 
   return (
