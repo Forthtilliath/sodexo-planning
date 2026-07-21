@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 
@@ -98,6 +98,20 @@ export default function ScannerScreen() {
       })();
     }, [])
   );
+
+  // Un salarié ajouté (ou réactivé) dans Réglages pendant qu'un planning est
+  // déjà ouvert doit y apparaître directement, sans passer par "+ Ajouter une
+  // ligne" à la main.
+  useEffect(() => {
+    if (step !== 'review') return;
+    const activeNames = roster.filter((r) => r.active).map((r) => r.name.trim()).filter(Boolean);
+    const missing = activeNames.filter(
+      (name) => !employees.some((e) => e.trim().toLowerCase() === name.toLowerCase())
+    );
+    if (missing.length === 0) return;
+    setEmployees((prev) => [...prev, ...missing]);
+    setGrid((prev) => [...prev, ...missing.map(() => Array(days.length).fill(''))]);
+  }, [roster, step, employees, days.length]);
 
   function toggleHoliday(iso: string) {
     setHolidays((prev) => {
