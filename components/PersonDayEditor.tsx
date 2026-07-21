@@ -82,18 +82,19 @@ export default function PersonDayEditor({
   const cells = useMemo(() => buildCells(days), [days]);
   const leadingBlanks = days.length > 0 ? mondayFirstWeekday(days[0]) : 0;
 
-  // Week-ends et jours fériés ne proposent que F1-F5 ; les autres jours
-  // proposent les codes habituels de la personne (Réglages). En cas de
-  // sélection mixte, on propose les deux jeux de codes.
+  // Jours normaux : jamais de F1-F5, seulement les autres codes habituels.
+  // Week-ends et jours fériés : seulement les F1-F5 qui font partie des codes
+  // habituels de la personne (pas la liste complète). Sélection mixte : les
+  // deux jeux de codes habituels, sans restriction.
   const quickCodes = useMemo(() => {
     if (selected.size === 0) return codeOptions;
     const indices = Array.from(selected);
     const specialFlags = indices.map((i) => isSpecialDay(days[i], holidays));
     const allSpecial = specialFlags.every(Boolean);
     const allNormal = specialFlags.every((v) => !v);
-    if (allSpecial) return HOLIDAY_CODES;
-    if (allNormal) return codeOptions;
-    return Array.from(new Set([...codeOptions, ...HOLIDAY_CODES]));
+    if (allSpecial) return codeOptions.filter((c) => HOLIDAY_CODES.includes(c));
+    if (allNormal) return codeOptions.filter((c) => !HOLIDAY_CODES.includes(c));
+    return codeOptions;
   }, [selected, days, holidays, codeOptions]);
 
   // Le reste des codes connus, pour affecter un poste qui n'est pas habituel
