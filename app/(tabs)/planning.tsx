@@ -97,8 +97,8 @@ export default function PlanningScreen() {
   if (scans.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Aucun scan pour l'instant.</Text>
-        <Text style={styles.emptyHint}>Va dans l'onglet Scanner pour photographier ton planning.</Text>
+        <Text style={styles.emptyText}>Aucun planning pour l'instant.</Text>
+        <Text style={styles.emptyHint}>Va dans l'onglet Planning pour en créer un.</Text>
       </View>
     );
   }
