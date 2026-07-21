@@ -91,8 +91,22 @@ export function saveSettings(settings: Settings): Promise<void> {
 	return writeJson(KEYS.settings, settings);
 }
 
-export function getTeamGroups(): Promise<TeamGroup[]> {
-	return readJson(KEYS.teamGroups, DEFAULT_TEAM_GROUPS);
+export async function getTeamGroups(): Promise<TeamGroup[]> {
+	const raw = await AsyncStorage.getItem(KEYS.teamGroups);
+	if (!raw) return DEFAULT_TEAM_GROUPS;
+	try {
+		const parsed: unknown = JSON.parse(raw);
+		if (!Array.isArray(parsed)) return DEFAULT_TEAM_GROUPS;
+		// Groupes déjà enregistrés avant l'ajout des couleurs : on complète avec
+		// la couleur par défaut du même groupe (par id), sans toucher au reste.
+		return (parsed as TeamGroup[]).map((g) => {
+			if (g.color) return g;
+			const withDefaultColor = DEFAULT_TEAM_GROUPS.find((d) => d.id === g.id);
+			return withDefaultColor?.color ? { ...g, color: withDefaultColor.color } : g;
+		});
+	} catch {
+		return DEFAULT_TEAM_GROUPS;
+	}
 }
 
 export function saveTeamGroups(groups: TeamGroup[]): Promise<void> {
