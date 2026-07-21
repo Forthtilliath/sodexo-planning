@@ -58,6 +58,21 @@ describe('computeDayPlanning', () => {
     expect(day.group).toBeUndefined();
     expect(day.teammates).toEqual([]);
   });
+
+  it('trie les coéquipiers par code alphabétique, peu importe leur ordre dans le tableau', () => {
+    const fGroup: TeamGroup[] = [{ id: 'f1-f5', label: 'F1-F5', codes: ['F1', 'F2', 'F3', 'F4', 'F5'] }];
+    const fScan: ScanRecord = {
+      id: 'scan-f',
+      year: 2026,
+      month: 7,
+      createdAt: 0,
+      days: ['2026-07-01'],
+      employees: ['Moi (F2)', 'F4 Person', 'F1 Person', 'F3 Person'],
+      grid: [['F2'], ['F4'], ['F1'], ['F3']],
+    };
+    const day = computeDayPlanning(fScan, 0, 0, fGroup);
+    expect(day.teammates.map((t) => t.code)).toEqual(['F1', 'F3', 'F4']);
+  });
 });
 
 describe('computeMonthPlanning', () => {

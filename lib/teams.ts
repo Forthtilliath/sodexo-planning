@@ -57,6 +57,7 @@ export function computeDayPlanning(
       teammates.push({ name: scan.employees[rowIndex] ?? `Ligne ${rowIndex + 1}`, code: rowCode });
     }
   });
+  teammates.sort((a, b) => a.code.localeCompare(b.code));
 
   return { date, code, group, teammates };
 }
