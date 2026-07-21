@@ -27,13 +27,14 @@ describe('buildIcs', () => {
     expect(ics).toContain('DTEND;VALUE=DATE:20260702');
   });
 
-  it("inclut les coéquipiers dans le résumé et la description", () => {
+  it('met seulement le code dans le résumé, les coéquipiers restent dans la description', () => {
     const ics = buildIcs(scan, groups, 0);
-    expect(ics).toContain('SUMMARY:D1 (avec D2 Person)');
+    expect(ics).toContain('SUMMARY:D1');
+    expect(ics).not.toContain('avec D2 Person');
     expect(ics).toContain('DESCRIPTION:Équipe : D2 Person (D2)');
   });
 
-  it('utilise juste le code quand il n\'y a pas de coéquipier', () => {
+  it("utilise juste le code quand il n'y a pas de coéquipier", () => {
     const ics = buildIcs(scan, groups, 0);
     expect(ics).toContain('SUMMARY:X');
   });

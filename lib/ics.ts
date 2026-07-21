@@ -55,9 +55,7 @@ export function buildIcs(
   const events = planning
     .filter((day) => day.code)
     .map((day, index) => {
-      const summary = day.teammates.length
-        ? `${day.code} (avec ${day.teammates.map((t) => t.name).join(', ')})`
-        : day.code;
+      const summary = day.code;
       const description =
         day.teammates.length > 0
           ? `Équipe : ${day.teammates.map((t) => `${t.name} (${t.code})`).join(', ')}`
