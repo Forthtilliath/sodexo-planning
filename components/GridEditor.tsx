@@ -60,7 +60,7 @@ export default function GridEditor({ days, employees, grid, onChangeEmployee, on
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
     marginBottom: 8,
     borderWidth: 1,
