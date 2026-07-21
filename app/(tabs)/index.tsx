@@ -77,7 +77,7 @@ export default function ScannerScreen() {
   const [myName, setMyName] = useState('');
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [editingRow, setEditingRow] = useState<number | null>(null);
 
   useFocusEffect(
@@ -201,28 +201,20 @@ export default function ScannerScreen() {
     return scan;
   }
 
-  async function handleSave() {
-    if (saving) return;
-    setSaving(true);
+  // Toujours accessible sous le titre, sans avoir à remonter en haut de
+  // l'écran : enregistre sur place et confirme brièvement, sans bloquer avec
+  // une alerte (on peut ne pas avoir fini de tout saisir d'un coup).
+  async function handleQuickSave() {
+    if (saveState === 'saving') return;
+    setSaveState('saving');
     try {
       await persistScan();
-      // Pas toujours le temps de tout saisir d'un coup : on propose de
-      // continuer sur place plutôt que de forcer une sortie de l'écran.
-      Alert.alert('Planning enregistré', 'Tu peux continuer la saisie ou t\'arrêter là — rien n\'est perdu.', [
-        { text: 'Continuer la saisie', style: 'cancel' },
-        {
-          text: 'Terminer',
-          onPress: () => {
-            reset();
-            router.push('/planning');
-          },
-        },
-      ]);
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 1500);
     } catch (err) {
-      console.error('handleSave failed', err);
+      console.error('handleQuickSave failed', err);
+      setSaveState('idle');
       Alert.alert("Échec de l'enregistrement", err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -243,9 +235,31 @@ export default function ScannerScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Planning</Text>
+    <View style={styles.screen}>
+      <View style={styles.headerArea}>
+        <Text style={styles.title}>Planning</Text>
+        {step === 'review' && (
+          <View style={styles.topActionBar}>
+            {editingRow !== null && (
+              <Pressable style={styles.topBackButton} onPress={handleClosePersonEditor} hitSlop={8}>
+                <Text style={styles.topBackButtonText}>← Retour à la liste</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={[styles.topSaveButton, saveState === 'saving' && styles.buttonDisabled]}
+              disabled={saveState === 'saving'}
+              onPress={handleQuickSave}>
+              {saveState === 'saving' ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.topSaveButtonText}>{saveState === 'saved' ? '✓ Enregistré' : '💾 Enregistrer'}</Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+      </View>
 
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {step === 'home' && (
         <>
           <View style={styles.row}>
@@ -305,10 +319,6 @@ export default function ScannerScreen() {
               allCodes={allCodes}
               holidays={holidays}
               onChangeCode={(colIndex, value) => updateCell(editingRow, colIndex, value)}
-              onSave={async () => {
-                await persistScan();
-              }}
-              onClose={handleClosePersonEditor}
             />
           ) : (
             <>
@@ -325,9 +335,6 @@ export default function ScannerScreen() {
                 onRemoveRow={removeRow}
                 onOpenRow={setEditingRow}
               />
-              <Pressable style={[styles.primaryButton, saving && styles.buttonDisabled]} disabled={saving} onPress={handleSave}>
-                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Enregistrer le planning</Text>}
-              </Pressable>
               <Pressable style={styles.resetButton} onPress={reset}>
                 <Text style={styles.resetButtonText}>Recommencer</Text>
               </Pressable>
@@ -335,7 +342,8 @@ export default function ScannerScreen() {
           )}
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -383,18 +391,54 @@ function SelectField({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: '#fff',
   },
-  content: {
-    padding: 16,
-    paddingBottom: 64,
+  headerArea: {
+    paddingTop: 16,
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  topActionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 12,
+  },
+  topBackButton: {
+    flexShrink: 1,
+  },
+  topBackButtonText: {
+    color: '#2f95dc',
+    fontWeight: '600',
+  },
+  topSaveButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#2f95dc',
+    minWidth: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topSaveButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    paddingTop: 0,
+    paddingBottom: 64,
   },
   sectionTitle: {
     fontSize: 16,

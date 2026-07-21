@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   employeeName: string;
@@ -9,8 +9,6 @@ type Props = {
   allCodes: string[]; // tous les codes connus (groupes de postes), pour affecter autre chose que les codes habituels
   holidays: Set<string>; // dates ISO fériées du mois
   onChangeCode: (colIndex: number, value: string) => void;
-  onSave: () => Promise<void>;
-  onClose: () => void;
 };
 
 const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'WE'];
@@ -72,12 +70,9 @@ export default function PersonDayEditor({
   allCodes,
   holidays,
   onChangeCode,
-  onSave,
-  onClose,
 }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [otherCodeModalOpen, setOtherCodeModalOpen] = useState(false);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const cells = useMemo(() => buildCells(days), [days]);
   const leadingBlanks = days.length > 0 ? mondayFirstWeekday(days[0]) : 0;
@@ -132,41 +127,11 @@ export default function PersonDayEditor({
     clearSelection();
   }
 
-  async function handleSavePress() {
-    if (saveState === 'saving') return;
-    setSaveState('saving');
-    try {
-      await onSave();
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 1500);
-    } catch (err) {
-      console.error('save from person editor failed', err);
-      setSaveState('idle');
-    }
-  }
-
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={onClose} hitSlop={8}>
-          <Text style={styles.backText}>← Retour à la liste</Text>
-        </Pressable>
-        <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {employeeName || 'Employé sans nom'}
-          </Text>
-          <Pressable
-            style={[styles.saveButton, saveState === 'saving' && styles.saveButtonDisabled]}
-            disabled={saveState === 'saving'}
-            onPress={handleSavePress}>
-            {saveState === 'saving' ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.saveButtonText}>{saveState === 'saved' ? '✓ Enregistré' : '💾 Enregistrer'}</Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
+      <Text style={styles.name} numberOfLines={1}>
+        {employeeName || 'Employé sans nom'}
+      </Text>
 
       <Text style={styles.hint}>Touche un ou plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
 
@@ -291,41 +256,10 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 8,
   },
-  header: {
-    marginBottom: 12,
-  },
-  backText: {
-    color: '#2f95dc',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
   name: {
-    flex: 1,
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  saveButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#2f95dc',
-    minWidth: 96,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
+    marginBottom: 12,
   },
   hint: {
     fontSize: 12,
