@@ -114,13 +114,18 @@ export default function ScannerScreen() {
     setGrid((prev) => [...prev, ...missing.map(() => Array(days.length).fill(''))]);
   }, [roster, step, employees, days.length]);
 
-  // Le titre natif de l'écran affiche directement "Planning de X" quand on
-  // édite une personne, plutôt qu'un second titre en double dans la page.
+  // Le titre natif de l'écran affiche directement "Planning de X" (personne
+  // éditée, ou mois/année en liste), plutôt qu'un second titre en double.
   useEffect(() => {
-    navigation.setOptions({
-      title: step === 'review' && editingRow !== null ? `Planning de ${employees[editingRow] || 'Employé sans nom'}` : 'Planning',
-    });
-  }, [navigation, step, editingRow, employees]);
+    let title = 'Planning';
+    if (step === 'review') {
+      title =
+        editingRow !== null
+          ? `Planning de ${employees[editingRow] || 'Employé sans nom'}`
+          : `Planning de ${MONTH_NAMES[month - 1]} ${year}`;
+    }
+    navigation.setOptions({ title });
+  }, [navigation, step, editingRow, employees, month, year]);
 
   function toggleHoliday(iso: string) {
     setHolidays((prev) => {
@@ -233,6 +238,12 @@ export default function ScannerScreen() {
     persistScan().catch((err) => console.error('auto-save failed', err));
   }
 
+  /** Retour à la liste des plannings (accueil) : enregistre automatiquement avant de quitter. */
+  function goToPlanningsList() {
+    persistScan().catch((err) => console.error('auto-save failed', err));
+    reset();
+  }
+
   function reset() {
     setStep('home');
     setEmployees([]);
@@ -248,9 +259,13 @@ export default function ScannerScreen() {
       <View style={styles.headerArea}>
         {step === 'review' && (
           <View style={styles.topActionBar}>
-            {editingRow !== null && (
+            {editingRow !== null ? (
               <Pressable style={styles.topBackButton} onPress={handleClosePersonEditor} hitSlop={8}>
                 <Text style={styles.topBackButtonText}>← Retour à la liste</Text>
+              </Pressable>
+            ) : (
+              <Pressable style={styles.topBackButton} onPress={goToPlanningsList} hitSlop={8}>
+                <Text style={styles.topBackButtonText}>← Liste des plannings</Text>
               </Pressable>
             )}
             <Pressable
@@ -329,10 +344,6 @@ export default function ScannerScreen() {
             />
           ) : (
             <>
-              <Text style={styles.sectionTitle}>
-                {MONTH_NAMES[month - 1]} {year} — {employees.length} ligne(s)
-                {currentScanId ? ' · modification' : ''}
-              </Text>
               <HolidayPicker days={days} holidays={holidays} onToggle={toggleHoliday} />
               <GridEditor
                 days={days}
