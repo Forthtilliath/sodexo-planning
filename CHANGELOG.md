@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## 1.1.2 — 2026-07-23
+
+- Ajout de cette page "Nouveautés" pour voir ce qui a changé à chaque mise à jour.
+
 ## 1.1.1 — 2026-07-23
 
 - Le nom de l'onglet "Planning" ne change plus quand le titre de l'écran change.
