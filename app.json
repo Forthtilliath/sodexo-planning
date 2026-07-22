@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "rn-planning",
-    "slug": "rn-planning",
+    "name": "Sodexo Planning",
+    "slug": "sodexo-planning",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.forth.rnplanning"
+      "package": "com.forth.sodexoplanning"
     },
     "web": {
       "bundler": "metro",
@@ -44,6 +44,6 @@
         "projectId": "d676f157-c2c6-410b-a109-9d07649727c4"
       }
     },
-    "owner": "forth"
+    "owner": "forthtilliath"
   }
 }
