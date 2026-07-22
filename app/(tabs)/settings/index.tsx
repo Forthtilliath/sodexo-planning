@@ -11,6 +11,7 @@ const MENU = [
     hint: 'Les codes de poste qui vont ensemble',
   },
   { href: '/settings/roster', emoji: '📋', title: 'Salariés', hint: 'Liste et codes habituels de chacun' },
+  { href: '/settings/notifications', emoji: '🔔', title: 'Notifications', hint: 'Rappel la veille d\'un jour travaillé' },
   { href: '/settings/about', emoji: 'ℹ️', title: 'À propos', hint: "Version et présentation de l'app" },
   { href: '/settings/contact', emoji: '✉️', title: 'Contact', hint: 'Une question, un bug à signaler' },
   { href: '/settings/privacy', emoji: '🔒', title: 'Confidentialité', hint: 'Où vont tes données (nulle part)' },

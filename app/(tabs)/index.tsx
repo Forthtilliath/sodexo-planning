@@ -6,6 +6,7 @@ import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
 import PersonDayEditor from '@/components/PersonDayEditor';
 import { getEmployeeCodeOptions, getEmployeeRoster, getScans, getSettings, getTeamGroups, saveScan } from '@/lib/db';
+import { rescheduleWorkReminders } from '@/lib/notifications';
 import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 /** Fait remonter "Mon nom" en tête de liste, sans changer l'ordre des autres. */
@@ -83,6 +84,7 @@ export default function PlanningEditorScreen() {
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -99,6 +101,11 @@ export default function PlanningEditorScreen() {
         setCodeOptions(options);
         setMyName(settings.myName);
         setGroups(teamGroups);
+        setRemindersEnabled(settings.remindersEnabled === true);
+        // Rattrape le décalage si l'app n'a pas été ouverte depuis un moment.
+        if (settings.remindersEnabled) {
+          rescheduleWorkReminders().catch((err) => console.error('reschedule reminders failed', err));
+        }
       })();
     }, [])
   );
@@ -215,6 +222,9 @@ export default function PlanningEditorScreen() {
       }
       return [scan, ...prev];
     });
+    if (remindersEnabled) {
+      rescheduleWorkReminders().catch((err) => console.error('reschedule reminders failed', err));
+    }
     return scan;
   }
 
