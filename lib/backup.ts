@@ -17,10 +17,15 @@ function isValidBackup(data: unknown): data is BackupData {
   );
 }
 
+/** "2026-07-22T09:38:00" -> "sodexo-planning-sauvegarde-20260722093800.json". */
+export function buildBackupFilename(date = new Date()): string {
+  return `sodexo-planning-sauvegarde-${timestampCompact(date)}.json`;
+}
+
 /** Exporte toutes les données de l'app dans un fichier JSON et ouvre le partage natif (mail, Drive, fichiers...). */
 export async function shareBackup(): Promise<void> {
   const data = await exportAllData();
-  const filename = `sodexo-planning-sauvegarde-${timestampCompact()}.json`;
+  const filename = buildBackupFilename();
   const file = new File(Paths.cache, filename);
   if (file.exists) {
     file.delete();

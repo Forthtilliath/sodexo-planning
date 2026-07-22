@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 
 import MonthCalendarView from '@/components/MonthCalendarView';
 import { getCodeSchedules, getScans, getSettings, getTeamGroups } from '@/lib/db';
-import { shareIcs } from '@/lib/exportIcs';
+import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
 import { computeMonthPlanning, findMyRowIndex, formatScheduleHours, type DayPlanning } from '@/lib/teams';
 import type { CodeSchedule, ScanRecord, Settings, TeamGroup } from '@/types';
@@ -94,9 +94,7 @@ export default function PlanningScreen() {
     setExporting(true);
     try {
       const ics = buildIcs(selectedScan, groups, myRowIndex, schedules);
-      const employeeSlug = selectedScan.employees[myRowIndex].trim().replace(/\s+/g, '-');
-      const yearMonth = `${selectedScan.year}${String(selectedScan.month).padStart(2, '0')}`;
-      const filename = `sodexo-planning-${yearMonth}-${employeeSlug}.ics`;
+      const filename = buildIcsFilename(selectedScan.year, selectedScan.month, selectedScan.employees[myRowIndex]);
       await shareIcs(filename, ics);
     } catch (err) {
       Alert.alert('Export impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
