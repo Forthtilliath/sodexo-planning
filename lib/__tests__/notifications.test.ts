@@ -7,21 +7,26 @@ jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
-  cancelAllScheduledNotificationsAsync: jest.fn(),
+  getAllScheduledNotificationsAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
-  SchedulableTriggerInputTypes: { DATE: 'date' },
+  SchedulableTriggerInputTypes: { DATE: 'date', TIME_INTERVAL: 'timeInterval' },
 }));
 
 import * as Notifications from 'expo-notifications';
 import {
+  BACKUP_REMINDER_INTERVAL_DAYS,
   DEFAULT_REMINDER_HOUR,
+  cancelBackupReminder,
   cancelWorkReminders,
   requestNotificationPermission,
   rescheduleWorkReminders,
+  scheduleBackupReminder,
 } from '@/lib/notifications';
 
 const scheduleMock = Notifications.scheduleNotificationAsync as jest.Mock;
-const cancelAllMock = Notifications.cancelAllScheduledNotificationsAsync as jest.Mock;
+const getAllScheduledMock = Notifications.getAllScheduledNotificationsAsync as jest.Mock;
+const cancelScheduledMock = Notifications.cancelScheduledNotificationAsync as jest.Mock;
 const getPermissionsMock = Notifications.getPermissionsAsync as jest.Mock;
 const requestPermissionsMock = Notifications.requestPermissionsAsync as jest.Mock;
 
@@ -44,6 +49,8 @@ describe('rescheduleWorkReminders', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
     jest.clearAllMocks();
+    getAllScheduledMock.mockResolvedValue([]);
+    cancelScheduledMock.mockResolvedValue(undefined);
     jest.useFakeTimers();
     jest.setSystemTime(NOW);
   });
@@ -59,7 +66,8 @@ describe('rescheduleWorkReminders', () => {
     await rescheduleWorkReminders();
 
     expect(scheduleMock).toHaveBeenCalledTimes(1);
-    const [{ content, trigger }] = scheduleMock.mock.calls[0];
+    const [{ identifier, content, trigger }] = scheduleMock.mock.calls[0];
+    expect(identifier).toBe('work-reminder-scan-1-0');
     expect(content.body).toBe('Poste : D1');
     expect(trigger.type).toBe('date');
     expect(trigger.date).toEqual(new Date(2026, 6, 14, DEFAULT_REMINDER_HOUR, 0, 0, 0));
@@ -146,13 +154,18 @@ describe('rescheduleWorkReminders', () => {
     expect(scheduleMock).not.toHaveBeenCalled();
   });
 
-  it('annule les rappels existants avant de reprogrammer', async () => {
+  it('annule les anciens rappels de travail avant de reprogrammer, sans toucher au rappel de sauvegarde', async () => {
     await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
+    getAllScheduledMock.mockResolvedValue([
+      { identifier: 'work-reminder-old-scan-0', content: {}, trigger: {} },
+      { identifier: 'backup-reminder', content: {}, trigger: {} },
+    ]);
 
     await rescheduleWorkReminders();
 
-    expect(cancelAllMock).toHaveBeenCalledTimes(1);
+    expect(cancelScheduledMock).toHaveBeenCalledWith('work-reminder-old-scan-0');
+    expect(cancelScheduledMock).not.toHaveBeenCalledWith('backup-reminder');
   });
 
   it('cumule les rappels de plusieurs plannings enregistrés', async () => {
@@ -167,10 +180,43 @@ describe('rescheduleWorkReminders', () => {
 });
 
 describe('cancelWorkReminders', () => {
-  it('annule toutes les notifications programmées', async () => {
+  it('annule uniquement les notifications de rappel de travail', async () => {
     jest.clearAllMocks();
+    getAllScheduledMock.mockResolvedValue([
+      { identifier: 'work-reminder-scan-1-0', content: {}, trigger: {} },
+      { identifier: 'backup-reminder', content: {}, trigger: {} },
+    ]);
+
     await cancelWorkReminders();
-    expect(cancelAllMock).toHaveBeenCalledTimes(1);
+
+    expect(cancelScheduledMock).toHaveBeenCalledTimes(1);
+    expect(cancelScheduledMock).toHaveBeenCalledWith('work-reminder-scan-1-0');
+  });
+});
+
+describe('scheduleBackupReminder / cancelBackupReminder', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    cancelScheduledMock.mockResolvedValue(undefined);
+  });
+
+  it('programme un rappel récurrent avec un identifiant fixe', async () => {
+    await scheduleBackupReminder();
+
+    expect(cancelScheduledMock).toHaveBeenCalledWith('backup-reminder');
+    expect(scheduleMock).toHaveBeenCalledTimes(1);
+    const [{ identifier, trigger }] = scheduleMock.mock.calls[0];
+    expect(identifier).toBe('backup-reminder');
+    expect(trigger).toEqual({
+      type: 'timeInterval',
+      seconds: BACKUP_REMINDER_INTERVAL_DAYS * 24 * 60 * 60,
+      repeats: true,
+    });
+  });
+
+  it('annule le rappel de sauvegarde par son identifiant', async () => {
+    await cancelBackupReminder();
+    expect(cancelScheduledMock).toHaveBeenCalledWith('backup-reminder');
   });
 });
 

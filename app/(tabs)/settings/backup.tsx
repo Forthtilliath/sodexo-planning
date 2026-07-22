@@ -1,11 +1,57 @@
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 import { pickAndImportBackup, shareBackup } from '@/lib/backup';
+import { getSettings, saveSettings } from '@/lib/db';
+import {
+  BACKUP_REMINDER_INTERVAL_DAYS,
+  cancelBackupReminder,
+  requestNotificationPermission,
+  scheduleBackupReminder,
+} from '@/lib/notifications';
 
 export default function BackupScreen() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderBusy, setReminderBusy] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const settings = await getSettings();
+        setReminderEnabled(settings.backupReminderEnabled === true);
+      })();
+    }, [])
+  );
+
+  async function handleToggleReminder(value: boolean) {
+    if (reminderBusy) return;
+    setReminderBusy(true);
+    try {
+      if (value) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          Alert.alert(
+            'Notifications refusées',
+            "Autorise les notifications pour cette app dans les réglages Android si tu changes d'avis."
+          );
+          return;
+        }
+        await scheduleBackupReminder();
+      } else {
+        await cancelBackupReminder();
+      }
+      const settings = await getSettings();
+      await saveSettings({ ...settings, backupReminderEnabled: value });
+      setReminderEnabled(value);
+    } catch (err) {
+      Alert.alert('Erreur', err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
+    } finally {
+      setReminderBusy(false);
+    }
+  }
 
   async function handleExport() {
     if (exporting) return;
@@ -60,6 +106,23 @@ export default function BackupScreen() {
           {importing ? <ActivityIndicator /> : <Text style={styles.secondaryButtonText}>⬇️ Importer</Text>}
         </Pressable>
       </View>
+
+      <Pressable
+        style={styles.reminderRow}
+        disabled={reminderBusy}
+        onPress={() => handleToggleReminder(!reminderEnabled)}>
+        <View style={styles.reminderTextColumn}>
+          <Text style={styles.reminderLabel}>🔔 Rappel de sauvegarde</Text>
+          <Text style={styles.reminderHint}>
+            Une notification tous les {BACKUP_REMINDER_INTERVAL_DAYS} jours pour penser à exporter.
+          </Text>
+        </View>
+        {reminderBusy ? (
+          <ActivityIndicator />
+        ) : (
+          <Switch value={reminderEnabled} onValueChange={handleToggleReminder} />
+        )}
+      </Pressable>
     </ScrollView>
   );
 }
@@ -79,6 +142,24 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 10,
+  },
+  reminderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 24,
+  },
+  reminderTextColumn: {
+    flex: 1,
+  },
+  reminderLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  reminderHint: {
+    fontSize: 13,
+    opacity: 0.7,
   },
   secondaryButton: {
     flex: 1,

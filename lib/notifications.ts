@@ -8,6 +8,13 @@ export const DEFAULT_REMINDER_HOUR = 19;
 // l'avance tout au plus, pas besoin d'aller chercher plus loin.
 const MAX_DAYS_AHEAD = 60;
 
+// Les rappels de travail et le rappel de sauvegarde sont deux catégories
+// indépendantes de notifications programmées : on les identifie par préfixe
+// pour pouvoir annuler/reprogrammer l'une sans toucher à l'autre.
+const WORK_REMINDER_PREFIX = 'work-reminder-';
+const BACKUP_REMINDER_ID = 'backup-reminder';
+export const BACKUP_REMINDER_INTERVAL_DAYS = 14;
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -24,13 +31,23 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return requested.granted;
 }
 
+async function cancelNotificationsWithPrefix(prefix: string): Promise<void> {
+  const all = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    all
+      .filter((n) => n.identifier.startsWith(prefix))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+  );
+}
+
 /**
- * Annule tous les rappels programmés puis reprogramme, pour chaque jour à
- * venir où "Mon nom" a un poste renseigné, un rappel la veille (heure
- * choisie dans Réglages > Notifications, 19h par défaut).
+ * Annule tous les rappels de travail programmés puis reprogramme, pour
+ * chaque jour à venir où "Mon nom" a un poste renseigné, un rappel la veille
+ * (heure choisie dans Réglages > Notifications, 19h par défaut), en
+ * mentionnant les coéquipiers du même groupe ce jour-là.
  */
 export async function rescheduleWorkReminders(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelNotificationsWithPrefix(WORK_REMINDER_PREFIX);
 
   const [scans, settings, groups] = await Promise.all([getScans(), getSettings(), getTeamGroups()]);
   const reminderHour = settings.reminderHour ?? DEFAULT_REMINDER_HOUR;
@@ -60,6 +77,7 @@ export async function rescheduleWorkReminders(): Promise<void> {
 
       schedules.push(
         Notifications.scheduleNotificationAsync({
+          identifier: `${WORK_REMINDER_PREFIX}${scan.id}-${dayIndex}`,
           content: {
             title: 'Tu travailles demain',
             body,
@@ -74,5 +92,30 @@ export async function rescheduleWorkReminders(): Promise<void> {
 }
 
 export async function cancelWorkReminders(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelNotificationsWithPrefix(WORK_REMINDER_PREFIX);
+}
+
+/**
+ * Programme un rappel récurrent (tous les BACKUP_REMINDER_INTERVAL_DAYS
+ * jours) pour inciter à exporter une sauvegarde : c'est la seule protection
+ * contre une perte de données (réinstallation, changement de package...).
+ */
+export async function scheduleBackupReminder(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(BACKUP_REMINDER_ID).catch(() => {});
+  await Notifications.scheduleNotificationAsync({
+    identifier: BACKUP_REMINDER_ID,
+    content: {
+      title: 'Pense à sauvegarder tes données',
+      body: 'Exporte une sauvegarde depuis Réglages > Sauvegarde, au cas où.',
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: BACKUP_REMINDER_INTERVAL_DAYS * 24 * 60 * 60,
+      repeats: true,
+    },
+  });
+}
+
+export async function cancelBackupReminder(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(BACKUP_REMINDER_ID).catch(() => {});
 }
