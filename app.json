@@ -34,7 +34,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "./plugins/withShortCxxPath.js"
     ],
     "experiments": {
       "typedRoutes": true
