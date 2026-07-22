@@ -2,6 +2,8 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
 import type { RosterEntry, TeamGroup } from '@/types';
 
@@ -22,6 +24,8 @@ function moveWithinGroup(entries: RosterEntry[], index: number, direction: -1 | 
 }
 
 export default function RosterScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
@@ -155,6 +159,7 @@ export default function RosterScreen() {
                 value={entry.name}
                 onChangeText={(v) => updateName(index, v)}
                 placeholder={`Salarié ${index + 1}`}
+                placeholderTextColor={colors.border}
               />
               <Pressable onPress={() => removeName(index, entry.name)} hitSlop={8} style={styles.rosterRemoveButton}>
                 <Text style={styles.removeText}>×</Text>
@@ -221,147 +226,161 @@ export default function RosterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  hint: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 8,
-  },
-  rosterCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(128,128,128,0.3)',
-    borderRadius: 8,
-    marginBottom: 8,
-    overflow: 'hidden',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-  },
-  cardName: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  cardSummary: {
-    fontSize: 12,
-    opacity: 0.6,
-  },
-  chevron: {
-    fontSize: 12,
-    opacity: 0.5,
-  },
-  cardBody: {
-    padding: 8,
-    paddingTop: 0,
-  },
-  rosterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  rosterMoveColumn: {
-    gap: 2,
-  },
-  moveButton: {
-    width: 28,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#999',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moveButtonDisabled: {
-    opacity: 0.3,
-  },
-  moveButtonText: {
-    fontSize: 11,
-  },
-  rosterNameInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 8,
-  },
-  rosterRemoveButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  removeText: {
-    color: '#d33',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  activeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  activeLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  codeChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  codeChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#999',
-  },
-  codeChipActive: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
-  },
-  codeChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  codeChipTextActive: {
-    color: '#fff',
-  },
-  addButton: {
-    marginTop: 4,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#999',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontWeight: '600',
-  },
-  inactiveToggle: {
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  inactiveToggleText: {
-    fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.6,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 48,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.background,
+    },
+    hint: {
+      fontSize: 13,
+      opacity: 0.7,
+      marginBottom: 8,
+      color: colors.text,
+    },
+    rosterCard: {
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: 8,
+      marginBottom: 8,
+      overflow: 'hidden',
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      padding: 12,
+    },
+    cardName: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    cardSummary: {
+      fontSize: 12,
+      opacity: 0.6,
+      color: colors.text,
+    },
+    chevron: {
+      fontSize: 12,
+      opacity: 0.5,
+      color: colors.text,
+    },
+    cardBody: {
+      padding: 8,
+      paddingTop: 0,
+    },
+    rosterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 6,
+    },
+    rosterMoveColumn: {
+      gap: 2,
+    },
+    moveButton: {
+      width: 28,
+      height: 18,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    moveButtonDisabled: {
+      opacity: 0.3,
+    },
+    moveButtonText: {
+      fontSize: 11,
+      color: colors.text,
+    },
+    rosterNameInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 8,
+      color: colors.text,
+    },
+    rosterRemoveButton: {
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+    },
+    removeText: {
+      color: colors.dangerStrong,
+      fontWeight: '700',
+      fontSize: 16,
+    },
+    activeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+    },
+    activeLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    codeChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    codeChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    codeChipActive: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    codeChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    codeChipTextActive: {
+      color: colors.onTint,
+    },
+    addButton: {
+      marginTop: 4,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.border,
+      alignItems: 'center',
+    },
+    addButtonText: {
+      fontWeight: '600',
+      color: colors.text,
+    },
+    inactiveToggle: {
+      marginTop: 16,
+      marginBottom: 4,
+    },
+    inactiveToggleText: {
+      fontSize: 13,
+      fontWeight: '600',
+      opacity: 0.6,
+      color: colors.text,
+    },
+  });
+}

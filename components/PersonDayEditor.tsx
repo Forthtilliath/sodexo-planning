@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
 
 type Props = {
@@ -61,6 +63,8 @@ export default function PersonDayEditor({
   holidays,
   onChangeCode,
 }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [otherCodeModalOpen, setOtherCodeModalOpen] = useState(false);
 
@@ -237,181 +241,190 @@ export default function PersonDayEditor({
 const COLUMN_WIDTH = '14.28%';
 const WEEKEND_WIDTH = '28.56%';
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 0,
-  },
-  hint: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 12,
-  },
-  holidayLegend: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 4,
-  },
-  weekdayRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  weekdayCell: {
-    width: COLUMN_WIDTH,
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  weekendCell: {
-    width: WEEKEND_WIDTH,
-  },
-  weekdayText: {
-    fontSize: 12,
-    fontWeight: '700',
-    opacity: 0.6,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: COLUMN_WIDTH,
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-  daySelectBox: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  dayCellSelected: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
-  },
-  dayLabel: {
-    fontSize: 11,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-  dayLabelSelected: {
-    color: '#fff',
-    opacity: 0.9,
-  },
-  weekendLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  weekendDayText: {
-    fontSize: 11,
-    opacity: 0.7,
-  },
-  weekendDivider: {
-    width: 1,
-    height: 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  weekendDividerSelected: {
-    backgroundColor: 'rgba(255,255,255,0.5)',
-  },
-  dayValue: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  dayValueSelected: {
-    color: '#fff',
-  },
-  daySelectBoxHoliday: {
-    borderColor: '#e08a00',
-    borderWidth: 2,
-  },
-  bulkBar: {
-    marginTop: 4,
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(47,149,220,0.1)',
-  },
-  bulkBarDisabled: {
-    opacity: 0.4,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
-  },
-  chip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: '#2f95dc',
-  },
-  chipText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  bulkRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  emptyCodeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#a33',
-    backgroundColor: '#fff',
-  },
-  emptyCodeButtonText: {
-    color: '#a33',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  otherCodeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#2f95dc',
-    backgroundColor: '#fff',
-  },
-  otherCodeButtonText: {
-    color: '#2f95dc',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  bulkClearButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  bulkClearText: {
-    color: '#a33',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxHeight: '70%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 8,
-  },
-  modalOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  modalOptionText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      marginTop: 0,
+    },
+    hint: {
+      fontSize: 12,
+      opacity: 0.7,
+      marginTop: 12,
+      color: colors.text,
+    },
+    holidayLegend: {
+      fontSize: 12,
+      opacity: 0.7,
+      marginTop: 4,
+      color: colors.text,
+    },
+    weekdayRow: {
+      flexDirection: 'row',
+      marginTop: 8,
+    },
+    weekdayCell: {
+      width: COLUMN_WIDTH,
+      alignItems: 'center',
+      paddingBottom: 4,
+    },
+    weekendCell: {
+      width: WEEKEND_WIDTH,
+    },
+    weekdayText: {
+      fontSize: 12,
+      fontWeight: '700',
+      opacity: 0.6,
+      color: colors.text,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    dayCell: {
+      width: COLUMN_WIDTH,
+      alignItems: 'center',
+      paddingVertical: 4,
+      paddingHorizontal: 2,
+    },
+    daySelectBox: {
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingVertical: 8,
+      alignItems: 'center',
+    },
+    dayCellSelected: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    dayLabel: {
+      fontSize: 11,
+      opacity: 0.7,
+      marginBottom: 4,
+      color: colors.text,
+    },
+    dayLabelSelected: {
+      color: colors.onTint,
+      opacity: 0.9,
+    },
+    weekendLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
+    },
+    weekendDayText: {
+      fontSize: 11,
+      opacity: 0.7,
+      color: colors.text,
+    },
+    weekendDivider: {
+      width: 1,
+      height: 10,
+      backgroundColor: 'rgba(128,128,128,0.3)',
+    },
+    weekendDividerSelected: {
+      backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    dayValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    dayValueSelected: {
+      color: colors.onTint,
+    },
+    daySelectBoxHoliday: {
+      borderColor: colors.holiday,
+      borderWidth: 2,
+    },
+    bulkBar: {
+      marginTop: 4,
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: colors.tintSoft,
+    },
+    bulkBarDisabled: {
+      opacity: 0.4,
+    },
+    chipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginBottom: 8,
+    },
+    chip: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: colors.tint,
+    },
+    chipText: {
+      color: colors.onTint,
+      fontWeight: '700',
+      fontSize: 13,
+    },
+    bulkRow: {
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+    },
+    emptyCodeButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      backgroundColor: colors.card,
+    },
+    emptyCodeButtonText: {
+      color: colors.danger,
+      fontWeight: '700',
+      fontSize: 13,
+    },
+    otherCodeButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.tint,
+      backgroundColor: colors.card,
+    },
+    otherCodeButtonText: {
+      color: colors.tint,
+      fontWeight: '700',
+      fontSize: 13,
+    },
+    bulkClearButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+    },
+    bulkClearText: {
+      color: colors.danger,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    modalCard: {
+      width: '100%',
+      maxHeight: '70%',
+      backgroundColor: colors.modalCard,
+      borderRadius: 12,
+      paddingVertical: 8,
+    },
+    modalOption: {
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+    },
+    modalOptionText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+  });
+}

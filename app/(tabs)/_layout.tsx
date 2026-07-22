@@ -1,17 +1,23 @@
 import { Tabs } from 'expo-router';
 import { ColorValue, Text } from 'react-native';
 
-import Colors from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 
 function TabIcon({ emoji, color }: { emoji: string; color: ColorValue }) {
   return <Text style={{ fontSize: 20, color }}>{emoji}</Text>;
 }
 
 export default function TabLayout() {
+  const colors = useThemeColors();
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
+        tabBarActiveTintColor: colors.tabIconSelected,
+        tabBarInactiveTintColor: colors.tabIconDefault,
+        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.borderSubtle },
+        headerStyle: { backgroundColor: colors.card },
+        headerTintColor: colors.text,
       }}>
       <Tabs.Screen
         name="index"

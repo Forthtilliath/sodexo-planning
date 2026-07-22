@@ -4,6 +4,8 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 
 import BottomSheet from '@/components/BottomSheet';
 import MonthCalendarView from '@/components/MonthCalendarView';
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { getCodeSchedules, getScans, getSettings, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
@@ -40,6 +42,8 @@ function monthYearLabel(scan: ScanRecord): string {
 
 export default function PlanningScreen() {
   const navigation = useNavigation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [settings, setSettings] = useState<Settings>({ myName: '' });
   const [groups, setGroups] = useState<TeamGroup[]>([]);
@@ -199,7 +203,7 @@ export default function PlanningScreen() {
               setViewingName(name);
               setColleaguePickerOpen(false);
             }}>
-            <Text>
+            <Text style={styles.employeeRowText}>
               {name || `Ligne ${index + 1}`}
               {index === myRowIndex ? ' (moi)' : ''}
             </Text>
@@ -216,7 +220,7 @@ export default function PlanningScreen() {
               setSelectedScanId(scan.id);
               setPastMonthsPickerOpen(false);
             }}>
-            <Text>{monthYearLabel(scan)}</Text>
+            <Text style={styles.employeeRowText}>{monthYearLabel(scan)}</Text>
           </Pressable>
         ))}
       </BottomSheet>
@@ -231,7 +235,7 @@ export default function PlanningScreen() {
               key={index}
               style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
               onPress={() => setManualRowIndex(index)}>
-              <Text>{name || `Ligne ${index + 1}`}</Text>
+              <Text style={styles.employeeRowText}>{name || `Ligne ${index + 1}`}</Text>
             </Pressable>
           ))}
         </View>
@@ -307,202 +311,218 @@ export default function PlanningScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  scanPickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  pastMonthsButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#999',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  pastMonthsButtonText: {
-    fontSize: 16,
-  },
-  scanPicker: {
-    flex: 1,
-  },
-  scanChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#999',
-    marginRight: 8,
-  },
-  scanChipActive: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
-  },
-  scanChipText: {
-    fontWeight: '600',
-  },
-  scanChipTextActive: {
-    color: '#fff',
-  },
-  viewerRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  viewerButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#999',
-    alignItems: 'center',
-  },
-  viewerButtonActive: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
-  },
-  viewerButtonText: {
-    fontWeight: '600',
-  },
-  viewerButtonTextActive: {
-    color: '#fff',
-  },
-  notFoundBox: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(200,50,50,0.08)',
-    marginBottom: 16,
-  },
-  notFoundText: {
-    marginBottom: 8,
-  },
-  employeeRow: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  employeeRowDivider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
-  },
-  viewModeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  viewModeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#999',
-  },
-  viewModeButtonActive: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
-  },
-  viewModeText: {
-    fontWeight: '600',
-  },
-  viewModeTextActive: {
-    color: '#fff',
-  },
-  hoursToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 10,
-    marginBottom: 12,
-  },
-  hoursToggleLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  dayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
-  },
-  dayRowHoliday: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#e08a00',
-    paddingLeft: 8,
-  },
-  dayHolidayTag: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#e08a00',
-  },
-  dayDate: {
-    width: 64,
-  },
-  dayDateText: {
-    fontWeight: '600',
-  },
-  dayInfo: {
-    flex: 1,
-  },
-  dayCodeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  groupDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  dayCode: {
-    fontWeight: 'bold',
-  },
-  daySchedule: {
-    fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.7,
-  },
-  dayTeammates: {
-    fontSize: 13,
-    fontWeight: '400',
-    opacity: 0.8,
-  },
-  exportButton: {
-    marginTop: 20,
-    paddingVertical: 14,
-    borderRadius: 8,
-    backgroundColor: '#2f95dc',
-    alignItems: 'center',
-  },
-  exportButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#fff',
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  emptyHint: {
-    textAlign: 'center',
-    opacity: 0.7,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 48,
+    },
+    scanPickerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    pastMonthsButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 8,
+    },
+    pastMonthsButtonText: {
+      fontSize: 16,
+    },
+    scanPicker: {
+      flex: 1,
+    },
+    scanChip: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: 8,
+    },
+    scanChipActive: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    scanChipText: {
+      fontWeight: '600',
+      color: colors.text,
+    },
+    scanChipTextActive: {
+      color: colors.onTint,
+    },
+    viewerRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 12,
+    },
+    viewerButton: {
+      flex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+    },
+    viewerButtonActive: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    viewerButtonText: {
+      fontWeight: '600',
+      color: colors.text,
+    },
+    viewerButtonTextActive: {
+      color: colors.onTint,
+    },
+    notFoundBox: {
+      padding: 12,
+      borderRadius: 8,
+      backgroundColor: colors.dangerSoft,
+      marginBottom: 16,
+    },
+    notFoundText: {
+      marginBottom: 8,
+      color: colors.text,
+    },
+    employeeRow: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+    },
+    employeeRowDivider: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.divider,
+    },
+    employeeRowText: {
+      color: colors.text,
+    },
+    viewModeRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 12,
+    },
+    viewModeButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    viewModeButtonActive: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    viewModeText: {
+      fontWeight: '600',
+      color: colors.text,
+    },
+    viewModeTextActive: {
+      color: colors.onTint,
+    },
+    hoursToggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: 10,
+      marginBottom: 12,
+    },
+    hoursToggleLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    dayRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.divider,
+    },
+    dayRowHoliday: {
+      borderLeftWidth: 3,
+      borderLeftColor: colors.holiday,
+      paddingLeft: 8,
+    },
+    dayHolidayTag: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.holiday,
+    },
+    dayDate: {
+      width: 64,
+    },
+    dayDateText: {
+      fontWeight: '600',
+      color: colors.text,
+    },
+    dayInfo: {
+      flex: 1,
+    },
+    dayCodeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    groupDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    dayCode: {
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    daySchedule: {
+      fontSize: 13,
+      fontWeight: '600',
+      opacity: 0.7,
+      color: colors.text,
+    },
+    dayTeammates: {
+      fontSize: 13,
+      fontWeight: '400',
+      opacity: 0.8,
+      color: colors.text,
+    },
+    exportButton: {
+      marginTop: 20,
+      paddingVertical: 14,
+      borderRadius: 8,
+      backgroundColor: colors.tint,
+      alignItems: 'center',
+    },
+    exportButtonText: {
+      color: colors.onTint,
+      fontWeight: '700',
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      backgroundColor: colors.background,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      marginBottom: 8,
+      color: colors.text,
+    },
+    emptyHint: {
+      textAlign: 'center',
+      opacity: 0.7,
+      color: colors.text,
+    },
+  });
+}

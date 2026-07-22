@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
 import { formatScheduleHours, type DayPlanning } from '@/lib/teams';
 
@@ -28,6 +31,8 @@ function hexToSoftBackground(hex: string): string {
 
 /** Vue calendrier en lecture seule : touche un jour pour voir le détail (code + coéquipiers). */
 export default function MonthCalendarView({ planning, holidays, showHours }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const leadingBlanks = planning.length > 0 ? mondayFirstWeekday(planning[0].date) : 0;
   const holidaySet = new Set(holidays);
 
@@ -82,44 +87,49 @@ export default function MonthCalendarView({ planning, holidays, showHours }: Pro
 
 const COLUMN_WIDTH = '14.28%';
 
-const styles = StyleSheet.create({
-  weekdayRow: {
-    flexDirection: 'row',
-  },
-  weekdayText: {
-    fontSize: 12,
-    fontWeight: '700',
-    opacity: 0.6,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  cell: {
-    width: COLUMN_WIDTH,
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-  dayBox: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  dayBoxHoliday: {
-    borderColor: '#e08a00',
-    borderWidth: 2,
-  },
-  dayLabel: {
-    fontSize: 11,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-  dayCode: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    weekdayRow: {
+      flexDirection: 'row',
+    },
+    weekdayText: {
+      fontSize: 12,
+      fontWeight: '700',
+      opacity: 0.6,
+      color: colors.text,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    cell: {
+      width: COLUMN_WIDTH,
+      alignItems: 'center',
+      paddingVertical: 4,
+      paddingHorizontal: 2,
+    },
+    dayBox: {
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingVertical: 8,
+      alignItems: 'center',
+    },
+    dayBoxHoliday: {
+      borderColor: colors.holiday,
+      borderWidth: 2,
+    },
+    dayLabel: {
+      fontSize: 11,
+      opacity: 0.7,
+      marginBottom: 4,
+      color: colors.text,
+    },
+    dayCode: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text,
+    },
+  });
+}

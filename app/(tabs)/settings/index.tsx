@@ -1,5 +1,9 @@
 import { router } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 
 const MENU = [
   { href: '/settings/backup', emoji: '💾', title: 'Sauvegarde', hint: 'Exporter / importer toutes tes données' },
@@ -18,6 +22,9 @@ const MENU = [
 ] as const;
 
 export default function SettingsMenu() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {MENU.map((item) => (
@@ -34,40 +41,46 @@ export default function SettingsMenu() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(128,128,128,0.3)',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 10,
-  },
-  emoji: {
-    fontSize: 24,
-  },
-  textColumn: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  rowHint: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 2,
-  },
-  chevron: {
-    fontSize: 22,
-    opacity: 0.4,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: 10,
+      padding: 14,
+      marginBottom: 10,
+    },
+    emoji: {
+      fontSize: 24,
+    },
+    textColumn: {
+      flex: 1,
+    },
+    rowTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    rowHint: {
+      fontSize: 12,
+      opacity: 0.7,
+      marginTop: 2,
+      color: colors.text,
+    },
+    chevron: {
+      fontSize: 22,
+      opacity: 0.4,
+      color: colors.text,
+    },
+  });
+}

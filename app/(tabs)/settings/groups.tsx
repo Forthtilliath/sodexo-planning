@@ -1,11 +1,15 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { getTeamGroups } from '@/lib/db';
 import type { TeamGroup } from '@/types';
 
 export default function GroupsScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
 
   const load = useCallback(async () => {
@@ -42,41 +46,47 @@ export default function GroupsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  hint: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 12,
-  },
-  groupCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(128,128,128,0.4)',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  groupLabel: {
-    fontWeight: '700',
-  },
-  groupCodes: {
-    opacity: 0.8,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 48,
+    },
+    hint: {
+      fontSize: 13,
+      opacity: 0.7,
+      marginBottom: 12,
+      color: colors.text,
+    },
+    groupCard: {
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 10,
+    },
+    groupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 4,
+    },
+    colorDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+    },
+    groupLabel: {
+      fontWeight: '700',
+      color: colors.text,
+    },
+    groupCodes: {
+      opacity: 0.8,
+      color: colors.text,
+    },
+  });
+}

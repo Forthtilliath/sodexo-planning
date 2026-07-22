@@ -1,7 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { pickAndImportBackup, shareBackup } from '@/lib/backup';
 import { getSettings, saveSettings } from '@/lib/db';
 import {
@@ -12,6 +14,8 @@ import {
 } from '@/lib/notifications';
 
 export default function BackupScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -127,54 +131,60 @@ export default function BackupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  hint: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  reminderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 24,
-  },
-  reminderTextColumn: {
-    flex: 1,
-  },
-  reminderLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  reminderHint: {
-    fontSize: 13,
-    opacity: 0.7,
-  },
-  secondaryButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#2f95dc',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: '#2f95dc',
-    fontWeight: '700',
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+    },
+    hint: {
+      fontSize: 13,
+      opacity: 0.7,
+      marginBottom: 16,
+      color: colors.text,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    reminderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 24,
+    },
+    reminderTextColumn: {
+      flex: 1,
+    },
+    reminderLabel: {
+      fontSize: 15,
+      fontWeight: '600',
+      marginBottom: 4,
+      color: colors.text,
+    },
+    reminderHint: {
+      fontSize: 13,
+      opacity: 0.7,
+      color: colors.text,
+    },
+    secondaryButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.tint,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    secondaryButtonText: {
+      color: colors.tint,
+      fontWeight: '700',
+    },
+    buttonDisabled: {
+      opacity: 0.4,
+    },
+  });
+}
