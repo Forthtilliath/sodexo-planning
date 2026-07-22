@@ -2,6 +2,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 import { exportAllData, importAllData, type BackupData } from './db';
+import { timestampCompact } from './dates';
 
 function isValidBackup(data: unknown): data is BackupData {
   if (!data || typeof data !== 'object') return false;
@@ -19,7 +20,7 @@ function isValidBackup(data: unknown): data is BackupData {
 /** Exporte toutes les données de l'app dans un fichier JSON et ouvre le partage natif (mail, Drive, fichiers...). */
 export async function shareBackup(): Promise<void> {
   const data = await exportAllData();
-  const filename = `rn-planning-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = `sodexo-planning-sauvegarde-${timestampCompact()}.json`;
   const file = new File(Paths.cache, filename);
   if (file.exists) {
     file.delete();

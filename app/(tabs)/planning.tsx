@@ -94,7 +94,9 @@ export default function PlanningScreen() {
     setExporting(true);
     try {
       const ics = buildIcs(selectedScan, groups, myRowIndex, schedules);
-      const filename = `planning-${selectedScan.year}-${String(selectedScan.month).padStart(2, '0')}.ics`;
+      const employeeSlug = selectedScan.employees[myRowIndex].trim().replace(/\s+/g, '-');
+      const yearMonth = `${selectedScan.year}${String(selectedScan.month).padStart(2, '0')}`;
+      const filename = `sodexo-planning-${yearMonth}-${employeeSlug}.ics`;
       await shareIcs(filename, ics);
     } catch (err) {
       Alert.alert('Export impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
