@@ -18,7 +18,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.forth.sodexoplanning"
+      "package": "com.forth.sodexoplanning",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
