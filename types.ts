@@ -3,6 +3,8 @@ export type Settings = {
   // Rappel local la veille de chaque jour travaillé ; absent = désactivé.
   remindersEnabled?: boolean;
   reminderHour?: number; // heure du rappel (0-23) ; absent = 19h par défaut
+  // Rappel récurrent incitant à exporter une sauvegarde ; absent = désactivé.
+  backupReminderEnabled?: boolean;
 };
 
 export type TeamGroup = {
