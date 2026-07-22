@@ -1,6 +1,6 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-const CONTACT_EMAIL = 'forth.jdronline@gmail.com';
+const CONTACT_EMAIL = 'vincent.lisita@gmail.com';
 
 export default function ContactScreen() {
   return (

@@ -21,7 +21,7 @@ export default function AboutScreen() {
 
       <View style={styles.separator} />
 
-      <Text style={styles.hint}>Développée par Forthtilliath.</Text>
+      <Text style={styles.hint}>Développée par Vincent LISITA.</Text>
     </ScrollView>
   );
 }
