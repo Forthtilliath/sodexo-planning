@@ -23,6 +23,10 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Planning',
+          // Le titre de l'en-tête est mis à jour dynamiquement (index.tsx)
+          // pour afficher "Planning de X" ; le libellé de l'onglet, lui,
+          // doit rester fixe.
+          tabBarLabel: 'Planning',
           tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
         }}
       />
