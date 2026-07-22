@@ -65,6 +65,29 @@ describe('rescheduleWorkReminders', () => {
     expect(trigger.date).toEqual(new Date(2026, 6, 14, DEFAULT_REMINDER_HOUR, 0, 0, 0));
   });
 
+  it('mentionne les coéquipiers du même groupe dans le corps de la notification', async () => {
+    await saveSettings({ myName: 'Moi' });
+    // D1 et D2 font partie du même groupe par défaut (voir DEFAULT_TEAM_GROUPS dans lib/db.ts).
+    await saveScan(
+      makeScan({ days: ['2026-07-15'], employees: ['Moi', 'Coéquipier'], grid: [['D1'], ['D2']] })
+    );
+
+    await rescheduleWorkReminders();
+
+    const [{ content }] = scheduleMock.mock.calls[0];
+    expect(content.body).toBe('Poste : D1 · Avec Coéquipier');
+  });
+
+  it("n'ajoute rien après le poste s'il n'y a pas de coéquipier", async () => {
+    await saveSettings({ myName: 'Moi' });
+    await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
+
+    await rescheduleWorkReminders();
+
+    const [{ content }] = scheduleMock.mock.calls[0];
+    expect(content.body).toBe('Poste : D1');
+  });
+
   it("utilise l'heure configurée dans les réglages plutôt que l'heure par défaut", async () => {
     await saveSettings({ myName: 'Moi', reminderHour: 21 });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
