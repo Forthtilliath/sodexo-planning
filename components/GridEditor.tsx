@@ -35,7 +35,11 @@ export default function GridEditor({ days, employees, grid, onRemoveRow, onAddEm
         const filledCount = (grid[rowIndex] ?? []).filter((c) => c.trim()).length;
         return (
           <View key={rowIndex} style={styles.row}>
-            <Pressable style={styles.deleteButton} onPress={() => confirmRemove(rowIndex, name)}>
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => confirmRemove(rowIndex, name)}
+              accessibilityRole="button"
+              accessibilityLabel={`Supprimer ${name || `Employé ${rowIndex + 1}`}`}>
               <Text style={styles.deleteText}>×</Text>
             </Pressable>
             <View style={styles.nameColumn}>

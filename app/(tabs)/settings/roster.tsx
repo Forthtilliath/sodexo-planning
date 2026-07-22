@@ -144,13 +144,17 @@ export default function RosterScreen() {
                 <Pressable
                   style={[styles.moveButton, posInGroup === 0 && styles.moveButtonDisabled]}
                   disabled={posInGroup === 0}
-                  onPress={() => moveName(index, -1)}>
+                  onPress={() => moveName(index, -1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Monter ${entry.name || `Salarié ${index + 1}`}`}>
                   <Text style={styles.moveButtonText}>↑</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.moveButton, posInGroup === group.length - 1 && styles.moveButtonDisabled]}
                   disabled={posInGroup === group.length - 1}
-                  onPress={() => moveName(index, 1)}>
+                  onPress={() => moveName(index, 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Descendre ${entry.name || `Salarié ${index + 1}`}`}>
                   <Text style={styles.moveButtonText}>↓</Text>
                 </Pressable>
               </View>
@@ -161,7 +165,12 @@ export default function RosterScreen() {
                 placeholder={`Salarié ${index + 1}`}
                 placeholderTextColor={colors.border}
               />
-              <Pressable onPress={() => removeName(index, entry.name)} hitSlop={8} style={styles.rosterRemoveButton}>
+              <Pressable
+                onPress={() => removeName(index, entry.name)}
+                hitSlop={8}
+                style={styles.rosterRemoveButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Supprimer ${entry.name || `Salarié ${index + 1}`}`}>
                 <Text style={styles.removeText}>×</Text>
               </Pressable>
             </View>

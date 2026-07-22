@@ -155,7 +155,11 @@ export default function PlanningScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.scanPickerRow}>
         {pastScans.length > 0 && (
-          <Pressable style={styles.pastMonthsButton} onPress={() => setPastMonthsPickerOpen(true)}>
+          <Pressable
+            style={styles.pastMonthsButton}
+            onPress={() => setPastMonthsPickerOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Mois précédents">
             <Text style={styles.pastMonthsButtonText}>🕓</Text>
           </Pressable>
         )}
