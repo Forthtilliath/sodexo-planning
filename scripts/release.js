@@ -31,8 +31,9 @@ if (bumpType) {
 
 run('npx expo prebuild --clean --platform android');
 
-const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-run(`${gradlew} assembleRelease`, path.join(root, 'android'));
+const androidDir = path.join(root, 'android');
+const gradlewPath = path.join(androidDir, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
+run(`"${gradlewPath}" assembleRelease`, androidDir);
 
 const apkPath = path.join(root, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
 if (!fs.existsSync(apkPath)) {
