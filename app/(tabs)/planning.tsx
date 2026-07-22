@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from 'expo-router';
 
+import BottomSheet from '@/components/BottomSheet';
 import MonthCalendarView from '@/components/MonthCalendarView';
 import { getCodeSchedules, getScans, getSettings, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
@@ -32,6 +33,11 @@ function formatDate(iso: string): string {
   return `${weekday} ${date.getDate()}`;
 }
 
+function monthYearLabel(scan: ScanRecord): string {
+  const month = MONTH_NAMES[scan.month - 1];
+  return `${month.charAt(0).toUpperCase()}${month.slice(1)} ${scan.year}`;
+}
+
 export default function PlanningScreen() {
   const navigation = useNavigation();
   const [scans, setScans] = useState<ScanRecord[]>([]);
@@ -40,8 +46,9 @@ export default function PlanningScreen() {
   const [schedules, setSchedules] = useState<CodeSchedule[]>([]);
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [manualRowIndex, setManualRowIndex] = useState<number | null>(null);
-  const [viewingIndex, setViewingIndex] = useState<number | null>(null);
+  const [viewingName, setViewingName] = useState<string | null>(null);
   const [colleaguePickerOpen, setColleaguePickerOpen] = useState(false);
+  const [pastMonthsPickerOpen, setPastMonthsPickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showHours, setShowHours] = useState(false);
@@ -67,20 +74,44 @@ export default function PlanningScreen() {
 
   const selectedScan = useMemo(() => scans.find((s) => s.id === selectedScanId) ?? null, [scans, selectedScanId]);
 
+  // Sépare les plannings du mois courant/à venir (affichés en haut) de ceux
+  // déjà passés (rangés dans une popup dédiée, plus loin dans la page).
+  const { visibleScans, pastScans } = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const visible: ScanRecord[] = [];
+    const past: ScanRecord[] = [];
+    for (const scan of scans) {
+      const isPast = scan.year < currentYear || (scan.year === currentYear && scan.month < currentMonth);
+      (isPast ? past : visible).push(scan);
+    }
+    past.sort((a, b) => b.year - a.year || b.month - a.month);
+    return { visibleScans: visible, pastScans: past };
+  }, [scans]);
+
   const myRowIndex = useMemo(() => {
     if (!selectedScan) return -1;
     if (manualRowIndex !== null) return manualRowIndex;
     return findMyRowIndex(selectedScan, settings.myName);
   }, [selectedScan, settings.myName, manualRowIndex]);
 
-  const viewingSomeoneElse = viewingIndex !== null && viewingIndex !== myRowIndex;
+  // Le nom du collègue consulté est conservé (pas son index de ligne), pour
+  // rester sur la même personne quand on change de planning plutôt que de
+  // revenir sur "moi" à chaque fois.
+  const viewingIndex = useMemo(() => {
+    if (!selectedScan || viewingName === null) return -1;
+    return findMyRowIndex(selectedScan, viewingName);
+  }, [selectedScan, viewingName]);
+
+  const viewingSomeoneElse = viewingIndex >= 0 && viewingIndex !== myRowIndex;
   const displayRowIndex = viewingSomeoneElse ? viewingIndex : myRowIndex;
 
   // Le titre natif de l'écran affiche "Planning de X" quand on consulte un
   // collègue, plutôt qu'un second titre en double dans la page.
   useEffect(() => {
     navigation.setOptions({
-      title: viewingSomeoneElse ? `Planning de ${selectedScan?.employees[viewingIndex!] || '—'}` : 'Mon planning',
+      title: viewingSomeoneElse ? `Planning de ${selectedScan?.employees[viewingIndex] || '—'}` : 'Mon planning',
     });
   }, [navigation, viewingSomeoneElse, selectedScan, viewingIndex]);
 
@@ -118,55 +149,77 @@ export default function PlanningScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scanPicker}>
-        {scans.map((scan) => (
-          <Pressable
-            key={scan.id}
-            style={[styles.scanChip, scan.id === selectedScanId && styles.scanChipActive]}
-            onPress={() => {
-              setSelectedScanId(scan.id);
-              setManualRowIndex(null);
-              setViewingIndex(null);
-              setColleaguePickerOpen(false);
-            }}>
-            <Text style={[styles.scanChipText, scan.id === selectedScanId && styles.scanChipTextActive]}>
-              {MONTH_NAMES[scan.month - 1]} {scan.year}
-            </Text>
+      <View style={styles.scanPickerRow}>
+        {pastScans.length > 0 && (
+          <Pressable style={styles.pastMonthsButton} onPress={() => setPastMonthsPickerOpen(true)}>
+            <Text style={styles.pastMonthsButtonText}>🕓</Text>
           </Pressable>
-        ))}
-      </ScrollView>
-
-      {selectedScan && selectedScan.employees.length > 0 && (
-        <View style={styles.colleagueBar}>
-          <Pressable style={styles.colleagueButton} onPress={() => setColleaguePickerOpen((v) => !v)}>
-            <Text style={styles.colleagueButtonText}>👥 Voir le planning d'un(e) collègue</Text>
-          </Pressable>
-          {viewingSomeoneElse && (
-            <Pressable onPress={() => setViewingIndex(null)}>
-              <Text style={styles.colleagueReset}>Revenir à mon planning</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
-      {colleaguePickerOpen && selectedScan && (
-        <View style={styles.pickerBox}>
-          {selectedScan.employees.map((name, index) => (
+        )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scanPicker}>
+          {visibleScans.map((scan) => (
             <Pressable
-              key={index}
-              style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
-              onPress={() => {
-                setViewingIndex(index);
-                setColleaguePickerOpen(false);
-              }}>
-              <Text>
-                {name || `Ligne ${index + 1}`}
-                {index === myRowIndex ? ' (moi)' : ''}
+              key={scan.id}
+              style={[styles.scanChip, scan.id === selectedScanId && styles.scanChipActive]}
+              onPress={() => setSelectedScanId(scan.id)}>
+              <Text style={[styles.scanChipText, scan.id === selectedScanId && styles.scanChipTextActive]}>
+                {monthYearLabel(scan)}
               </Text>
             </Pressable>
           ))}
+        </ScrollView>
+      </View>
+
+      {selectedScan && selectedScan.employees.length > 0 && (
+        <View style={styles.viewerRow}>
+          <Pressable
+            style={[styles.viewerButton, viewingSomeoneElse && styles.viewerButtonActive]}
+            onPress={() => setColleaguePickerOpen(true)}>
+            <Text
+              style={[styles.viewerButtonText, viewingSomeoneElse && styles.viewerButtonTextActive]}
+              numberOfLines={1}>
+              {viewingSomeoneElse ? `👥 ${selectedScan.employees[viewingIndex] || 'Collègue'}` : '👥 Un collègue'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.viewerButton, !viewingSomeoneElse && styles.viewerButtonActive]}
+            onPress={() => setViewingName(null)}>
+            <Text style={[styles.viewerButtonText, !viewingSomeoneElse && styles.viewerButtonTextActive]}>
+              🙋 Mon planning
+            </Text>
+          </Pressable>
         </View>
       )}
+
+      <BottomSheet visible={colleaguePickerOpen} onClose={() => setColleaguePickerOpen(false)}>
+        {selectedScan?.employees.map((name, index) => (
+          <Pressable
+            key={index}
+            style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
+            onPress={() => {
+              setViewingName(name);
+              setColleaguePickerOpen(false);
+            }}>
+            <Text>
+              {name || `Ligne ${index + 1}`}
+              {index === myRowIndex ? ' (moi)' : ''}
+            </Text>
+          </Pressable>
+        ))}
+      </BottomSheet>
+
+      <BottomSheet visible={pastMonthsPickerOpen} onClose={() => setPastMonthsPickerOpen(false)}>
+        {pastScans.map((scan, index) => (
+          <Pressable
+            key={scan.id}
+            style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
+            onPress={() => {
+              setSelectedScanId(scan.id);
+              setPastMonthsPickerOpen(false);
+            }}>
+            <Text>{monthYearLabel(scan)}</Text>
+          </Pressable>
+        ))}
+      </BottomSheet>
 
       {selectedScan && !viewingSomeoneElse && myRowIndex < 0 && (
         <View style={styles.notFoundBox}>
@@ -201,10 +254,10 @@ export default function PlanningScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.hoursToggleRow}>
+          <Pressable style={styles.hoursToggleRow} onPress={() => setShowHours((v) => !v)}>
             <Text style={styles.hoursToggleLabel}>🕐 Afficher les horaires</Text>
             <Switch value={showHours} onValueChange={setShowHours} />
-          </View>
+          </Pressable>
 
           {viewMode === 'list' ? (
             planning.map((day) => {
@@ -244,7 +297,7 @@ export default function PlanningScreen() {
               {exporting
                 ? 'Export en cours…'
                 : viewingSomeoneElse
-                  ? `📤 Exporter le planning de ${selectedScan.employees[viewingIndex!] || 'ce/cette collègue'}`
+                  ? `📤 Exporter le planning de ${selectedScan.employees[viewingIndex] || 'ce/cette collègue'}`
                   : '📤 Exporter en agenda (.ics)'}
             </Text>
           </Pressable>
@@ -263,8 +316,26 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 48,
   },
-  scanPicker: {
+  scanPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  pastMonthsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#999',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  pastMonthsButtonText: {
+    fontSize: 16,
+  },
+  scanPicker: {
+    flex: 1,
   },
   scanChip: {
     paddingVertical: 8,
@@ -284,34 +355,29 @@ const styles = StyleSheet.create({
   scanChipTextActive: {
     color: '#fff',
   },
-  colleagueBar: {
+  viewerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    flexWrap: 'wrap',
     gap: 8,
+    marginBottom: 12,
   },
-  colleagueButton: {
+  viewerButton: {
+    flex: 1,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#999',
+    alignItems: 'center',
   },
-  colleagueButtonText: {
+  viewerButtonActive: {
+    backgroundColor: '#2f95dc',
+    borderColor: '#2f95dc',
+  },
+  viewerButtonText: {
     fontWeight: '600',
   },
-  colleagueReset: {
-    color: '#2f95dc',
-    fontWeight: '600',
-  },
-  pickerBox: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(128,128,128,0.3)',
-    marginBottom: 16,
+  viewerButtonTextActive: {
+    color: '#fff',
   },
   notFoundBox: {
     padding: 12,
@@ -323,7 +389,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   employeeRow: {
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   employeeRowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -354,7 +421,8 @@ const styles = StyleSheet.create({
   hoursToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    alignSelf: 'flex-start',
+    gap: 10,
     marginBottom: 12,
   },
   hoursToggleLabel: {
