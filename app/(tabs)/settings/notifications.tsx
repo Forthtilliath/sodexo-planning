@@ -1,7 +1,9 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { getSettings, saveSettings } from '@/lib/db';
 import {
   DEFAULT_REMINDER_HOUR,
@@ -13,6 +15,8 @@ import {
 const HOUR_OPTIONS = Array.from({ length: 8 }, (_, i) => 16 + i); // 16h à 23h
 
 export default function NotificationsScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [enabled, setEnabled] = useState(false);
   const [reminderHour, setReminderHour] = useState(DEFAULT_REMINDER_HOUR);
   const [busy, setBusy] = useState(false);
@@ -132,72 +136,79 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  rowDisabled: {
-    opacity: 0.4,
-  },
-  textColumn: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  hint: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 8,
-  },
-  hourButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#2f95dc',
-  },
-  hourButtonText: {
-    color: '#2f95dc',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxHeight: '70%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 8,
-  },
-  modalOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  modalOptionText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 16,
+    },
+    rowDisabled: {
+      opacity: 0.4,
+    },
+    textColumn: {
+      flex: 1,
+    },
+    label: {
+      fontSize: 15,
+      fontWeight: '600',
+      marginBottom: 4,
+      color: colors.text,
+    },
+    hint: {
+      fontSize: 13,
+      opacity: 0.7,
+      marginBottom: 8,
+      color: colors.text,
+    },
+    hourButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.tint,
+    },
+    hourButtonText: {
+      color: colors.tint,
+      fontWeight: '700',
+      fontSize: 15,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    modalCard: {
+      width: '100%',
+      maxHeight: '70%',
+      backgroundColor: colors.modalCard,
+      borderRadius: 12,
+      paddingVertical: 8,
+    },
+    modalOption: {
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+    },
+    modalOptionText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+  });
+}

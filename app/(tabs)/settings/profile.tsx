@@ -1,11 +1,15 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeRoster, getSettings, saveEmployeeRoster, saveSettings } from '@/lib/db';
 import type { RosterEntry } from '@/types';
 
 export default function ProfileScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [myName, setMyName] = useState('');
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -57,6 +61,7 @@ export default function ProfileScreen() {
         onChangeText={setMyName}
         onBlur={ensureNameInRoster}
         placeholder="ex: MARTIN NICOLAS"
+        placeholderTextColor={colors.border}
         autoCapitalize="characters"
       />
       <Text style={styles.hint}>Automatiquement ajouté à la liste des salariés.</Text>
@@ -64,22 +69,27 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  hint: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 8,
-  },
-  nameInput: {
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 10,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+    },
+    hint: {
+      fontSize: 13,
+      opacity: 0.7,
+      marginBottom: 8,
+      color: colors.text,
+    },
+    nameInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 10,
+      color: colors.text,
+    },
+  });
+}

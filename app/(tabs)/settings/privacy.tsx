@@ -1,6 +1,13 @@
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
+
 export default function PrivacyScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Aucune donnée envoyée nulle part</Text>
@@ -32,27 +39,32 @@ export default function PrivacyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  paragraph: {
-    fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.85,
-    marginBottom: 8,
-  },
-  separator: {
-    height: 1,
-    marginVertical: 16,
-    backgroundColor: 'rgba(128,128,128,0.3)',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+    },
+    title: {
+      fontSize: 15,
+      fontWeight: '700',
+      marginBottom: 6,
+      color: colors.text,
+    },
+    paragraph: {
+      fontSize: 14,
+      lineHeight: 20,
+      opacity: 0.85,
+      marginBottom: 8,
+      color: colors.text,
+    },
+    separator: {
+      height: 1,
+      marginVertical: 16,
+      backgroundColor: colors.borderSubtle,
+    },
+  });
+}

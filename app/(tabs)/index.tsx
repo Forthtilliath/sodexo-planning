@@ -5,6 +5,8 @@ import { router, useFocusEffect, useNavigation } from 'expo-router';
 import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
 import PersonDayEditor from '@/components/PersonDayEditor';
+import type { ThemeColors } from '@/constants/Colors';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getScans, getSettings, getTeamGroups, saveScan } from '@/lib/db';
 import { rescheduleWorkReminders } from '@/lib/notifications';
 import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
@@ -60,6 +62,8 @@ type Step = 'home' | 'review';
 
 export default function PlanningEditorScreen() {
   const navigation = useNavigation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [step, setStep] = useState<Step>('home');
 
   const now = new Date();
@@ -286,7 +290,7 @@ export default function PlanningEditorScreen() {
               disabled={saveState === 'saving'}
               onPress={handleQuickSave}>
               {saveState === 'saving' ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.onTint} />
               ) : (
                 <Text style={styles.topSaveButtonText}>{saveState === 'saved' ? '✓ Enregistré' : '💾 Enregistrer'}</Text>
               )}
@@ -390,6 +394,8 @@ function SelectField({
   onSelect: (value: number) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.labeledInput}>
@@ -421,160 +427,170 @@ function SelectField({
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  headerArea: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
-  },
-  topActionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 6,
-  },
-  topBackButton: {
-    flexShrink: 1,
-  },
-  topBackButtonText: {
-    color: '#2f95dc',
-    fontWeight: '600',
-  },
-  topSaveButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#2f95dc',
-    minWidth: 110,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topSaveButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingTop: 0,
-    paddingBottom: 64,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  labeledInput: {
-    flex: 1,
-  },
-  inputLabel: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-  selectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 10,
-  },
-  selectButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  selectChevron: {
-    opacity: 0.5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxHeight: '70%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 8,
-  },
-  modalOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  modalOptionText: {
-    fontSize: 16,
-  },
-  hint: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 4,
-  },
-  separator: {
-    height: 1,
-    marginVertical: 20,
-    backgroundColor: 'rgba(128,128,128,0.3)',
-  },
-  savedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: 'rgba(128,128,128,0.3)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-  savedRowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  savedRowHint: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 2,
-  },
-  savedRowAction: {
-    color: '#2f95dc',
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  primaryButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#2f95dc',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  resetButton: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    color: '#a33',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    headerArea: {
+      paddingTop: 16,
+      paddingHorizontal: 16,
+    },
+    topActionBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginBottom: 6,
+    },
+    topBackButton: {
+      flexShrink: 1,
+    },
+    topBackButtonText: {
+      color: colors.tint,
+      fontWeight: '600',
+    },
+    topSaveButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      backgroundColor: colors.tint,
+      minWidth: 110,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    topSaveButtonText: {
+      color: colors.onTint,
+      fontWeight: '700',
+      fontSize: 13,
+    },
+    container: {
+      flex: 1,
+    },
+    content: {
+      padding: 16,
+      paddingTop: 0,
+      paddingBottom: 64,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      marginTop: 8,
+      marginBottom: 8,
+      color: colors.text,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    labeledInput: {
+      flex: 1,
+    },
+    inputLabel: {
+      fontSize: 12,
+      opacity: 0.7,
+      marginBottom: 4,
+      color: colors.text,
+    },
+    selectButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 10,
+    },
+    selectButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    selectChevron: {
+      opacity: 0.5,
+      color: colors.text,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    modalCard: {
+      width: '100%',
+      maxHeight: '70%',
+      backgroundColor: colors.modalCard,
+      borderRadius: 12,
+      paddingVertical: 8,
+    },
+    modalOption: {
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+    },
+    modalOptionText: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    hint: {
+      fontSize: 12,
+      opacity: 0.7,
+      marginTop: 4,
+      color: colors.text,
+    },
+    separator: {
+      height: 1,
+      marginVertical: 20,
+      backgroundColor: colors.borderSubtle,
+    },
+    savedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 8,
+    },
+    savedRowTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    savedRowHint: {
+      fontSize: 12,
+      opacity: 0.7,
+      marginTop: 2,
+      color: colors.text,
+    },
+    savedRowAction: {
+      color: colors.tint,
+      fontWeight: '600',
+    },
+    buttonDisabled: {
+      opacity: 0.4,
+    },
+    primaryButton: {
+      marginTop: 16,
+      paddingVertical: 12,
+      borderRadius: 8,
+      backgroundColor: colors.tint,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+    },
+    primaryButtonText: {
+      color: colors.onTint,
+      fontWeight: '700',
+    },
+    resetButton: {
+      marginTop: 24,
+      alignItems: 'center',
+    },
+    resetButtonText: {
+      color: colors.danger,
+    },
+  });
+}
