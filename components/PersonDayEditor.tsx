@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -98,6 +99,7 @@ export default function PersonDayEditor({
   }
 
   function toggleCell(cell: Cell) {
+    Haptics.selectionAsync();
     const indices = cellIndices(cell);
     setSelected((prev) => {
       const next = new Set(prev);
