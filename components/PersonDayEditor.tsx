@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
+
 type Props = {
   days: string[]; // dates ISO, une par colonne
   codes: string[]; // un code par jour, pour cette seule personne
@@ -14,16 +16,6 @@ const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'WE'];
 const HOLIDAY_CODES = ['F1', 'F2', 'F3', 'F4', 'F5'];
 
 type Cell = { kind: 'day'; index: number } | { kind: 'weekend'; satIndex: number; sunIndex: number };
-
-/** Index du jour de la semaine avec lundi = 0 ... dimanche = 6 (au lieu du dimanche = 0 par défaut de JS). */
-function mondayFirstWeekday(iso: string): number {
-  const jsDay = new Date(`${iso}T00:00:00`).getDay();
-  return (jsDay + 6) % 7;
-}
-
-function dayNumber(iso: string): number {
-  return new Date(`${iso}T00:00:00`).getDate();
-}
 
 /** Week-end ou jour férié : ces jours-là, seuls les codes F1-F5 ont du sens. */
 function isSpecialDay(iso: string, holidays: Set<string>): boolean {

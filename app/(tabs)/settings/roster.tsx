@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
@@ -95,7 +95,7 @@ export default function RosterScreen() {
 
   // Les codes proposés à cocher viennent des groupes de postes déjà définis :
   // pas besoin de les retaper, et ça reste cohérent avec le reste.
-  const allKnownCodes = Array.from(new Set(groups.flatMap((g) => g.codes))).sort();
+  const allKnownCodes = useMemo(() => Array.from(new Set(groups.flatMap((g) => g.codes))).sort(), [groups]);
 
   function toggleCodeForEmployee(name: string, code: string) {
     setCodeOptions((prev) => {

@@ -114,7 +114,7 @@ export function saveTeamGroups(groups: TeamGroup[]): Promise<void> {
 	return writeJson(KEYS.teamGroups, groups);
 }
 
-/** Liste des salariés, gérée dans Réglages et réutilisée à chaque saisie (photo, OCR ou manuelle). */
+/** Liste des salariés, gérée dans Réglages et réutilisée à chaque planning. */
 export async function getEmployeeRoster(): Promise<RosterEntry[]> {
 	const raw = await AsyncStorage.getItem(KEYS.roster);
 	if (!raw) return DEFAULT_ROSTER;
@@ -174,19 +174,6 @@ export async function saveScan(scan: ScanRecord): Promise<void> {
 	}
 	scans.sort((a, b) => b.createdAt - a.createdAt);
 	await writeJson(KEYS.scans, scans);
-}
-
-export async function deleteScan(id: string): Promise<void> {
-	const scans = await getScans();
-	await writeJson(
-		KEYS.scans,
-		scans.filter((s) => s.id !== id),
-	);
-}
-
-export async function getScanById(id: string): Promise<ScanRecord | undefined> {
-	const scans = await getScans();
-	return scans.find((s) => s.id === id);
 }
 
 export type BackupData = {

@@ -1,5 +1,6 @@
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
 import { formatScheduleHours, type DayPlanning } from '@/lib/teams';
 
 type Props = {
@@ -9,15 +10,6 @@ type Props = {
 };
 
 const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-function mondayFirstWeekday(iso: string): number {
-  const jsDay = new Date(`${iso}T00:00:00`).getDay();
-  return (jsDay + 6) % 7;
-}
-
-function dayNumber(iso: string): number {
-  return new Date(`${iso}T00:00:00`).getDate();
-}
 
 function formatFullDate(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);

@@ -13,7 +13,7 @@ export default function ProfileScreen() {
   const load = useCallback(async () => {
     const [settings, employeeRoster] = await Promise.all([getSettings(), getEmployeeRoster()]);
     // "Mon nom" doit toujours faire partie de la liste des salariés, sinon
-    // impossible de retrouver sa propre ligne dans un scan.
+    // impossible de retrouver sa propre ligne dans un planning.
     const trimmedName = settings.myName.trim();
     const alreadyInRoster = employeeRoster.some((r) => r.name.trim().toLowerCase() === trimmedName.toLowerCase());
     setMyName(settings.myName);
@@ -49,7 +49,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.hint}>
-        Doit correspondre au nom tel qu'il apparaît dans le tableau scanné (pour retrouver ta ligne).
+        Doit correspondre au nom utilisé dans tes plannings (pour retrouver ta ligne).
       </Text>
       <TextInput
         style={styles.nameInput}

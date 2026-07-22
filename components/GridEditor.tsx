@@ -9,12 +9,12 @@ type Props = {
   onOpenRow: (rowIndex: number) => void;
 };
 
-/** Liste des salariés du scan : un par ligne, avec un résumé de remplissage et un accès à l'éditeur par personne. */
+/** Liste des salariés du planning : un par ligne, avec un résumé de remplissage et un accès à l'éditeur par personne. */
 export default function GridEditor({ days, employees, grid, onRemoveRow, onAddEmployee, onOpenRow }: Props) {
   function confirmRemove(rowIndex: number, name: string) {
     Alert.alert(
       'Supprimer cette ligne ?',
-      `"${name || `Employé ${rowIndex + 1}`}" et son planning seront retirés de ce scan.`,
+      `"${name || `Employé ${rowIndex + 1}`}" sera retiré de ce planning.`,
       [
         { text: 'Annuler', style: 'cancel' },
         { text: 'Supprimer', style: 'destructive', onPress: () => onRemoveRow(rowIndex) },

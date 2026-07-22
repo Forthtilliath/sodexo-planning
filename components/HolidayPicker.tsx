@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
+
 type Props = {
   days: string[]; // dates ISO du mois
   holidays: Set<string>;
@@ -8,15 +10,6 @@ type Props = {
 };
 
 const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-function mondayFirstWeekday(iso: string): number {
-  const jsDay = new Date(`${iso}T00:00:00`).getDay();
-  return (jsDay + 6) % 7;
-}
-
-function dayNumber(iso: string): number {
-  return new Date(`${iso}T00:00:00`).getDate();
-}
 
 /**
  * Marque les jours fériés du mois (en plus des week-ends, déjà traités à

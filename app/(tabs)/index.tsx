@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 
@@ -57,7 +57,7 @@ function buildDays(year: number, month: number): string[] {
 
 type Step = 'home' | 'review';
 
-export default function ScannerScreen() {
+export default function PlanningEditorScreen() {
   const navigation = useNavigation();
   const [step, setStep] = useState<Step>('home');
 
@@ -71,10 +71,13 @@ export default function ScannerScreen() {
   const [grid, setGrid] = useState<string[][]>([]);
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [currentScanId, setCurrentScanId] = useState<string | null>(null);
-  const existingScan = scans.find((s) => s.year === year && s.month === month) ?? null;
+  const existingScan = useMemo(
+    () => scans.find((s) => s.year === year && s.month === month) ?? null,
+    [scans, year, month]
+  );
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
-  const allCodes = Array.from(new Set(groups.flatMap((g) => g.codes))).sort();
+  const allCodes = useMemo(() => Array.from(new Set(groups.flatMap((g) => g.codes))).sort(), [groups]);
   const [myName, setMyName] = useState('');
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
   const [holidays, setHolidays] = useState<Set<string>>(new Set());

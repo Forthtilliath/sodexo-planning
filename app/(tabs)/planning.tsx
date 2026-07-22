@@ -167,7 +167,7 @@ export default function PlanningScreen() {
       {selectedScan && !viewingSomeoneElse && myRowIndex < 0 && (
         <View style={styles.notFoundBox}>
           <Text style={styles.notFoundText}>
-            Nom "{settings.myName || '(non renseigné)'}" introuvable dans ce scan. Choisis ta ligne :
+            Nom "{settings.myName || '(non renseigné)'}" introuvable dans ce planning. Choisis ta ligne :
           </Text>
           {selectedScan.employees.map((name, index) => (
             <Pressable
