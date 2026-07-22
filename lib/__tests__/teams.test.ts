@@ -1,5 +1,14 @@
-import { computeDayPlanning, computeMonthPlanning, findMyRowIndex } from '@/lib/teams';
-import type { ScanRecord, TeamGroup } from '@/types';
+import {
+  computeDayPlanning,
+  computeMonthPlanning,
+  findGroupForCode,
+  findMyRowIndex,
+  findScheduleForCode,
+  formatScheduleHours,
+  normalizeCode,
+  normalizeName,
+} from '@/lib/teams';
+import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
 const groups: TeamGroup[] = [
   { id: 'd1-d4', label: 'D1-D4', codes: ['D1', 'D2', 'D3', 'D4'] },
@@ -25,6 +34,47 @@ const scan: ScanRecord = {
     ['X', 'X', 'X'],
   ],
 };
+
+describe('normalizeCode / normalizeName', () => {
+  it('normalizeCode retire les espaces et met en majuscules', () => {
+    expect(normalizeCode('  d1 ')).toBe('D1');
+    expect(normalizeCode('')).toBe('');
+  });
+
+  it('normalizeName met en minuscules et réduit les espaces multiples', () => {
+    expect(normalizeName('  Jean   Dupont ')).toBe('jean dupont');
+  });
+});
+
+describe('findGroupForCode', () => {
+  it('retrouve le groupe contenant le code, insensible à la casse', () => {
+    expect(findGroupForCode('d2', groups)?.id).toBe('d1-d4');
+    expect(findGroupForCode('C7', groups)?.id).toBe('c6-c8');
+  });
+
+  it("renvoie undefined pour un code inconnu ou vide", () => {
+    expect(findGroupForCode('RTT', groups)).toBeUndefined();
+    expect(findGroupForCode('', groups)).toBeUndefined();
+  });
+});
+
+describe('findScheduleForCode / formatScheduleHours', () => {
+  const schedules: CodeSchedule[] = [
+    { codes: ['E1'], start: '08:00', end: '16:24' },
+    { codes: ['C6', 'C7', 'C8'], start: '09:00', end: '17:00' },
+  ];
+
+  it('retrouve un horaire par code, quel que soit le nombre de codes du groupe', () => {
+    expect(findScheduleForCode('e1', schedules)?.end).toBe('16:24');
+    expect(findScheduleForCode('C7', schedules)?.start).toBe('09:00');
+    expect(findScheduleForCode('RTT', schedules)).toBeUndefined();
+  });
+
+  it('formate les horaires façon "8h-16h24" (minutes omises si :00)', () => {
+    expect(formatScheduleHours({ codes: ['E1'], start: '08:00', end: '16:24' })).toBe('8h-16h24');
+    expect(formatScheduleHours({ codes: ['C6'], start: '09:00', end: '17:00' })).toBe('9h-17h');
+  });
+});
 
 describe('findMyRowIndex', () => {
   it('trouve la ligne en ignorant casse et espaces superflus', () => {
