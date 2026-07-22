@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rnplanning",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +19,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.forth.sodexoplanning",
-      "versionCode": 1
+      "versionCode": 1,
+      "allowBackup": false
     },
     "web": {
       "bundler": "metro",
