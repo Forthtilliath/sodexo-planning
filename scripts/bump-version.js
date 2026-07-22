@@ -4,7 +4,12 @@
 //   patch = correctif (fix)
 //   minor = petite mise à jour (nouvelle fonctionnalité sans casser l'existant)
 //   major = grosse mise à jour
+//
+// Avant de lancer ce script, ajoute une entrée pour la nouvelle version dans
+// lib/changelog.ts (à la main, en français, pour l'écran "Nouveautés") —
+// ce script se contente ensuite de régénérer CHANGELOG.md à partir de ça.
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -38,3 +43,5 @@ fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n');
 fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
 
 console.log(`Version : ${current} -> ${next} (versionCode ${nextVersionCode})`);
+
+execFileSync(process.execPath, [path.join(__dirname, 'render-changelog.js')], { stdio: 'inherit' });
