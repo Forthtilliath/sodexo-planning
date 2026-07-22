@@ -4,10 +4,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+// Catch any errors thrown by the Layout component, avec un écran de secours
+// lisible (voir components/ErrorFallback.tsx) plutôt que l'écran noir de debug par défaut.
+export { default as ErrorBoundary } from '@/components/ErrorFallback';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
