@@ -9,7 +9,7 @@ describe('ChangelogScreen', () => {
 
     for (const entry of CHANGELOG) {
       expect(screen.getByText(`Version ${entry.version}`)).toBeTruthy();
-      expect(screen.getByText(entry.date)).toBeTruthy();
+      expect(screen.getAllByText(entry.date).length).toBeGreaterThan(0);
       for (const change of entry.changes) {
         expect(screen.getByText(`•  ${change}`)).toBeTruthy();
       }
