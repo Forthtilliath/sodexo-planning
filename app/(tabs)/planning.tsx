@@ -90,11 +90,15 @@ export default function PlanningScreen() {
   }, [selectedScan, displayRowIndex, groups, schedules]);
 
   async function handleExport() {
-    if (!selectedScan || myRowIndex < 0) return;
+    if (!selectedScan || displayRowIndex < 0) return;
     setExporting(true);
     try {
-      const ics = buildIcs(selectedScan, groups, myRowIndex, schedules);
-      const filename = buildIcsFilename(selectedScan.year, selectedScan.month, selectedScan.employees[myRowIndex]);
+      const ics = buildIcs(selectedScan, groups, displayRowIndex, schedules);
+      const filename = buildIcsFilename(
+        selectedScan.year,
+        selectedScan.month,
+        selectedScan.employees[displayRowIndex]
+      );
       await shareIcs(filename, ics);
     } catch (err) {
       Alert.alert('Export impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
@@ -235,15 +239,15 @@ export default function PlanningScreen() {
             <MonthCalendarView planning={planning} holidays={selectedScan?.holidays ?? []} showHours={showHours} />
           )}
 
-          {viewingSomeoneElse ? (
-            <Text style={styles.exportHint}>L'export en agenda concerne uniquement ton propre planning.</Text>
-          ) : (
-            <Pressable style={styles.exportButton} disabled={exporting} onPress={handleExport}>
-              <Text style={styles.exportButtonText}>
-                {exporting ? 'Export en cours…' : "📤 Exporter en agenda (.ics)"}
-              </Text>
-            </Pressable>
-          )}
+          <Pressable style={styles.exportButton} disabled={exporting} onPress={handleExport}>
+            <Text style={styles.exportButtonText}>
+              {exporting
+                ? 'Export en cours…'
+                : viewingSomeoneElse
+                  ? `📤 Exporter le planning de ${selectedScan.employees[viewingIndex!] || 'ce/cette collègue'}`
+                  : '📤 Exporter en agenda (.ics)'}
+            </Text>
+          </Pressable>
         </>
       )}
     </ScrollView>
@@ -301,12 +305,6 @@ const styles = StyleSheet.create({
   colleagueReset: {
     color: '#2f95dc',
     fontWeight: '600',
-  },
-  exportHint: {
-    marginTop: 16,
-    textAlign: 'center',
-    opacity: 0.7,
-    fontSize: 13,
   },
   pickerBox: {
     padding: 12,
