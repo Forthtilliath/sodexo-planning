@@ -4,12 +4,15 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
-import { formatScheduleHours, type DayPlanning } from '@/lib/teams';
+import { computeDayRoster, formatScheduleHours, type DayPlanning } from '@/lib/teams';
+import type { ScanRecord, TeamGroup } from '@/types';
 
 type Props = {
   planning: DayPlanning[]; // un élément par jour du mois, dans l'ordre
   holidays: string[]; // dates ISO fériées du mois
   showHours: boolean;
+  scan: ScanRecord;
+  groups: TeamGroup[];
 };
 
 const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -29,8 +32,8 @@ function hexToSoftBackground(hex: string): string {
   return `rgba(${r}, ${g}, ${b}, 0.22)`;
 }
 
-/** Vue calendrier en lecture seule : touche un jour pour voir le détail (code + coéquipiers). */
-export default function MonthCalendarView({ planning, holidays, showHours }: Props) {
+/** Vue calendrier en lecture seule : touche un jour pour voir qui travaille, groupé par équipe. */
+export default function MonthCalendarView({ planning, holidays, showHours, scan, groups }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const leadingBlanks = planning.length > 0 ? mondayFirstWeekday(planning[0].date) : 0;
@@ -41,9 +44,17 @@ export default function MonthCalendarView({ planning, holidays, showHours }: Pro
     if (showHours && day.schedule) {
       lines.push(`Horaire : ${formatScheduleHours(day.schedule)}`);
     }
-    if (day.teammates.length > 0) {
-      lines.push(`Avec ${day.teammates.map((t) => t.name).join(', ')}`);
+
+    const dayIndex = scan.days.indexOf(day.date);
+    const roster = computeDayRoster(scan, dayIndex, groups);
+    if (roster.length > 0) {
+      lines.push('');
+      for (const { group, members } of roster) {
+        const names = members.map((m) => `${m.name} (${m.code})`).join(', ');
+        lines.push(`${group?.label ?? 'Autres'} : ${names}`);
+      }
     }
+
     Alert.alert(formatFullDate(day.date), lines.join('\n'));
   }
 

@@ -90,3 +90,41 @@ export function computeMonthPlanning(
 ): DayPlanning[] {
   return scan.days.map((_, dayIndex) => computeDayPlanning(scan, dayIndex, myRowIndex, groups, schedules));
 }
+
+export type DayRosterGroup = {
+  group: TeamGroup | undefined; // undefined = codes sans groupe configuré ("Autres")
+  members: Teammate[];
+};
+
+/**
+ * Pour un jour donné, liste tout le monde qui a un code renseigné, regroupé
+ * par groupe de postes (contrairement à computeDayPlanning, qui ne regarde
+ * que les coéquipiers d'une seule personne) : une vue d'équipe complète.
+ */
+export function computeDayRoster(scan: ScanRecord, dayIndex: number, groups: TeamGroup[]): DayRosterGroup[] {
+  const byGroupId = new Map<string, DayRosterGroup>();
+  const others: DayRosterGroup = { group: undefined, members: [] };
+
+  scan.grid.forEach((row, rowIndex) => {
+    const code = normalizeCode(row[dayIndex] ?? '');
+    if (!code) return;
+    const name = scan.employees[rowIndex] ?? `Ligne ${rowIndex + 1}`;
+    const group = findGroupForCode(code, groups);
+    if (!group) {
+      others.members.push({ name, code });
+      return;
+    }
+    if (!byGroupId.has(group.id)) byGroupId.set(group.id, { group, members: [] });
+    byGroupId.get(group.id)!.members.push({ name, code });
+  });
+
+  const result = Array.from(byGroupId.values());
+  for (const g of result) {
+    g.members.sort((a, b) => a.code.localeCompare(b.code) || a.name.localeCompare(b.name));
+  }
+  if (others.members.length > 0) {
+    others.members.sort((a, b) => a.code.localeCompare(b.code) || a.name.localeCompare(b.name));
+    result.push(others);
+  }
+  return result;
+}

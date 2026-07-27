@@ -1,5 +1,6 @@
 import {
   computeDayPlanning,
+  computeDayRoster,
   computeMonthPlanning,
   findGroupForCode,
   findMyRowIndex,
@@ -122,6 +123,63 @@ describe('computeDayPlanning', () => {
     };
     const day = computeDayPlanning(fScan, 0, 0, fGroup);
     expect(day.teammates.map((t) => t.code)).toEqual(['F1', 'F3', 'F4']);
+  });
+});
+
+describe('computeDayRoster', () => {
+  const rosterScan: ScanRecord = {
+    id: 'scan-roster',
+    year: 2026,
+    month: 7,
+    createdAt: 0,
+    days: ['2026-07-01'],
+    employees: ['Alice', 'Bob', 'Carla', 'Dan', 'Eve'],
+    grid: [['D1'], ['D2'], ['C6'], ['C7'], ['RTT']],
+  };
+
+  it('regroupe tout le monde par équipe pour un jour donné', () => {
+    const roster = computeDayRoster(rosterScan, 0, groups);
+
+    expect(roster).toHaveLength(3);
+    expect(roster[0]).toEqual({
+      group: groups[0],
+      members: [
+        { name: 'Alice', code: 'D1' },
+        { name: 'Bob', code: 'D2' },
+      ],
+    });
+    expect(roster[1]).toEqual({
+      group: groups[1],
+      members: [
+        { name: 'Carla', code: 'C6' },
+        { name: 'Dan', code: 'C7' },
+      ],
+    });
+  });
+
+  it("range les codes sans groupe configuré dans un dernier bloc 'Autres'", () => {
+    const roster = computeDayRoster(rosterScan, 0, groups);
+
+    expect(roster[2]).toEqual({ group: undefined, members: [{ name: 'Eve', code: 'RTT' }] });
+  });
+
+  it('ignore les lignes sans code ce jour-là', () => {
+    const scanWithGaps: ScanRecord = {
+      ...rosterScan,
+      grid: [['D1'], [''], ['C6'], [''], ['']],
+    };
+
+    const roster = computeDayRoster(scanWithGaps, 0, groups);
+
+    expect(roster.flatMap((g) => g.members)).toEqual([
+      { name: 'Alice', code: 'D1' },
+      { name: 'Carla', code: 'C6' },
+    ]);
+  });
+
+  it("renvoie un tableau vide si personne n'a de code ce jour-là", () => {
+    const emptyScan: ScanRecord = { ...rosterScan, grid: rosterScan.grid.map(() => ['']) };
+    expect(computeDayRoster(emptyScan, 0, groups)).toEqual([]);
   });
 });
 
