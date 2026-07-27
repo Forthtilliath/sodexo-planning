@@ -10,6 +10,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.1.3',
+    date: '2026-07-23',
+    changes: [
+      'Correction : les rappels de travail ne se doublonnent plus (l\'ancienne notification restait parfois à côté de la nouvelle).',
+      'Le calendrier de "Mon planning" affiche maintenant, en touchant un jour, tout le monde qui travaille ce jour-là, groupé par équipe.',
+      'L\'onglet "Planning" est renommé "Saisie", pour bien le distinguer de "Mon planning".',
+    ],
+  },
+  {
     version: '1.1.2',
     date: '2026-07-23',
     changes: ['Ajout de cette page "Nouveautés" pour voir ce qui a changé à chaque mise à jour.'],
