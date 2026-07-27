@@ -131,7 +131,7 @@ export default function PlanningEditorScreen() {
   // Le titre natif de l'écran affiche directement "Planning de X" (personne
   // éditée, ou mois/année en liste), plutôt qu'un second titre en double.
   useEffect(() => {
-    let title = 'Planning';
+    let title = 'Saisie';
     if (step === 'review') {
       title =
         editingRow !== null

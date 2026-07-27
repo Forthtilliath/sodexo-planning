@@ -22,11 +22,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Planning',
+          title: 'Saisie',
           // Le titre de l'en-tête est mis à jour dynamiquement (index.tsx)
           // pour afficher "Planning de X" ; le libellé de l'onglet, lui,
           // doit rester fixe.
-          tabBarLabel: 'Planning',
+          tabBarLabel: 'Saisie',
           tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
         }}
       />
