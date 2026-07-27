@@ -297,7 +297,13 @@ export default function PlanningScreen() {
               );
             })
           ) : (
-            <MonthCalendarView planning={planning} holidays={selectedScan?.holidays ?? []} showHours={showHours} />
+            <MonthCalendarView
+              planning={planning}
+              holidays={selectedScan.holidays ?? []}
+              showHours={showHours}
+              scan={selectedScan}
+              groups={groups}
+            />
           )}
 
           <Pressable style={styles.exportButton} disabled={exporting} onPress={handleExport}>
