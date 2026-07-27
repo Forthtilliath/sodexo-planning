@@ -168,6 +168,20 @@ describe('rescheduleWorkReminders', () => {
     expect(cancelScheduledMock).not.toHaveBeenCalledWith('backup-reminder');
   });
 
+  it("annule aussi les rappels d'une ancienne version de l'app (identifiant auto-généré, sans préfixe), pour éviter les doublons", async () => {
+    await saveSettings({ myName: 'Moi' });
+    await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
+    getAllScheduledMock.mockResolvedValue([
+      { identifier: 'a1b2c3d4-legacy-uuid', content: {}, trigger: {} },
+      { identifier: 'backup-reminder', content: {}, trigger: {} },
+    ]);
+
+    await rescheduleWorkReminders();
+
+    expect(cancelScheduledMock).toHaveBeenCalledWith('a1b2c3d4-legacy-uuid');
+    expect(cancelScheduledMock).not.toHaveBeenCalledWith('backup-reminder');
+  });
+
   it('cumule les rappels de plusieurs plannings enregistrés', async () => {
     await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ id: 'scan-1', days: ['2026-07-15'], grid: [['D1']] }));

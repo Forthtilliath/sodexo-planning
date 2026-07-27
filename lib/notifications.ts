@@ -31,11 +31,16 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return requested.granted;
 }
 
-async function cancelNotificationsWithPrefix(prefix: string): Promise<void> {
+// Annule tout ce qui est programmé à part le rappel de sauvegarde. Plus
+// robuste qu'un filtre par préfixe : ça nettoie aussi les rappels de travail
+// programmés par une version antérieure de l'app (identifiants générés
+// automatiquement, sans le préfixe "work-reminder-"), qui sinon restaient
+// coincés indéfiniment et doublonnaient avec les nouveaux.
+async function cancelWorkReminderNotifications(): Promise<void> {
   const all = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
     all
-      .filter((n) => n.identifier.startsWith(prefix))
+      .filter((n) => n.identifier !== BACKUP_REMINDER_ID)
       .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
   );
 }
@@ -47,7 +52,7 @@ async function cancelNotificationsWithPrefix(prefix: string): Promise<void> {
  * mentionnant les coéquipiers du même groupe ce jour-là.
  */
 export async function rescheduleWorkReminders(): Promise<void> {
-  await cancelNotificationsWithPrefix(WORK_REMINDER_PREFIX);
+  await cancelWorkReminderNotifications();
 
   const [scans, settings, groups] = await Promise.all([getScans(), getSettings(), getTeamGroups()]);
   const reminderHour = settings.reminderHour ?? DEFAULT_REMINDER_HOUR;
@@ -92,7 +97,7 @@ export async function rescheduleWorkReminders(): Promise<void> {
 }
 
 export async function cancelWorkReminders(): Promise<void> {
-  await cancelNotificationsWithPrefix(WORK_REMINDER_PREFIX);
+  await cancelWorkReminderNotifications();
 }
 
 /**
