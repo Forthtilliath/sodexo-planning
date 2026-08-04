@@ -5,6 +5,8 @@ export type Settings = {
   reminderHour?: number; // heure du rappel (0-23) ; absent = 19h par défaut
   // Rappel récurrent incitant à exporter une sauvegarde ; absent = désactivé.
   backupReminderEnabled?: boolean;
+  // Thème de l'app ; absent = "system" (suit le thème du téléphone).
+  theme?: 'light' | 'dark' | 'system';
 };
 
 export type TeamGroup = {

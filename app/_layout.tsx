@@ -2,8 +2,10 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 import 'react-native-reanimated';
+
+import ThemePreferenceProvider from '@/components/ThemePreferenceProvider';
+import { useResolvedScheme } from '@/hooks/useThemeColors';
 
 // Catch any errors thrown by the Layout component, avec un écran de secours
 // lisible (voir components/ErrorFallback.tsx) plutôt que l'écran noir de debug par défaut.
@@ -13,7 +15,15 @@ export { default as ErrorBoundary } from '@/components/ErrorFallback';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <ThemePreferenceProvider>
+      <RootLayoutNav />
+    </ThemePreferenceProvider>
+  );
+}
+
+function RootLayoutNav() {
+  const scheme = useResolvedScheme();
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -34,7 +44,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
