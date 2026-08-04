@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ThemeColors } from '@/constants/Colors';
-import { useThemeColors } from '@/hooks/useThemeColors';
+import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
 import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
 import { computeDayRoster, formatScheduleHours, type DayPlanning } from '@/lib/teams';
 import type { ScanRecord, TeamGroup } from '@/types';
@@ -23,18 +23,21 @@ function formatFullDate(iso: string): string {
   return `${weekday} ${date.getDate()}`;
 }
 
-/** Teinte légère (fond) plutôt que la couleur pleine, pour ne pas gêner la lecture du texte. */
-function hexToSoftBackground(hex: string): string {
+// En sombre, une même opacité rend le fond beaucoup plus terne (mélangé à du
+// quasi-noir plutôt qu'à du blanc) : on pousse l'opacité pour que la couleur
+// du groupe reste repérable, y compris à la lumière du jour.
+function hexToSoftBackground(hex: string, isDark: boolean): string {
   const clean = hex.replace('#', '');
   const r = parseInt(clean.slice(0, 2), 16);
   const g = parseInt(clean.slice(2, 4), 16);
   const b = parseInt(clean.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, 0.22)`;
+  return `rgba(${r}, ${g}, ${b}, ${isDark ? 0.45 : 0.22})`;
 }
 
 /** Vue calendrier en lecture seule : touche un jour pour voir qui travaille, groupé par équipe. */
 export default function MonthCalendarView({ planning, holidays, showHours, scan, groups }: Props) {
   const colors = useThemeColors();
+  const isDark = useResolvedScheme() === 'dark';
   const styles = useMemo(() => createStyles(colors), [colors]);
   const leadingBlanks = planning.length > 0 ? mondayFirstWeekday(planning[0].date) : 0;
   const holidaySet = new Set(holidays);
@@ -79,7 +82,7 @@ export default function MonthCalendarView({ planning, holidays, showHours, scan,
               <Pressable
                 style={[
                   styles.dayBox,
-                  day.group?.color && { backgroundColor: hexToSoftBackground(day.group.color) },
+                  day.group?.color && { backgroundColor: hexToSoftBackground(day.group.color, isDark) },
                   isHoliday && styles.dayBoxHoliday,
                 ]}
                 onPress={() => showDayInfo(day)}>
