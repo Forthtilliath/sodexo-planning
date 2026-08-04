@@ -7,19 +7,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const ts = require('typescript');
+
+const { loadChangelog } = require('./lib/loadChangelog');
 
 const root = path.join(__dirname, '..');
-const changelogTsPath = path.join(root, 'lib', 'changelog.ts');
 const changelogMdPath = path.join(root, 'CHANGELOG.md');
-
-function loadChangelog() {
-  const source = fs.readFileSync(changelogTsPath, 'utf8');
-  const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-  const module_ = { exports: {} };
-  new Function('module', 'exports', js)(module_, module_.exports);
-  return module_.exports.CHANGELOG;
-}
 
 function toMarkdown(entries) {
   const lines = ['# Journal des modifications', ''];
