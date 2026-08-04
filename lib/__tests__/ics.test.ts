@@ -68,4 +68,26 @@ describe('buildIcs', () => {
     // La suite de la ligne repliée commence par un espace, comme l'exige RFC5545.
     expect(ics).toMatch(/DESCRIPTION:[\s\S]*\r\n /);
   });
+
+  it("garde le même UID pour un jour donné même si le nombre de jours renseignés change (pas de doublon au ré-import)", () => {
+    // Seul le lundi 1er est rempli.
+    const oneDayScan: ScanRecord = { ...scan, grid: [['D1', ''], ['D2', '']] };
+    const icsBefore = buildIcs(oneDayScan, groups, 0);
+    const uidBefore = icsBefore.match(/UID:([^\r\n]+)/)?.[1];
+
+    // Le mardi 2 est renseigné à son tour : sans le fix, l'UID du 1er
+    // changerait puisqu'il dépendait de sa position parmi les jours remplis.
+    const twoDaysScan: ScanRecord = { ...scan, grid: [['D1', 'D1'], ['D2', 'D2']] };
+    const icsAfter = buildIcs(twoDaysScan, groups, 0);
+    const uidAfter = icsAfter.match(/UID:([^\r\n]+)/)?.[1];
+
+    expect(uidBefore).toBe(uidAfter);
+    expect(uidBefore).toBe('scan-1-2026-07-01@rn-planning');
+  });
+
+  it('inclut un SEQUENCE et METHOD:PUBLISH pour que le calendrier remplace plutôt que doublonne', () => {
+    const ics = buildIcs(scan, groups, 0);
+    expect(ics).toContain('METHOD:PUBLISH');
+    expect(ics).toMatch(/SEQUENCE:\d+/);
+  });
 });

@@ -315,6 +315,10 @@ export default function PlanningScreen() {
                   : '📤 Exporter en agenda (.ics)'}
             </Text>
           </Pressable>
+          <Text style={styles.exportHint}>
+            Un ré-export met à jour les événements déjà importés (même jour = même événement). Si ton appli
+            calendrier crée quand même des doublons, supprime l'ancien import avant de réimporter.
+          </Text>
         </>
       )}
     </ScrollView>
@@ -515,6 +519,13 @@ function createStyles(colors: ThemeColors) {
     exportButtonText: {
       color: colors.onTint,
       fontWeight: '700',
+    },
+    exportHint: {
+      fontSize: 11,
+      opacity: 0.6,
+      marginTop: 8,
+      textAlign: 'center',
+      color: colors.text,
     },
     emptyContainer: {
       flex: 1,
