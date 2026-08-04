@@ -196,12 +196,6 @@ export default function PlanningEditorScreen() {
     router.push('/settings/roster');
   }
 
-  function removeRow(rowIndex: number) {
-    setEmployees((prev) => prev.filter((_, i) => i !== rowIndex));
-    setGrid((prev) => prev.filter((_, i) => i !== rowIndex));
-    setEditingRow(null);
-  }
-
   /** Enregistre l'état courant sans confirmation ; réutilisé par le bouton "Enregistrer" et l'auto-save. */
   async function persistScan(): Promise<ScanRecord> {
     const existing = scans.find((s) => s.id === currentScanId);
@@ -367,7 +361,6 @@ export default function PlanningEditorScreen() {
                 employees={employees}
                 grid={grid}
                 onAddEmployee={goToRoster}
-                onRemoveRow={removeRow}
                 onOpenRow={setEditingRow}
               />
               <Pressable style={styles.resetButton} onPress={reset}>
