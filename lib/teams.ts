@@ -147,9 +147,22 @@ export function computeDayRoster(scan: ScanRecord, dayIndex: number, groups: Tea
   for (const g of result) {
     g.members.sort((a, b) => a.code.localeCompare(b.code) || a.name.localeCompare(b.name));
   }
+  // Groupes triés selon CODE_DISPLAY_ORDER (E1-E3, puis D1-D4, C6-C8, C2-C5,
+  // B1), via le code le plus prioritaire de chaque groupe.
+  result.sort((a, b) => groupRank(a.group) - groupRank(b.group));
   if (others.members.length > 0) {
     others.members.sort((a, b) => a.code.localeCompare(b.code) || a.name.localeCompare(b.name));
     result.push(others);
   }
   return result;
+}
+
+function groupRank(group: TeamGroup | undefined): number {
+  if (!group) return CODE_DISPLAY_ORDER.length;
+  let best = CODE_DISPLAY_ORDER.length;
+  for (const code of group.codes) {
+    const idx = CODE_DISPLAY_ORDER.indexOf(normalizeCode(code));
+    if (idx !== -1 && idx < best) best = idx;
+  }
+  return best;
 }

@@ -179,6 +179,29 @@ describe('computeDayRoster', () => {
     });
   });
 
+  it("trie les groupes selon CODE_DISPLAY_ORDER (E, D, C, B1), pas selon l'ordre de saisie des groupes", () => {
+    // Groupes déclarés dans un ordre différent de la priorité E > D > C > B1.
+    const scrambledGroups: TeamGroup[] = [
+      { id: 'b1', label: 'B1', codes: ['B1'] },
+      { id: 'c6-c8', label: 'C6-C8', codes: ['C6', 'C7', 'C8'] },
+      { id: 'e1-e3', label: 'E1-E3', codes: ['E1', 'E2', 'E3'] },
+      { id: 'd1-d4', label: 'D1-D4', codes: ['D1', 'D2', 'D3', 'D4'] },
+    ];
+    const scan: ScanRecord = {
+      id: 'scan-scrambled',
+      year: 2026,
+      month: 7,
+      createdAt: 0,
+      days: ['2026-07-01'],
+      employees: ['Alice', 'Bob', 'Carla', 'Dan'],
+      grid: [['B1'], ['C6'], ['E1'], ['D1']],
+    };
+
+    const roster = computeDayRoster(scan, 0, scrambledGroups);
+
+    expect(roster.map((g) => g.group?.id)).toEqual(['e1-e3', 'd1-d4', 'c6-c8', 'b1']);
+  });
+
   it("range les codes sans groupe configuré dans un dernier bloc 'Autres'", () => {
     const roster = computeDayRoster(rosterScan, 0, groups);
 
