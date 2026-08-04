@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
@@ -8,26 +8,14 @@ type Props = {
   days: string[]; // dates ISO, une par colonne
   employees: string[];
   grid: string[][];
-  onRemoveRow: (rowIndex: number) => void;
   onAddEmployee: () => void;
   onOpenRow: (rowIndex: number) => void;
 };
 
 /** Liste des salariés du planning : un par ligne, avec un résumé de remplissage et un accès à l'éditeur par personne. */
-export default function GridEditor({ days, employees, grid, onRemoveRow, onAddEmployee, onOpenRow }: Props) {
+export default function GridEditor({ days, employees, grid, onAddEmployee, onOpenRow }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-
-  function confirmRemove(rowIndex: number, name: string) {
-    Alert.alert(
-      'Supprimer cette ligne ?',
-      `"${name || `Employé ${rowIndex + 1}`}" sera retiré de ce planning.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: () => onRemoveRow(rowIndex) },
-      ]
-    );
-  }
 
   return (
     <View>
@@ -35,13 +23,6 @@ export default function GridEditor({ days, employees, grid, onRemoveRow, onAddEm
         const filledCount = (grid[rowIndex] ?? []).filter((c) => c.trim()).length;
         return (
           <View key={rowIndex} style={styles.row}>
-            <Pressable
-              style={styles.deleteButton}
-              onPress={() => confirmRemove(rowIndex, name)}
-              accessibilityRole="button"
-              accessibilityLabel={`Supprimer ${name || `Employé ${rowIndex + 1}`}`}>
-              <Text style={styles.deleteText}>×</Text>
-            </Pressable>
             <View style={styles.nameColumn}>
               <Text style={styles.nameText}>{name || `Employé ${rowIndex + 1}`}</Text>
               <Text style={styles.summaryText}>
@@ -73,15 +54,6 @@ function createStyles(colors: ThemeColors) {
       borderColor: colors.borderSubtle,
       borderRadius: 8,
       padding: 8,
-    },
-    deleteButton: {
-      paddingHorizontal: 6,
-      paddingVertical: 6,
-    },
-    deleteText: {
-      color: colors.danger,
-      fontWeight: '700',
-      fontSize: 16,
     },
     nameColumn: {
       flex: 1,
