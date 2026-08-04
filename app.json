@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sodexo Planning",
     "slug": "sodexo-planning",
-    "version": "1.1.3",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rnplanning",
@@ -19,9 +19,11 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.forth.sodexoplanning",
-      "versionCode": 5,
+      "versionCode": 6,
       "allowBackup": false,
-      "permissions": ["REQUEST_INSTALL_PACKAGES"]
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
