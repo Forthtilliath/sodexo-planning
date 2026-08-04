@@ -20,7 +20,8 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.forth.sodexoplanning",
       "versionCode": 5,
-      "allowBackup": false
+      "allowBackup": false,
+      "permissions": ["REQUEST_INSTALL_PACKAGES"]
     },
     "web": {
       "bundler": "metro",
