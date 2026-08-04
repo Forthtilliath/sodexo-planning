@@ -5,7 +5,10 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Te
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
+import { CODE_DISPLAY_ORDER, majorityCode, normalizeName } from '@/lib/teams';
 import type { RosterEntry, TeamGroup } from '@/types';
+
+type SortMode = 'manual' | 'alpha' | 'majority';
 
 /** Déplace l'entrée `index` d'un cran parmi les autres entrées qui partagent le même statut actif/inactif. */
 function moveWithinGroup(entries: RosterEntry[], index: number, direction: -1 | 1): RosterEntry[] {
@@ -32,6 +35,8 @@ export default function RosterScreen() {
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [showInactive, setShowInactive] = useState(false);
+  const [search, setSearch] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('manual');
 
   const load = useCallback(async () => {
     const [teamGroups, employeeRoster, options] = await Promise.all([
@@ -140,24 +145,26 @@ export default function RosterScreen() {
         {isExpanded && (
           <View style={styles.cardBody}>
             <View style={styles.rosterRow}>
-              <View style={styles.rosterMoveColumn}>
-                <Pressable
-                  style={[styles.moveButton, posInGroup === 0 && styles.moveButtonDisabled]}
-                  disabled={posInGroup === 0}
-                  onPress={() => moveName(index, -1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Monter ${entry.name || `Salarié ${index + 1}`}`}>
-                  <Text style={styles.moveButtonText}>↑</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.moveButton, posInGroup === group.length - 1 && styles.moveButtonDisabled]}
-                  disabled={posInGroup === group.length - 1}
-                  onPress={() => moveName(index, 1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Descendre ${entry.name || `Salarié ${index + 1}`}`}>
-                  <Text style={styles.moveButtonText}>↓</Text>
-                </Pressable>
-              </View>
+              {sortMode === 'manual' && !searching && (
+                <View style={styles.rosterMoveColumn}>
+                  <Pressable
+                    style={[styles.moveButton, posInGroup === 0 && styles.moveButtonDisabled]}
+                    disabled={posInGroup === 0}
+                    onPress={() => moveName(index, -1)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Monter ${entry.name || `Salarié ${index + 1}`}`}>
+                    <Text style={styles.moveButtonText}>↑</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.moveButton, posInGroup === group.length - 1 && styles.moveButtonDisabled]}
+                    disabled={posInGroup === group.length - 1}
+                    onPress={() => moveName(index, 1)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Descendre ${entry.name || `Salarié ${index + 1}`}`}>
+                    <Text style={styles.moveButtonText}>↓</Text>
+                  </Pressable>
+                </View>
+              )}
               <TextInput
                 style={styles.rosterNameInput}
                 value={entry.name}
@@ -203,8 +210,37 @@ export default function RosterScreen() {
     );
   }
 
-  const activeEntries = roster.map((e, i) => [e, i] as const).filter(([e]) => e.active);
-  const inactiveEntries = roster.map((e, i) => [e, i] as const).filter(([e]) => !e.active);
+  function majorityRank(name: string): number {
+    const code = majorityCode(codeOptions[name] ?? []);
+    if (!code) return CODE_DISPLAY_ORDER.length + 1;
+    const idx = CODE_DISPLAY_ORDER.indexOf(code);
+    return idx === -1 ? CODE_DISPLAY_ORDER.length : idx;
+  }
+
+  function sortEntries(entries: (readonly [RosterEntry, number])[]): (readonly [RosterEntry, number])[] {
+    if (sortMode === 'alpha') {
+      return [...entries].sort((a, b) => a[0].name.localeCompare(b[0].name, 'fr', { sensitivity: 'base' }));
+    }
+    if (sortMode === 'majority') {
+      return [...entries].sort((a, b) => {
+        const rankDiff = majorityRank(a[0].name) - majorityRank(b[0].name);
+        return rankDiff !== 0 ? rankDiff : a[0].name.localeCompare(b[0].name, 'fr', { sensitivity: 'base' });
+      });
+    }
+    return entries;
+  }
+
+  const searching = search.trim().length > 0;
+  const matchesSearch = ([entry]: readonly [RosterEntry, number]) =>
+    !searching || normalizeName(entry.name).includes(normalizeName(search));
+
+  const activeEntries = sortEntries(
+    roster.map((e, i) => [e, i] as const).filter(([e]) => e.active).filter(matchesSearch)
+  );
+  const inactiveEntries = sortEntries(
+    roster.map((e, i) => [e, i] as const).filter(([e]) => !e.active).filter(matchesSearch)
+  );
+  const inactiveVisible = showInactive || searching;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -213,24 +249,57 @@ export default function RosterScreen() {
         ils disparaissent des propositions de planning sans perdre leur historique.
       </Text>
 
-      {activeEntries.map(([entry, index]) => renderCard(entry, index))}
+      <TextInput
+        style={styles.searchInput}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Rechercher un salarié…"
+        placeholderTextColor={colors.border}
+      />
 
-      <Pressable style={styles.addButton} onPress={addName}>
-        <Text style={styles.addButtonText}>+ Ajouter un salarié</Text>
-      </Pressable>
+      <View style={styles.sortRow}>
+        {(
+          [
+            { mode: 'manual', label: '↕️ Manuel' },
+            { mode: 'alpha', label: '🔤 A-Z' },
+            { mode: 'majority', label: '🎯 Poste' },
+          ] as const
+        ).map(({ mode, label }) => (
+          <Pressable
+            key={mode}
+            style={[styles.sortButton, sortMode === mode && styles.sortButtonActive]}
+            onPress={() => setSortMode(mode)}>
+            <Text style={[styles.sortButtonText, sortMode === mode && styles.sortButtonTextActive]}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {activeEntries.length === 0 && searching ? (
+        <Text style={styles.hint}>Aucun salarié actif ne correspond à "{search}".</Text>
+      ) : (
+        activeEntries.map(([entry, index]) => renderCard(entry, index))
+      )}
+
+      {!searching && (
+        <Pressable style={styles.addButton} onPress={addName}>
+          <Text style={styles.addButtonText}>+ Ajouter un salarié</Text>
+        </Pressable>
+      )}
 
       {inactiveEntries.length > 0 && (
         <>
-          <Pressable style={styles.inactiveToggle} onPress={() => setShowInactive((v) => !v)}>
-            <Text style={styles.inactiveToggleText}>
-              {showInactive ? '▲' : '▼'} Salariés désactivés ({inactiveEntries.length})
-            </Text>
-          </Pressable>
-          {showInactive && inactiveEntries.map(([entry, index]) => renderCard(entry, index))}
+          {!searching && (
+            <Pressable style={styles.inactiveToggle} onPress={() => setShowInactive((v) => !v)}>
+              <Text style={styles.inactiveToggleText}>
+                {showInactive ? '▲' : '▼'} Salariés désactivés ({inactiveEntries.length})
+              </Text>
+            </Pressable>
+          )}
+          {inactiveVisible && inactiveEntries.map(([entry, index]) => renderCard(entry, index))}
         </>
       )}
 
-      <Text style={styles.hint}>{activeEntries.length} salarié(s) actif(s)</Text>
+      {!searching && <Text style={styles.hint}>{roster.filter((e) => e.active).length} salarié(s) actif(s)</Text>}
     </ScrollView>
   );
 }
@@ -257,6 +326,39 @@ function createStyles(colors: ThemeColors) {
       opacity: 0.7,
       marginBottom: 8,
       color: colors.text,
+    },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 10,
+      color: colors.text,
+    },
+    sortRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 12,
+    },
+    sortButton: {
+      flex: 1,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+    },
+    sortButtonActive: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    sortButtonText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    sortButtonTextActive: {
+      color: colors.onTint,
     },
     rosterCard: {
       borderWidth: 1,
