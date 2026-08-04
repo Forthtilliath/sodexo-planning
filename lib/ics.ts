@@ -37,6 +37,13 @@ function dtstamp(): string {
   return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 }
 
+// Nombre de secondes depuis l'epoch : toujours croissant d'un export à
+// l'autre, ce qui satisfait la sémantique RFC5545 de SEQUENCE ("plus la
+// valeur est grande, plus c'est récent") sans avoir à mémoriser un compteur.
+function sequenceNumber(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
 /**
  * Génère un fichier .ics avec un événement par jour du scan, pour la ligne de
  * l'utilisateur (myRowIndex). Évènement avec heure réelle quand l'horaire du
@@ -51,17 +58,27 @@ export function buildIcs(
 ): string {
   const planning = computeMonthPlanning(scan, myRowIndex, groups, schedules);
   const stamp = dtstamp();
+  const sequence = sequenceNumber();
 
   const events = planning
     .filter((day) => day.code)
-    .map((day, index) => {
+    .map((day) => {
       const summary = day.code;
       const description =
         day.teammates.length > 0
           ? `Équipe : ${day.teammates.map((t) => `${t.name} (${t.code})`).join(', ')}`
           : '';
 
-      const lines = ['BEGIN:VEVENT', `UID:${scan.id}-${day.date}-${index}@rn-planning`, `DTSTAMP:${stamp}`];
+      // UID basé uniquement sur la date (pas de position dans la liste) :
+      // stable d'un export à l'autre même si des jours changent de contenu,
+      // pour que le calendrier remplace l'événement existant au lieu d'en
+      // créer un doublon.
+      const lines = [
+        'BEGIN:VEVENT',
+        `UID:${scan.id}-${day.date}@rn-planning`,
+        `DTSTAMP:${stamp}`,
+        `SEQUENCE:${sequence}`,
+      ];
       if (day.schedule) {
         lines.push(`DTSTART:${toIcsDateTime(day.date, day.schedule.start)}`);
         lines.push(`DTEND:${toIcsDateTime(day.date, day.schedule.end)}`);
@@ -82,6 +99,7 @@ export function buildIcs(
     'VERSION:2.0',
     'PRODID:-//rn-planning//FR',
     'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
     ...events,
     'END:VCALENDAR',
   ].join('\r\n');
