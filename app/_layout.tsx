@@ -2,9 +2,11 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import 'react-native-reanimated';
 
 import ThemePreferenceProvider from '@/components/ThemePreferenceProvider';
+import UpdateBanner from '@/components/UpdateBanner';
 import { useResolvedScheme } from '@/hooks/useThemeColors';
 
 // Catch any errors thrown by the Layout component, avec un écran de secours
@@ -45,9 +47,12 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <UpdateBanner />
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </View>
     </ThemeProvider>
   );
 }
