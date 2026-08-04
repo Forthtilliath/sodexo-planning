@@ -6,6 +6,7 @@ import {
   findMyRowIndex,
   findScheduleForCode,
   formatScheduleHours,
+  majorityCode,
   normalizeCode,
   normalizeName,
 } from '@/lib/teams';
@@ -44,6 +45,27 @@ describe('normalizeCode / normalizeName', () => {
 
   it('normalizeName met en minuscules et réduit les espaces multiples', () => {
     expect(normalizeName('  Jean   Dupont ')).toBe('jean dupont');
+  });
+});
+
+describe('majorityCode', () => {
+  it('renvoie le code le plus prioritaire selon CODE_DISPLAY_ORDER', () => {
+    expect(majorityCode(['C2', 'D1'])).toBe('D1');
+    expect(majorityCode(['B1', 'E2'])).toBe('E2');
+    expect(majorityCode(['C4', 'C3'])).toBe('C3');
+  });
+
+  it("est insensible à l'ordre d'entrée et à la casse", () => {
+    expect(majorityCode(['d1', 'e1'])).toBe('E1');
+    expect(majorityCode(['e1', 'd1'])).toBe('E1');
+  });
+
+  it("garde un code hors-liste en dernier recours", () => {
+    expect(majorityCode(['RTT', 'CP'])).toBe('CP');
+  });
+
+  it('renvoie undefined pour une liste vide', () => {
+    expect(majorityCode([])).toBeUndefined();
   });
 });
 

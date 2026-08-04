@@ -8,6 +8,31 @@ export function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+// Ordre "hiérarchique" des postes, du plus prioritaire au moins prioritaire,
+// utilisé pour attribuer un poste majoritaire à chaque salarié (tri dans
+// Réglages > Salariés) : E1-E3 d'abord, puis D1-D4, C6-C8, C2-C5, B1.
+export const CODE_DISPLAY_ORDER = [
+  'E1', 'E2', 'E3',
+  'D1', 'D2', 'D3', 'D4',
+  'C6', 'C7', 'C8',
+  'C2', 'C3', 'C4', 'C5',
+  'B1',
+];
+
+/**
+ * Parmi les codes habituels d'un salarié, renvoie le plus prioritaire selon
+ * CODE_DISPLAY_ORDER ("poste majoritaire"). Un code hors de cette liste est
+ * gardé en dernier recours (ordre alphabétique entre eux).
+ */
+export function majorityCode(codes: string[]): string | undefined {
+  if (codes.length === 0) return undefined;
+  const normalized = codes.map(normalizeCode);
+  for (const code of CODE_DISPLAY_ORDER) {
+    if (normalized.includes(code)) return code;
+  }
+  return normalized.slice().sort()[0];
+}
+
 export function findGroupForCode(code: string, groups: TeamGroup[]): TeamGroup | undefined {
   const norm = normalizeCode(code);
   if (!norm) return undefined;
