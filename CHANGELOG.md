@@ -1,5 +1,15 @@
 # Journal des modifications
 
+## 1.2.0 — 2026-07-24
+
+- Nouveau : l'app se met à jour toute seule — elle vérifie au lancement si une nouvelle version existe et propose de l'installer directement.
+- Nouveau : choix du thème (clair, sombre, ou automatique selon le téléphone) dans Réglages.
+- Nouveau : recherche et tri (alphabétique, ou par poste principal) dans la liste des salariés.
+- Correction : export agenda (.ics) — un ré-export met maintenant à jour les événements déjà importés au lieu de créer des doublons en cas de changement de poste.
+- Correction : suppression du bouton croix dans Saisie qui ne servait à rien (le salarié réapparaissait aussitôt).
+- Correction : les couleurs de poste ressortent mieux dans le calendrier de "Mon planning" en mode sombre.
+- Correction : dans le détail d'un jour (calendrier), les équipes sont maintenant triées dans le même ordre que les postes (E, D, C, B1).
+
 ## 1.1.3 — 2026-07-23
 
 - Correction : les rappels de travail ne se doublonnent plus (l'ancienne notification restait parfois à côté de la nouvelle).
