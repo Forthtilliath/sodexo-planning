@@ -8,6 +8,14 @@ export function dayNumber(iso: string): number {
   return new Date(`${iso}T00:00:00`).getDate();
 }
 
+/** true si la date ISO (YYYY-MM-DD) correspond au jour courant. */
+export function isToday(iso: string): boolean {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return iso === todayIso;
+}
+
 /** Horodatage compact YYYYMMDDHHMMSS (heure locale), utilisé dans les noms de fichiers exportés. */
 export function timestampCompact(date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
