@@ -70,7 +70,14 @@ export default function PlanningScreen() {
         setSettings(loadedSettings);
         setGroups(loadedGroups);
         setSchedules(loadedSchedules);
-        setSelectedScanId((prev) => prev ?? loadedScans[0]?.id ?? null);
+        setSelectedScanId((prev) => {
+          if (prev) return prev;
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = now.getMonth() + 1;
+          const currentMonthScan = loadedScans.find((s) => s.year === currentYear && s.month === currentMonth);
+          return currentMonthScan?.id ?? loadedScans[0]?.id ?? null;
+        });
         setManualRowIndex(null);
       })();
     }, [])
