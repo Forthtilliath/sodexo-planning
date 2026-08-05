@@ -3,7 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ThemeColors } from '@/constants/Colors';
 import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
-import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
+import { dayNumber, isToday, mondayFirstWeekday } from '@/lib/dates';
 import { computeDayRoster, formatScheduleHours, type DayPlanning } from '@/lib/teams';
 import type { ScanRecord, TeamGroup } from '@/types';
 
@@ -77,6 +77,7 @@ export default function MonthCalendarView({ planning, holidays, showHours, scan,
         ))}
         {planning.map((day) => {
           const isHoliday = holidaySet.has(day.date);
+          const isCurrentDay = isToday(day.date);
           return (
             <View key={day.date} style={styles.cell}>
               <Pressable
@@ -84,9 +85,10 @@ export default function MonthCalendarView({ planning, holidays, showHours, scan,
                   styles.dayBox,
                   day.group?.color && { backgroundColor: hexToSoftBackground(day.group.color, isDark) },
                   isHoliday && styles.dayBoxHoliday,
+                  isCurrentDay && styles.dayBoxToday,
                 ]}
                 onPress={() => showDayInfo(day)}>
-                <Text style={styles.dayLabel}>{dayNumber(day.date)}</Text>
+                <Text style={[styles.dayLabel, isCurrentDay && styles.dayLabelToday]}>{dayNumber(day.date)}</Text>
                 <Text style={styles.dayCode} numberOfLines={1}>
                   {day.code || '—'}
                 </Text>
@@ -134,11 +136,21 @@ function createStyles(colors: ThemeColors) {
       borderColor: colors.holiday,
       borderWidth: 2,
     },
+    dayBoxToday: {
+      borderColor: colors.tint,
+      borderWidth: 2,
+      backgroundColor: colors.tintSoft,
+    },
     dayLabel: {
       fontSize: 11,
       opacity: 0.7,
       marginBottom: 4,
       color: colors.text,
+    },
+    dayLabelToday: {
+      color: colors.tint,
+      fontWeight: '800',
+      opacity: 1,
     },
     dayCode: {
       fontSize: 13,
