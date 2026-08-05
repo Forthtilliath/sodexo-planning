@@ -11,6 +11,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Stack.Screen name="theme" options={{ title: 'Thème' }} />
       <Stack.Screen name="changelog" options={{ title: 'Nouveautés' }} />
+      <Stack.Screen name="update" options={{ title: 'Mise à jour' }} />
       <Stack.Screen name="about" options={{ title: 'À propos' }} />
       <Stack.Screen name="contact" options={{ title: 'Contact' }} />
       <Stack.Screen name="privacy" options={{ title: 'Confidentialité' }} />
