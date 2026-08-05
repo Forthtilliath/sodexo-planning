@@ -4,6 +4,7 @@
   "version": "1.2.0",
   "dependencies": {
     "@forthtilliath/expo-release-updates": "^0.2.0",
+    "@forthtilliath/react-native-kit": "^0.9.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.7",
     "expo-constants": "~57.0.6",
