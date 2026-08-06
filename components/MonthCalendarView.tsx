@@ -139,7 +139,6 @@ function createStyles(colors: ThemeColors) {
     dayBoxToday: {
       borderColor: colors.tint,
       borderWidth: 2,
-      backgroundColor: colors.tintSoft,
     },
     dayLabel: {
       fontSize: 11,
