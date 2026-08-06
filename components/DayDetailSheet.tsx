@@ -37,11 +37,11 @@ export default function DayDetailSheet({ day, scan, groups, showHours, isHoliday
             {isHoliday && <Text style={styles.holidayTag}>Férié</Text>}
           </View>
 
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>Code : {day.code || '—'}</Text>
-            {showHours && day.schedule && (
-              <Text style={styles.infoText}>Horaire : {formatScheduleHours(day.schedule)}</Text>
-            )}
+          <View style={styles.myCodeRow}>
+            <View style={[styles.codeBadge, styles.myCodeBadge, { backgroundColor: day.group?.color ?? colors.border }]}>
+              <Text style={[styles.codeBadgeText, styles.myCodeBadgeText]}>{day.code || '—'}</Text>
+            </View>
+            {showHours && day.schedule && <Text style={styles.scheduleText}>{formatScheduleHours(day.schedule)}</Text>}
           </View>
 
           {roster.map(({ group, members }) => (
@@ -67,16 +67,18 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     content: {
       paddingHorizontal: 20,
-      paddingBottom: 12,
+      paddingBottom: 8,
     },
     header: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 14,
+      gap: 8,
+      marginBottom: 12,
     },
     dateTitle: {
-      fontSize: 19,
+      fontSize: 18,
       fontWeight: '700',
       color: colors.text,
     },
@@ -90,17 +92,28 @@ function createStyles(colors: ThemeColors) {
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
-    infoBox: {
-      marginBottom: 20,
-      gap: 4,
+    myCodeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 16,
     },
-    infoText: {
+    myCodeBadge: {
+      minWidth: 56,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 8,
+    },
+    myCodeBadgeText: {
+      fontSize: 16,
+    },
+    scheduleText: {
       fontSize: 14,
-      opacity: 0.85,
+      opacity: 0.75,
       color: colors.text,
     },
     groupSection: {
-      marginBottom: 20,
+      marginBottom: 14,
     },
     groupLabel: {
       fontSize: 12,
@@ -108,19 +121,19 @@ function createStyles(colors: ThemeColors) {
       textTransform: 'uppercase',
       letterSpacing: 0.5,
       opacity: 0.6,
-      marginBottom: 10,
+      marginBottom: 7,
       color: colors.text,
     },
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-      marginBottom: 10,
+      marginBottom: 7,
     },
     codeBadge: {
-      minWidth: 42,
-      paddingHorizontal: 8,
-      paddingVertical: 5,
+      minWidth: 40,
+      paddingHorizontal: 7,
+      paddingVertical: 4,
       borderRadius: 6,
       alignItems: 'center',
     },
