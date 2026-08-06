@@ -20,9 +20,9 @@ describe('dayNumber', () => {
 });
 
 describe('formatFullDate', () => {
-  it('formate en "jour_de_la_semaine quantième"', () => {
-    expect(formatFullDate('2026-07-01')).toBe('mercredi 1');
-    expect(formatFullDate('2026-07-26')).toBe('dimanche 26');
+  it('formate en "Jour_de_la_semaine quantième Mois année", avec majuscules', () => {
+    expect(formatFullDate('2026-07-01')).toBe('Mercredi 1 Juillet 2026');
+    expect(formatFullDate('2026-08-13')).toBe('Jeudi 13 Août 2026');
   });
 });
 

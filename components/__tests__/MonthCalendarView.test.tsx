@@ -43,9 +43,8 @@ describe('MonthCalendarView', () => {
 
     await fireEvent.press(screen.getByText('1'));
 
-    expect(screen.getByText('mercredi 1')).toBeTruthy();
-    expect(screen.getByText('Code : D1')).toBeTruthy();
-    expect(screen.getByText('Horaire : 8h-16h')).toBeTruthy();
+    expect(screen.getByText('Mercredi 1 Juillet 2026')).toBeTruthy();
+    expect(screen.getByText('8h-16h')).toBeTruthy();
     expect(screen.getByText('D1-D4')).toBeTruthy();
     expect(screen.getByText('Moi')).toBeTruthy();
   });
@@ -65,8 +64,8 @@ describe('MonthCalendarView', () => {
 
     await fireEvent.press(screen.getByText('1'));
 
-    expect(screen.getByText('mercredi 1')).toBeTruthy();
-    expect(screen.queryByText(/Horaire/)).toBeNull();
+    expect(screen.getByText('Mercredi 1 Juillet 2026')).toBeTruthy();
+    expect(screen.queryByText('8h-16h')).toBeNull();
   });
 
   it("range les codes sans groupe dans 'Autres'", async () => {
@@ -84,8 +83,8 @@ describe('MonthCalendarView', () => {
 
     expect(screen.getByText('Autres')).toBeTruthy();
     expect(screen.getByText('Moi')).toBeTruthy();
-    // 'RTT' apparaît deux fois : dans la case du jour et dans le badge du détail.
-    expect(screen.getAllByText('RTT').length).toBe(2);
+    // 'RTT' apparaît trois fois : la case du jour, le badge "mon poste", et le badge du roster.
+    expect(screen.getAllByText('RTT').length).toBe(3);
   });
 
   it('affiche un badge "Férié" dans le détail quand le jour est férié', async () => {
