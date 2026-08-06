@@ -92,6 +92,18 @@ export function saveSettings(settings: Settings): Promise<void> {
 	return writeJson(KEYS.settings, settings);
 }
 
+/** Horodatage de la dernière vérification de mise à jour (voir components/UpdateBanner.tsx). */
+export async function recordUpdateCheck(lastCheckedAt: number): Promise<void> {
+	const settings = await getSettings();
+	await saveSettings({ ...settings, lastUpdateCheckAt: lastCheckedAt });
+}
+
+/** Mémorise la version fermée par l'utilisateur, pour ne pas la re-proposer tant qu'il n'y en a pas de plus récente. */
+export async function dismissUpdateVersion(version: string): Promise<void> {
+	const settings = await getSettings();
+	await saveSettings({ ...settings, dismissedUpdateVersion: version });
+}
+
 export async function getTeamGroups(): Promise<TeamGroup[]> {
 	const raw = await AsyncStorage.getItem(KEYS.teamGroups);
 	if (!raw) return DEFAULT_TEAM_GROUPS;
