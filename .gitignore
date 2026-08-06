@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Claude Code — réglages locaux (permissions personnelles, non partagées)
+.claude/settings.local.json
+
 # typescript
 *.tsbuildinfo
 
