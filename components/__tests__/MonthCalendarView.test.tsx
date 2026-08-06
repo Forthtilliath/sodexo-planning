@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 import MonthCalendarView from '@/components/MonthCalendarView';
 import type { DayPlanning } from '@/lib/teams';
@@ -39,37 +38,35 @@ describe('MonthCalendarView', () => {
     expect(screen.getAllByText('D1')).toHaveLength(2);
   });
 
-  it("affiche l'horaire et le roster groupé par équipe dans l'alerte au clic sur un jour", async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it("affiche l'horaire et le roster groupé par équipe dans le détail au clic sur un jour", async () => {
     await render(<MonthCalendarView planning={planning} holidays={[]} showHours={true} scan={scan} groups={groups} />);
 
     await fireEvent.press(screen.getByText('1'));
 
-    expect(alertSpy).toHaveBeenCalledWith('mercredi 1', 'Code : D1\nHoraire : 8h-16h\n\nD1-D4 : Moi (D1)');
-
-    alertSpy.mockRestore();
+    expect(screen.getByText('mercredi 1')).toBeTruthy();
+    expect(screen.getByText('Code : D1')).toBeTruthy();
+    expect(screen.getByText('Horaire : 8h-16h')).toBeTruthy();
+    expect(screen.getByText('D1-D4')).toBeTruthy();
+    expect(screen.getByText('Moi')).toBeTruthy();
   });
 
   it("liste tous les membres de l'équipe (pas juste les coéquipiers d'une seule personne)", async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<MonthCalendarView planning={planning} holidays={[]} showHours={false} scan={scan} groups={groups} />);
 
     await fireEvent.press(screen.getByText('2'));
 
-    expect(alertSpy).toHaveBeenCalledWith('jeudi 2', 'Code : D1\n\nD1-D4 : Moi (D1), Coéquipier (D2)');
-
-    alertSpy.mockRestore();
+    expect(screen.getByText('Moi')).toBeTruthy();
+    expect(screen.getByText('Coéquipier')).toBeTruthy();
+    expect(screen.getByText('D2')).toBeTruthy();
   });
 
-  it("n'affiche pas l'horaire dans l'alerte quand showHours est désactivé", async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it("n'affiche pas l'horaire dans le détail quand showHours est désactivé", async () => {
     await render(<MonthCalendarView planning={planning} holidays={[]} showHours={false} scan={scan} groups={groups} />);
 
     await fireEvent.press(screen.getByText('1'));
 
-    expect(alertSpy).toHaveBeenCalledWith('mercredi 1', 'Code : D1\n\nD1-D4 : Moi (D1)');
-
-    alertSpy.mockRestore();
+    expect(screen.getByText('mercredi 1')).toBeTruthy();
+    expect(screen.queryByText(/Horaire/)).toBeNull();
   });
 
   it("range les codes sans groupe dans 'Autres'", async () => {
@@ -79,15 +76,25 @@ describe('MonthCalendarView', () => {
       days: ['2026-07-01'],
       grid: [['RTT'], ['']],
     };
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(
       <MonthCalendarView planning={noGroupPlanning} holidays={[]} showHours={false} scan={noGroupScan} groups={groups} />
     );
 
     await fireEvent.press(screen.getByText('1'));
 
-    expect(alertSpy).toHaveBeenCalledWith('mercredi 1', 'Code : RTT\n\nAutres : Moi (RTT)');
+    expect(screen.getByText('Autres')).toBeTruthy();
+    expect(screen.getByText('Moi')).toBeTruthy();
+    // 'RTT' apparaît deux fois : dans la case du jour et dans le badge du détail.
+    expect(screen.getAllByText('RTT').length).toBe(2);
+  });
 
-    alertSpy.mockRestore();
+  it('affiche un badge "Férié" dans le détail quand le jour est férié', async () => {
+    await render(
+      <MonthCalendarView planning={planning} holidays={['2026-07-01']} showHours={false} scan={scan} groups={groups} />
+    );
+
+    await fireEvent.press(screen.getByText('1'));
+
+    expect(screen.getByText('Férié')).toBeTruthy();
   });
 });

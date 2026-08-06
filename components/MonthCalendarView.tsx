@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import DayDetailSheet from '@/components/DayDetailSheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
 import { dayNumber, isToday, mondayFirstWeekday } from '@/lib/dates';
-import { computeDayRoster, formatScheduleHours, type DayPlanning } from '@/lib/teams';
+import type { DayPlanning } from '@/lib/teams';
 import type { ScanRecord, TeamGroup } from '@/types';
 
 type Props = {
@@ -16,12 +17,6 @@ type Props = {
 };
 
 const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-function formatFullDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00`);
-  const weekday = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][date.getDay()];
-  return `${weekday} ${date.getDate()}`;
-}
 
 // En sombre, une même opacité rend le fond beaucoup plus terne (mélangé à du
 // quasi-noir plutôt qu'à du blanc) : on pousse l'opacité pour que la couleur
@@ -41,25 +36,7 @@ export default function MonthCalendarView({ planning, holidays, showHours, scan,
   const styles = useMemo(() => createStyles(colors), [colors]);
   const leadingBlanks = planning.length > 0 ? mondayFirstWeekday(planning[0].date) : 0;
   const holidaySet = new Set(holidays);
-
-  function showDayInfo(day: DayPlanning) {
-    const lines = [`Code : ${day.code || '—'}`];
-    if (showHours && day.schedule) {
-      lines.push(`Horaire : ${formatScheduleHours(day.schedule)}`);
-    }
-
-    const dayIndex = scan.days.indexOf(day.date);
-    const roster = computeDayRoster(scan, dayIndex, groups);
-    if (roster.length > 0) {
-      lines.push('');
-      for (const { group, members } of roster) {
-        const names = members.map((m) => `${m.name} (${m.code})`).join(', ');
-        lines.push(`${group?.label ?? 'Autres'} : ${names}`);
-      }
-    }
-
-    Alert.alert(formatFullDate(day.date), lines.join('\n'));
-  }
+  const [selectedDay, setSelectedDay] = useState<DayPlanning | null>(null);
 
   return (
     <View>
@@ -87,7 +64,7 @@ export default function MonthCalendarView({ planning, holidays, showHours, scan,
                   isHoliday && styles.dayBoxHoliday,
                   isCurrentDay && styles.dayBoxToday,
                 ]}
-                onPress={() => showDayInfo(day)}>
+                onPress={() => setSelectedDay(day)}>
                 <Text style={[styles.dayLabel, isCurrentDay && styles.dayLabelToday]}>{dayNumber(day.date)}</Text>
                 <Text style={styles.dayCode} numberOfLines={1}>
                   {day.code || '—'}
@@ -97,6 +74,15 @@ export default function MonthCalendarView({ planning, holidays, showHours, scan,
           );
         })}
       </View>
+
+      <DayDetailSheet
+        day={selectedDay}
+        scan={scan}
+        groups={groups}
+        showHours={showHours}
+        isHoliday={selectedDay !== null && holidaySet.has(selectedDay.date)}
+        onClose={() => setSelectedDay(null)}
+      />
     </View>
   );
 }
