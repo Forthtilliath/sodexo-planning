@@ -18,11 +18,16 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <View style={styles.overlay}>
+        {/* Fond cliquable pour fermer : un FRÈRE de la sheet, pas un parent — un
+            Pressable qui englobe le ScrollView entre en conflit avec son geste
+            de défilement (le tap-and-drag est intercepté par le Pressable au
+            lieu de faire défiler le contenu, surtout sur Android). */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.sheet}>
           <ScrollView style={styles.scroll}>{children}</ScrollView>
         </View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
