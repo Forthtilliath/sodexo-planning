@@ -10,13 +10,18 @@ export function normalizeName(name: string): string {
 
 // Ordre "hiérarchique" des postes, du plus prioritaire au moins prioritaire,
 // utilisé pour attribuer un poste majoritaire à chaque salarié (tri dans
-// Réglages > Salariés) : E1-E3 d'abord, puis D1-D4, C6-C8, C2-C5, B1.
+// Réglages > Salariés) et pour grouper le roster d'un jour (voir
+// computeDayRoster) : E1-E3 d'abord, puis D1-D4, C6-C8, C2-C5, B1, puis les
+// codes de weekend/férié F1-F3 (= C6-C8) et F4-F5 (= D1-D2), dans cet ordre
+// entre eux — sans quoi ils étaient à égalité et s'affichaient dans un ordre
+// dépendant juste de qui apparaît en premier dans la grille ce jour-là.
 export const CODE_DISPLAY_ORDER = [
   'E1', 'E2', 'E3',
   'D1', 'D2', 'D3', 'D4',
   'C6', 'C7', 'C8',
   'C2', 'C3', 'C4', 'C5',
   'B1',
+  'F1', 'F2', 'F3', 'F4', 'F5',
 ];
 
 /**
