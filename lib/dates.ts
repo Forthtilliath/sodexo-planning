@@ -8,6 +8,13 @@ export function dayNumber(iso: string): number {
   return new Date(`${iso}T00:00:00`).getDate();
 }
 
+/** "2026-07-01" -> "mercredi 1", pour l'en-tête du détail d'un jour. */
+export function formatFullDate(iso: string): string {
+  const date = new Date(`${iso}T00:00:00`);
+  const weekday = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][date.getDay()];
+  return `${weekday} ${date.getDate()}`;
+}
+
 /** true si la date ISO (YYYY-MM-DD) correspond au jour courant. */
 export function isToday(iso: string): boolean {
   const now = new Date();
