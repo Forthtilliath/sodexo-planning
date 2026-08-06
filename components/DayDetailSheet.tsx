@@ -33,16 +33,20 @@ export default function DayDetailSheet({ day, scan, groups, showHours, isHoliday
       {day && (
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.dateTitle}>{formatFullDate(day.date)}</Text>
-            {isHoliday && <Text style={styles.holidayTag}>Férié</Text>}
-          </View>
-
-          <View style={styles.myCodeRow}>
+            <Text style={styles.dateTitle} numberOfLines={1}>
+              {formatFullDate(day.date)}
+            </Text>
             <View style={[styles.codeBadge, styles.myCodeBadge, { backgroundColor: day.group?.color ?? colors.border }]}>
               <Text style={[styles.codeBadgeText, styles.myCodeBadgeText]}>{day.code || '—'}</Text>
             </View>
-            {showHours && day.schedule && <Text style={styles.scheduleText}>{formatScheduleHours(day.schedule)}</Text>}
           </View>
+
+          {(isHoliday || (showHours && day.schedule)) && (
+            <View style={styles.subHeaderRow}>
+              {isHoliday && <Text style={styles.holidayTag}>Férié</Text>}
+              {showHours && day.schedule && <Text style={styles.scheduleText}>{formatScheduleHours(day.schedule)}</Text>}
+            </View>
+          )}
 
           {roster.map(({ group, members }) => (
             <View key={group?.id ?? 'autres'} style={styles.groupSection}>
@@ -71,16 +75,22 @@ function createStyles(colors: ThemeColors) {
     },
     header: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 8,
-      marginBottom: 12,
+      gap: 10,
+      marginBottom: 8,
     },
     dateTitle: {
-      fontSize: 18,
+      flexShrink: 1,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
+    },
+    subHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 16,
     },
     holidayTag: {
       fontSize: 12,
@@ -91,12 +101,6 @@ function createStyles(colors: ThemeColors) {
       borderRadius: 6,
       paddingHorizontal: 8,
       paddingVertical: 2,
-    },
-    myCodeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginBottom: 16,
     },
     myCodeBadge: {
       minWidth: 56,
