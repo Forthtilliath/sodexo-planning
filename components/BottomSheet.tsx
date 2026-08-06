@@ -20,7 +20,7 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={styles.sheet}>
-          <ScrollView>{children}</ScrollView>
+          <ScrollView style={styles.scroll}>{children}</ScrollView>
         </View>
       </Pressable>
     </Modal>
@@ -41,6 +41,12 @@ function createStyles(colors: ThemeColors) {
       paddingTop: 8,
       paddingBottom: 24,
       maxHeight: '70%',
+    },
+    // Sans flexShrink, le ScrollView prend la hauteur de son contenu au lieu
+    // de se contraindre au maxHeight du sheet : le contenu déborde sans que
+    // ça défile (le surplus est juste invisible/coupé, pas scrollable).
+    scroll: {
+      flexShrink: 1,
     },
   });
 }
