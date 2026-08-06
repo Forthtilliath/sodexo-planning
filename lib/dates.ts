@@ -8,6 +8,24 @@ export function dayNumber(iso: string): number {
   return new Date(`${iso}T00:00:00`).getDate();
 }
 
+const WEEKDAY_NAMES = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const MONTH_NAMES = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+];
+
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/** "2026-08-13" -> "Jeudi 13 Août 2026", pour l'en-tête du détail d'un jour. */
+export function formatFullDate(iso: string): string {
+  const date = new Date(`${iso}T00:00:00`);
+  const weekday = capitalize(WEEKDAY_NAMES[date.getDay()]);
+  const month = capitalize(MONTH_NAMES[date.getMonth()]);
+  return `${weekday} ${date.getDate()} ${month} ${date.getFullYear()}`;
+}
+
 /** true si la date ISO (YYYY-MM-DD) correspond au jour courant. */
 export function isToday(iso: string): boolean {
   const now = new Date();
