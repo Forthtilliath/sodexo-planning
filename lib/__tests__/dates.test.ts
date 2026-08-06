@@ -1,4 +1,4 @@
-import { dayNumber, mondayFirstWeekday, timestampCompact } from '@/lib/dates';
+import { dayNumber, formatFullDate, isToday, mondayFirstWeekday, timestampCompact } from '@/lib/dates';
 
 describe('mondayFirstWeekday', () => {
   it('renvoie 0 pour un lundi et 6 pour un dimanche', () => {
@@ -16,6 +16,27 @@ describe('dayNumber', () => {
   it("extrait le quantième du mois depuis une date ISO", () => {
     expect(dayNumber('2026-07-01')).toBe(1);
     expect(dayNumber('2026-07-31')).toBe(31);
+  });
+});
+
+describe('formatFullDate', () => {
+  it('formate en "jour_de_la_semaine quantième"', () => {
+    expect(formatFullDate('2026-07-01')).toBe('mercredi 1');
+    expect(formatFullDate('2026-07-26')).toBe('dimanche 26');
+  });
+});
+
+describe('isToday', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("renvoie true seulement pour la date du jour", () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 15)); // 15 juillet 2026
+
+    expect(isToday('2026-07-15')).toBe(true);
+    expect(isToday('2026-07-14')).toBe(false);
+    expect(isToday('2026-07-16')).toBe(false);
   });
 });
 
