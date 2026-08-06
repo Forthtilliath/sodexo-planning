@@ -6,6 +6,7 @@ import BottomSheet from '@/components/BottomSheet';
 import MonthCalendarView from '@/components/MonthCalendarView';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { isToday } from '@/lib/dates';
 import { getCodeSchedules, getScans, getSettings, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
@@ -277,8 +278,11 @@ export default function PlanningScreen() {
           {viewMode === 'list' ? (
             planning.map((day) => {
               const isHoliday = selectedScan?.holidays?.includes(day.date) ?? false;
+              const isCurrentDay = isToday(day.date);
               return (
-                <View key={day.date} style={[styles.dayRow, isHoliday && styles.dayRowHoliday]}>
+                <View
+                  key={day.date}
+                  style={[styles.dayRow, isHoliday && styles.dayRowHoliday, isCurrentDay && styles.dayRowToday]}>
                   <View style={styles.dayDate}>
                     <Text style={styles.dayDateText}>{formatDate(day.date)}</Text>
                   </View>
@@ -473,6 +477,11 @@ function createStyles(colors: ThemeColors) {
     dayRowHoliday: {
       borderLeftWidth: 3,
       borderLeftColor: colors.holiday,
+      paddingLeft: 8,
+    },
+    dayRowToday: {
+      borderLeftWidth: 3,
+      borderLeftColor: colors.tint,
       paddingLeft: 8,
     },
     dayHolidayTag: {
