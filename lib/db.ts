@@ -99,12 +99,13 @@ export async function getTeamGroups(): Promise<TeamGroup[]> {
 	try {
 		const parsed: unknown = JSON.parse(raw);
 		if (!Array.isArray(parsed)) return DEFAULT_TEAM_GROUPS;
-		// Les groupes ne sont plus modifiables dans l'app : la couleur définie
-		// dans le code prime toujours sur celle éventuellement déjà enregistrée
-		// (ex: après un ajustement de palette), par id de groupe.
+		// Les groupes ne sont plus modifiables dans l'app : la couleur et le
+		// label définis dans le code priment toujours sur ceux éventuellement
+		// déjà enregistrés (ex: après un ajustement de palette ou de libellé),
+		// par id de groupe.
 		return (parsed as TeamGroup[]).map((g) => {
-			const withDefaultColor = DEFAULT_TEAM_GROUPS.find((d) => d.id === g.id);
-			return withDefaultColor?.color ? { ...g, color: withDefaultColor.color } : g;
+			const withDefaults = DEFAULT_TEAM_GROUPS.find((d) => d.id === g.id);
+			return withDefaults ? { ...g, color: withDefaults.color, label: withDefaults.label } : g;
 		});
 	} catch {
 		return DEFAULT_TEAM_GROUPS;

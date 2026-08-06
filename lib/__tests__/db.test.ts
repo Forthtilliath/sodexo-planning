@@ -83,6 +83,15 @@ describe('getTeamGroups', () => {
     const reloaded = await getTeamGroups();
     expect(reloaded.find((g) => g.id === 'e1-e3')?.color).toBe('#c9a227');
   });
+
+  it("réimpose le label par défaut même si un ancien label a été sauvegardé (ex: avant l'ajout des labels lisibles)", async () => {
+    const groups = await getTeamGroups();
+    const tampered = groups.map((g) => (g.id === 'e1-e3' ? { ...g, label: 'E1-E3' } : g));
+    await saveTeamGroups(tampered);
+
+    const reloaded = await getTeamGroups();
+    expect(reloaded.find((g) => g.id === 'e1-e3')?.label).toBe('Direction');
+  });
 });
 
 describe('getEmployeeRoster', () => {
