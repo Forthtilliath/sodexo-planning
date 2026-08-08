@@ -1,9 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import PersonDayEditor from '@/components/PersonDayEditor';
+import type { TeamGroup } from '@/types';
 
 // mer, jeu, ven, sam, dim, lun, mar — samedi+dimanche consécutifs (indices 3-4)
 const days = ['2026-07-01', '2026-07-02', '2026-07-03', '2026-07-04', '2026-07-05', '2026-07-06', '2026-07-07'];
+
+const groups: TeamGroup[] = [{ id: 'e1-e3', label: 'Direction', codes: ['E1', 'E2', 'E3'], color: '#c9a227' }];
 
 function emptyCodes() {
   return days.map(() => '');
@@ -18,6 +21,7 @@ describe('PersonDayEditor', () => {
         codes={codes}
         codeOptions={[]}
         allCodes={[]}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={jest.fn()}
       />
@@ -34,6 +38,25 @@ describe('PersonDayEditor', () => {
     expect(screen.getAllByText('F1')).toHaveLength(1);
   });
 
+  it('colore le fond du jour avec la couleur du groupe du code affecté', async () => {
+    const codes = ['E1', '', '', '', '', '', ''];
+    await render(
+      <PersonDayEditor
+        days={days}
+        codes={codes}
+        codeOptions={[]}
+        allCodes={[]}
+        groups={groups}
+        holidays={new Set()}
+        onChangeCode={jest.fn()}
+      />
+    );
+
+    const dayBox = screen.getByText('E1').parent;
+    const flatStyle = [dayBox?.props.style].flat(Infinity).filter(Boolean);
+    expect(flatStyle.some((s) => typeof s === 'object' && 'backgroundColor' in s)).toBe(true);
+  });
+
   it("ne propose que les codes normaux quand la sélection est un jour de semaine", async () => {
     await render(
       <PersonDayEditor
@@ -41,6 +64,7 @@ describe('PersonDayEditor', () => {
         codes={emptyCodes()}
         codeOptions={['E1', 'F1']}
         allCodes={['E1', 'F1']}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={jest.fn()}
       />
@@ -63,6 +87,7 @@ describe('PersonDayEditor', () => {
         codes={emptyCodes()}
         codeOptions={['E1', 'F1']}
         allCodes={['E1', 'F1']}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={jest.fn()}
       />
@@ -82,6 +107,7 @@ describe('PersonDayEditor', () => {
         codes={emptyCodes()}
         codeOptions={['E1']}
         allCodes={['E1']}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={onChangeCode}
       />
@@ -101,6 +127,7 @@ describe('PersonDayEditor', () => {
         codes={emptyCodes()}
         codeOptions={['F1']}
         allCodes={['F1']}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={onChangeCode}
       />
@@ -121,6 +148,7 @@ describe('PersonDayEditor', () => {
         codes={['E1', '', '', '', '', '', '']}
         codeOptions={[]}
         allCodes={[]}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={onChangeCode}
       />
@@ -140,6 +168,7 @@ describe('PersonDayEditor', () => {
         codes={emptyCodes()}
         codeOptions={['E1']}
         allCodes={['E1', 'C2']}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={onChangeCode}
       />
@@ -159,6 +188,7 @@ describe('PersonDayEditor', () => {
         codes={emptyCodes()}
         codeOptions={[]}
         allCodes={[]}
+        groups={groups}
         holidays={new Set()}
         onChangeCode={jest.fn()}
       />
@@ -172,6 +202,7 @@ describe('PersonDayEditor', () => {
         codes={emptyCodes()}
         codeOptions={[]}
         allCodes={[]}
+        groups={groups}
         holidays={new Set(['2026-07-01'])}
         onChangeCode={jest.fn()}
       />
