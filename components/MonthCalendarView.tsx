@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import DayDetailSheet from '@/components/DayDetailSheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
+import { hexToSoftBackground } from '@/lib/colors';
 import { dayNumber, isToday, mondayFirstWeekday } from '@/lib/dates';
 import type { DayPlanning } from '@/lib/teams';
 import type { ScanRecord, TeamGroup } from '@/types';
@@ -17,17 +18,6 @@ type Props = {
 };
 
 const WEEKDAY_HEADERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-// En sombre, une même opacité rend le fond beaucoup plus terne (mélangé à du
-// quasi-noir plutôt qu'à du blanc) : on pousse l'opacité pour que la couleur
-// du groupe reste repérable, y compris à la lumière du jour.
-function hexToSoftBackground(hex: string, isDark: boolean): string {
-  const clean = hex.replace('#', '');
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${isDark ? 0.45 : 0.22})`;
-}
 
 /** Vue calendrier en lecture seule : touche un jour pour voir qui travaille, groupé par équipe. */
 export default function MonthCalendarView({ planning, holidays, showHours, scan, groups }: Props) {
@@ -120,7 +110,7 @@ function createStyles(colors: ThemeColors) {
     },
     dayBoxHoliday: {
       borderColor: colors.holiday,
-      borderWidth: 2,
+      borderWidth: 1,
     },
     dayBoxToday: {
       borderColor: colors.tint,
