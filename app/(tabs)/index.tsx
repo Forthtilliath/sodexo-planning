@@ -350,6 +350,7 @@ export default function PlanningEditorScreen() {
               codes={grid[editingRow] ?? []}
               codeOptions={codeOptions[employees[editingRow] ?? ''] ?? []}
               allCodes={allCodes}
+              groups={groups}
               holidays={holidays}
               onChangeCode={(colIndex, value) => updateCell(editingRow, colIndex, value)}
             />

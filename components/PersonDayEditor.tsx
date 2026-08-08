@@ -3,14 +3,18 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { ThemeColors } from '@/constants/Colors';
-import { useThemeColors } from '@/hooks/useThemeColors';
+import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
+import { hexToSoftBackground } from '@/lib/colors';
 import { dayNumber, mondayFirstWeekday } from '@/lib/dates';
+import { findGroupForCode } from '@/lib/teams';
+import type { TeamGroup } from '@/types';
 
 type Props = {
   days: string[]; // dates ISO, une par colonne
   codes: string[]; // un code par jour, pour cette seule personne
   codeOptions: string[]; // codes habituels de cette personne (Réglages), proposés en boutons rapides
   allCodes: string[]; // tous les codes connus (groupes de postes), pour affecter autre chose que les codes habituels
+  groups: TeamGroup[]; // pour colorer chaque jour selon le poste affecté, comme dans "Mon planning"
   holidays: Set<string>; // dates ISO fériées du mois
   onChangeCode: (colIndex: number, value: string) => void;
 };
@@ -61,10 +65,12 @@ export default function PersonDayEditor({
   codes,
   codeOptions,
   allCodes,
+  groups,
   holidays,
   onChangeCode,
 }: Props) {
   const colors = useThemeColors();
+  const isDark = useResolvedScheme() === 'dark';
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [otherCodeModalOpen, setOtherCodeModalOpen] = useState(false);
@@ -178,12 +184,18 @@ export default function PersonDayEditor({
           const indices = cellIndices(cell);
           const isSelected = indices.length > 0 && indices.every((i) => selected.has(i));
           const isHoliday = indices.some((i) => holidays.has(days[i]));
+          const group = value ? findGroupForCode(value, groups) : undefined;
           const key = cell.kind === 'weekend' ? `we-${cell.satIndex}` : `d-${cell.index}`;
 
           return (
             <View key={key} style={[styles.dayCell, isWeekend && styles.weekendCell]}>
               <Pressable
-                style={[styles.daySelectBox, isHoliday && styles.daySelectBoxHoliday, isSelected && styles.dayCellSelected]}
+                style={[
+                  styles.daySelectBox,
+                  group?.color && { backgroundColor: hexToSoftBackground(group.color, isDark) },
+                  isHoliday && styles.daySelectBoxHoliday,
+                  isSelected && styles.dayCellSelected,
+                ]}
                 onPress={() => toggleCell(cell)}>
                 {cell.kind === 'weekend' ? (
                   // L'en-tête dit déjà "WE" : ici on montre les deux jours
