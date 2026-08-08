@@ -475,7 +475,7 @@ function createStyles(colors: ThemeColors) {
       borderColor: colors.divider,
     },
     dayRowHoliday: {
-      borderLeftWidth: 3,
+      borderLeftWidth: 2,
       borderLeftColor: colors.holiday,
       paddingLeft: 8,
     },
