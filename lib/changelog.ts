@@ -1,6 +1,7 @@
-// Historique des versions, écrit à la main en français pour l'écran
-// "Nouveautés" de l'app. À compléter à chaque nouvelle version (voir
-// scripts/render-changelog.js pour la génération de CHANGELOG.md).
+// Historique des versions, écrit à la main en français : source des notes de
+// version affichées dans Réglages > Mise à jour (historique des releases) et
+// du CHANGELOG.md du dépôt (voir scripts/render-changelog.js). À compléter à
+// chaque nouvelle version.
 
 export type ChangelogEntry = {
   version: string;
@@ -19,7 +20,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Nouveau : les groupes de postes ont des noms lisibles (Direction, Plonge Matin, Plonge Soir, Chaud, Froid, Chaîne, Boutique) au lieu de codes bruts (E1-E3, D1-D2...).',
       'Nouveau : le détail d\'un jour dans le calendrier affiche une vraie fiche avec badges colorés par poste, au lieu d\'une popup système austère.',
       'Nouveau : la Saisie colore maintenant chaque jour selon le poste affecté, comme dans "Mon planning".',
-      'Nouveau : écran "Mise à jour" dans Réglages, avec vérification manuelle, barre de progression et historique des versions.',
+      'Nouveau : écran "Mise à jour" dans Réglages, avec vérification manuelle, barre de progression et historique des versions — remplace la page "Nouveautés".',
       'Correction : les jours fériés étaient trop voyants dans "Mon planning" et se confondaient avec le jour actuel — bordure allégée.',
       'Correction : l\'ordre des codes de weekend/férié (F1 à F5) dans le détail d\'un jour était aléatoire.',
       'Correction : le calendrier ne défilait pas quand il y avait trop de monde à afficher dans le détail d\'un jour.',
