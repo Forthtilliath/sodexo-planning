@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 
 import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
@@ -62,6 +62,7 @@ type Step = 'home' | 'review';
 
 export default function PlanningEditorScreen() {
   const navigation = useNavigation();
+  const editParams = useLocalSearchParams<{ scanId?: string; editRow?: string }>();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [step, setStep] = useState<Step>('home');
@@ -171,7 +172,7 @@ export default function PlanningEditorScreen() {
   }
 
   /** Reprend un planning déjà enregistré (même en plusieurs fois, sur plusieurs jours). */
-  function openScanForEditing(scan: ScanRecord) {
+  const openScanForEditing = useCallback((scan: ScanRecord) => {
     setYear(scan.year);
     setMonth(scan.month);
     setDays(scan.days);
@@ -181,7 +182,21 @@ export default function PlanningEditorScreen() {
     setCurrentScanId(scan.id);
     setEditingRow(null);
     setStep('review');
-  }
+  }, []);
+
+  // Arrivée depuis "Mon planning" (bouton "✏️ Modifier") : ouvre directement
+  // le bon planning sur la bonne personne, sans repasser par la sélection
+  // mois/salarié à la main. Les params sont retirés une fois consommés, sinon
+  // revenir sur cet onglet plus tard nous ramènerait toujours au même endroit.
+  useEffect(() => {
+    if (!editParams.scanId || !editParams.editRow) return;
+    const scan = scans.find((s) => s.id === editParams.scanId);
+    if (!scan) return;
+    const rowIndex = Number(editParams.editRow);
+    openScanForEditing(scan);
+    setEditingRow(Number.isNaN(rowIndex) ? null : rowIndex);
+    router.setParams({ scanId: undefined, editRow: undefined });
+  }, [editParams, scans, openScanForEditing]);
 
   function updateCell(rowIndex: number, colIndex: number, value: string) {
     setGrid((prev) =>
