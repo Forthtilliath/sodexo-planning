@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation } from 'expo-router';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
 
 import BottomSheet from '@/components/BottomSheet';
 import MonthCalendarView from '@/components/MonthCalendarView';
@@ -131,6 +131,11 @@ export default function PlanningScreen() {
     if (!selectedScan || displayRowIndex < 0) return [];
     return computeMonthPlanning(selectedScan, displayRowIndex, groups, schedules);
   }, [selectedScan, displayRowIndex, groups, schedules]);
+
+  function handleEdit() {
+    if (!selectedScan || displayRowIndex < 0) return;
+    router.push({ pathname: '/', params: { scanId: selectedScan.id, editRow: String(displayRowIndex) } });
+  }
 
   async function handleExport() {
     if (!selectedScan || displayRowIndex < 0) return;
@@ -269,6 +274,14 @@ export default function PlanningScreen() {
               </Text>
             </Pressable>
           </View>
+
+          <Pressable style={styles.editButton} onPress={handleEdit}>
+            <Text style={styles.editButtonText}>
+              {viewingSomeoneElse
+                ? `✏️ Modifier le planning de ${selectedScan.employees[viewingIndex] || 'ce/cette collègue'}`
+                : '✏️ Modifier ce planning'}
+            </Text>
+          </Pressable>
 
           <Pressable style={styles.hoursToggleRow} onPress={() => setShowHours((v) => !v)}>
             <Text style={styles.hoursToggleLabel}>🕐 Afficher les horaires</Text>
@@ -454,6 +467,19 @@ function createStyles(colors: ThemeColors) {
     },
     viewModeTextActive: {
       color: colors.onTint,
+    },
+    editButton: {
+      paddingVertical: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.tint,
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    editButtonText: {
+      color: colors.tint,
+      fontWeight: '700',
+      fontSize: 13,
     },
     hoursToggleRow: {
       flexDirection: 'row',
