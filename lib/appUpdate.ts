@@ -4,8 +4,7 @@ import {
   fetchReleaseHistory as fetchReleaseHistoryBase,
 } from '@forthtilliath/expo-release-updates';
 
-export { compareVersions } from '@forthtilliath/expo-release-updates';
-export type { LatestRelease, ReleaseHistoryEntry } from '@forthtilliath/expo-release-updates';
+export { compareVersions, type LatestRelease, type ReleaseHistoryEntry } from '@forthtilliath/expo-release-updates';
 
 const REPO = { owner: 'Forthtilliath', repo: 'sodexo-planning' };
 const APK_FILE_NAME = 'sodexo-planning-update.apk';
