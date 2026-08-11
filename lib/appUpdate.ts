@@ -7,7 +7,7 @@ import {
 export { compareVersions } from '@forthtilliath/expo-release-updates/compareVersions';
 export type { LatestRelease, ReleaseHistoryEntry } from '@forthtilliath/expo-release-updates/githubReleases';
 
-const REPO = { owner: 'Forthtilliath', repo: 'reactnative-sodexo-planning' };
+const REPO = { owner: 'Forthtilliath', repo: 'sodexo-planning' };
 const APK_FILE_NAME = 'sodexo-planning-update.apk';
 
 export function fetchLatestRelease() {
