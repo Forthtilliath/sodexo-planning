@@ -1,5 +1,5 @@
 {
-  "name": "rn-planning",
+  "name": "sodexo-planning",
   "main": "expo-router/entry",
   "version": "1.3.0",
   "dependencies": {
