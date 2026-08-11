@@ -17,7 +17,12 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # --legacy-peer-deps: react-native@0.86.0's peerOptional
+      # @react-native/jest-preset want (exactly 0.86.0) is unsatisfiable
+      # alongside jest-expo's peer want (^0.86.2) — no single version can
+      # match both, this is an upstream inconsistency between the two
+      # packages, not something fixable by picking a different version here.
+      - run: npm ci --legacy-peer-deps
 
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.json
