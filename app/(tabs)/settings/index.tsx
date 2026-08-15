@@ -1,88 +1,94 @@
+import { SettingsMenu } from '@forthtilliath/react-native-kit/components/settings/SettingsMenu';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView } from 'react-native';
 
-import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 
-const MENU = [
-  { href: '/settings/backup', emoji: '💾', title: 'Sauvegarde', hint: 'Exporter / importer toutes tes données' },
-  { href: '/settings/profile', emoji: '🙋', title: 'Mon nom', hint: 'Pour te retrouver dans "Mon planning"' },
-  {
-    href: '/settings/groups',
-    emoji: '👥',
-    title: 'Groupes de postes',
-    hint: 'Les codes de poste qui vont ensemble',
-  },
-  { href: '/settings/roster', emoji: '📋', title: 'Salariés', hint: 'Liste et codes habituels de chacun' },
-  { href: '/settings/notifications', emoji: '🔔', title: 'Notifications', hint: 'Rappel la veille d\'un jour travaillé' },
-  { href: '/settings/theme', emoji: '🎨', title: 'Thème', hint: 'Clair, sombre, ou automatique' },
-  { href: '/settings/update', emoji: '⬇️', title: 'Mise à jour', hint: 'Vérifier, installer, et voir les nouveautés de chaque version' },
-  { href: '/settings/about', emoji: 'ℹ️', title: 'À propos', hint: "Version et présentation de l'app" },
-  { href: '/settings/contact', emoji: '✉️', title: 'Contact', hint: 'Une question, un bug à signaler' },
-  { href: '/settings/privacy', emoji: '🔒', title: 'Confidentialité', hint: 'Où vont tes données (nulle part)' },
-] as const;
-
-export default function SettingsMenu() {
+export default function SettingsMenuScreen() {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {MENU.map((item) => (
-        <Pressable key={item.href} style={styles.row} onPress={() => router.push(item.href)}>
-          <Text style={styles.emoji}>{item.emoji}</Text>
-          <View style={styles.textColumn}>
-            <Text style={styles.rowTitle}>{item.title}</Text>
-            <Text style={styles.rowHint}>{item.hint}</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-      ))}
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16 }}>
+      <SettingsMenu
+        items={[
+          {
+            key: 'backup',
+            emoji: '💾',
+            title: 'Sauvegarde',
+            hint: 'Exporter / importer toutes tes données',
+            onPress: () => router.push('/settings/backup'),
+          },
+          {
+            key: 'profile',
+            emoji: '🙋',
+            title: 'Mon nom',
+            hint: 'Pour te retrouver dans "Mon planning"',
+            onPress: () => router.push('/settings/profile'),
+          },
+          {
+            key: 'groups',
+            emoji: '👥',
+            title: 'Groupes de postes',
+            hint: 'Les codes de poste qui vont ensemble',
+            onPress: () => router.push('/settings/groups'),
+          },
+          {
+            key: 'roster',
+            emoji: '📋',
+            title: 'Salariés',
+            hint: 'Liste et codes habituels de chacun',
+            onPress: () => router.push('/settings/roster'),
+          },
+          {
+            key: 'notifications',
+            emoji: '🔔',
+            title: 'Notifications',
+            hint: "Rappel la veille d'un jour travaillé",
+            onPress: () => router.push('/settings/notifications'),
+          },
+          {
+            key: 'theme',
+            emoji: '🎨',
+            title: 'Thème',
+            hint: 'Clair, sombre, ou automatique',
+            onPress: () => router.push('/settings/theme'),
+          },
+          {
+            key: 'update',
+            emoji: '⬇️',
+            title: 'Mise à jour',
+            hint: 'Vérifier, installer, et voir les nouveautés de chaque version',
+            onPress: () => router.push('/settings/update'),
+          },
+          {
+            key: 'about',
+            emoji: 'ℹ️',
+            title: 'À propos',
+            hint: "Version et présentation de l'app",
+            onPress: () => router.push('/settings/about'),
+          },
+          {
+            key: 'contact',
+            emoji: '✉️',
+            title: 'Contact',
+            hint: 'Une question, un bug à signaler',
+            onPress: () => router.push('/settings/contact'),
+          },
+          {
+            key: 'privacy',
+            emoji: '🔒',
+            title: 'Confidentialité',
+            hint: 'Où vont tes données (nulle part)',
+            onPress: () => router.push('/settings/privacy'),
+          },
+        ]}
+        styles={{
+          row: { borderColor: colors.borderSubtle },
+          title: { color: colors.text },
+          hint: { color: colors.text },
+          chevronColor: colors.text,
+        }}
+      />
     </ScrollView>
   );
-}
-
-function createStyles(colors: ThemeColors) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    content: {
-      padding: 16,
-    },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderRadius: 10,
-      padding: 14,
-      marginBottom: 10,
-    },
-    emoji: {
-      fontSize: 24,
-    },
-    textColumn: {
-      flex: 1,
-    },
-    rowTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    rowHint: {
-      fontSize: 12,
-      opacity: 0.7,
-      marginTop: 2,
-      color: colors.text,
-    },
-    chevron: {
-      fontSize: 22,
-      opacity: 0.4,
-      color: colors.text,
-    },
-  });
 }

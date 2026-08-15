@@ -1,70 +1,41 @@
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PrivacySettingsScreen } from '@forthtilliath/react-native-kit/components/settings/PrivacySettingsScreen';
+import { ScrollView } from 'react-native';
 
-import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 
 export default function PrivacyScreen() {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Aucune donnée envoyée nulle part</Text>
-      <Text style={styles.paragraph}>
-        Cette application ne collecte aucune donnée, ne fait appel à aucun serveur, et ne contient aucun outil de
-        suivi ni de publicité.
-      </Text>
-
-      <View style={styles.separator} />
-
-      <Text style={styles.title}>Stockage local uniquement</Text>
-      <Text style={styles.paragraph}>
-        Tout ce que tu saisis (salariés, plannings, réglages) reste stocké uniquement sur cet appareil, dans le
-        stockage local de l'application. Rien n'est envoyé ailleurs.
-      </Text>
-      <Text style={styles.paragraph}>
-        Ces données sont perdues si tu désinstalles l'application ou si tu effaces son stockage depuis les réglages
-        Android — pense à utiliser Réglages → Sauvegarde → Exporter régulièrement pour pouvoir les restaurer.
-      </Text>
-
-      <View style={styles.separator} />
-
-      <Text style={styles.title}>Partage volontaire uniquement</Text>
-      <Text style={styles.paragraph}>
-        La seule façon pour une donnée de quitter cet appareil, c'est quand tu choisis toi-même de la partager
-        (export d'une sauvegarde, export d'un planning au format .ics), via le sélecteur de partage natif d'Android.
-      </Text>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16 }}>
+      <PrivacySettingsScreen
+        sections={[
+          {
+            title: 'Aucune donnée envoyée nulle part',
+            paragraphs: [
+              'Cette application ne collecte aucune donnée, ne fait appel à aucun serveur, et ne contient aucun outil de suivi ni de publicité.',
+            ],
+          },
+          {
+            title: 'Stockage local uniquement',
+            paragraphs: [
+              "Tout ce que tu saisis (salariés, plannings, réglages) reste stocké uniquement sur cet appareil, dans le stockage local de l'application. Rien n'est envoyé ailleurs.",
+              "Ces données sont perdues si tu désinstalles l'application ou si tu effaces son stockage depuis les réglages Android — pense à utiliser Réglages → Sauvegarde → Exporter régulièrement pour pouvoir les restaurer.",
+            ],
+          },
+          {
+            title: 'Partage volontaire uniquement',
+            paragraphs: [
+              "La seule façon pour une donnée de quitter cet appareil, c'est quand tu choisis toi-même de la partager (export d'une sauvegarde, export d'un planning au format .ics), via le sélecteur de partage natif d'Android.",
+            ],
+          },
+        ]}
+        styles={{
+          title: { color: colors.text },
+          paragraph: { color: colors.text },
+          separator: { backgroundColor: colors.borderSubtle },
+        }}
+      />
     </ScrollView>
   );
-}
-
-function createStyles(colors: ThemeColors) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    content: {
-      padding: 16,
-    },
-    title: {
-      fontSize: 15,
-      fontWeight: '700',
-      marginBottom: 6,
-      color: colors.text,
-    },
-    paragraph: {
-      fontSize: 14,
-      lineHeight: 20,
-      opacity: 0.85,
-      marginBottom: 8,
-      color: colors.text,
-    },
-    separator: {
-      height: 1,
-      marginVertical: 16,
-      backgroundColor: colors.borderSubtle,
-    },
-  });
 }
