@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { BackupSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/BackupSettingsScreen';
+import { useCallback, useState } from 'react';
+import { Alert, ScrollView } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
-import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { pickAndImportBackup, shareBackup } from '@/lib/backup';
 import { getSettings, saveSettings } from '@/lib/db';
@@ -15,9 +15,6 @@ import {
 
 export default function BackupScreen() {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const [exporting, setExporting] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
 
@@ -57,134 +54,36 @@ export default function BackupScreen() {
     }
   }
 
-  async function handleExport() {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      await shareBackup();
-    } catch (err) {
-      Alert.alert("Échec de l'export", err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
-    } finally {
-      setExporting(false);
+  async function handleImport() {
+    const imported = await pickAndImportBackup();
+    if (imported) {
+      Alert.alert('Importé', 'Tes données ont été restaurées.');
     }
   }
 
-  async function handleImport() {
-    if (importing) return;
-    Alert.alert(
-      'Importer une sauvegarde ?',
-      'Toutes les données actuelles (salariés, groupes, plannings) seront remplacées par celles du fichier choisi.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Choisir un fichier',
-          onPress: async () => {
-            setImporting(true);
-            try {
-              const imported = await pickAndImportBackup();
-              if (imported) {
-                Alert.alert('Importé', 'Tes données ont été restaurées.');
-              }
-            } catch (err) {
-              Alert.alert("Échec de l'import", err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
-            } finally {
-              setImporting(false);
-            }
-          },
-        },
-      ]
-    );
-  }
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.hint}>
-        Les données sont stockées uniquement sur cet appareil et sont perdues en cas de réinstallation ou de mise à
-        jour incompatible. Exporte-les régulièrement (mail, Drive, Bluetooth...) pour pouvoir les restaurer.
-      </Text>
-      <View style={styles.row}>
-        <Pressable style={[styles.secondaryButton, exporting && styles.buttonDisabled]} disabled={exporting} onPress={handleExport}>
-          {exporting ? <ActivityIndicator /> : <Text style={styles.secondaryButtonText}>⬆️ Exporter</Text>}
-        </Pressable>
-        <Pressable style={[styles.secondaryButton, importing && styles.buttonDisabled]} disabled={importing} onPress={handleImport}>
-          {importing ? <ActivityIndicator /> : <Text style={styles.secondaryButtonText}>⬇️ Importer</Text>}
-        </Pressable>
-      </View>
-
-      <Pressable
-        style={styles.reminderRow}
-        disabled={reminderBusy}
-        onPress={() => handleToggleReminder(!reminderEnabled)}>
-        <View style={styles.reminderTextColumn}>
-          <Text style={styles.reminderLabel}>🔔 Rappel de sauvegarde</Text>
-          <Text style={styles.reminderHint}>
-            Une notification tous les {BACKUP_REMINDER_INTERVAL_DAYS} jours pour penser à exporter.
-          </Text>
-        </View>
-        {reminderBusy ? (
-          <ActivityIndicator />
-        ) : (
-          <Switch value={reminderEnabled} onValueChange={handleToggleReminder} />
-        )}
-      </Pressable>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16 }}>
+      <BackupSettingsScreen
+        onExport={shareBackup}
+        onImport={handleImport}
+        reminder={{
+          enabled: reminderEnabled,
+          busy: reminderBusy,
+          onToggle: handleToggleReminder,
+          intervalDays: BACKUP_REMINDER_INTERVAL_DAYS,
+        }}
+        labels={{
+          hint: "Les données sont stockées uniquement sur cet appareil et sont perdues en cas de réinstallation ou de mise à jour incompatible. Exporte-les régulièrement (mail, Drive, Bluetooth...) pour pouvoir les restaurer.",
+          importConfirmMessage: 'Toutes les données actuelles (salariés, groupes, plannings) seront remplacées par celles du fichier choisi.',
+        }}
+        styles={{
+          hint: { color: colors.text },
+          button: { borderColor: colors.tint },
+          buttonText: { color: colors.tint },
+          reminderLabel: { color: colors.text },
+          reminderHint: { color: colors.text },
+        }}
+      />
     </ScrollView>
   );
-}
-
-function createStyles(colors: ThemeColors) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    content: {
-      padding: 16,
-    },
-    hint: {
-      fontSize: 13,
-      opacity: 0.7,
-      marginBottom: 16,
-      color: colors.text,
-    },
-    row: {
-      flexDirection: 'row',
-      gap: 10,
-    },
-    reminderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginTop: 24,
-    },
-    reminderTextColumn: {
-      flex: 1,
-    },
-    reminderLabel: {
-      fontSize: 15,
-      fontWeight: '600',
-      marginBottom: 4,
-      color: colors.text,
-    },
-    reminderHint: {
-      fontSize: 13,
-      opacity: 0.7,
-      color: colors.text,
-    },
-    secondaryButton: {
-      flex: 1,
-      paddingVertical: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.tint,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    secondaryButtonText: {
-      color: colors.tint,
-      fontWeight: '700',
-    },
-    buttonDisabled: {
-      opacity: 0.4,
-    },
-  });
 }
