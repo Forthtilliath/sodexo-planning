@@ -1,21 +1,29 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 
 import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
 import PersonDayEditor from '@/components/PersonDayEditor';
+import SwipeableRow from '@/components/SwipeableRow';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { getEmployeeCodeOptions, getEmployeeRoster, getScans, getSettings, getTeamGroups, saveScan } from '@/lib/db';
+import {
+  deleteScan,
+  getEmployeeCodeOptions,
+  getEmployeeRoster,
+  getScans,
+  getSettings,
+  getTeamGroups,
+  saveScan,
+} from '@/lib/db';
 import { rescheduleWorkReminders } from '@/lib/notifications';
+import { MY_NAME } from '@/lib/teams';
 import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
-/** Fait remonter "Mon nom" en tête de liste, sans changer l'ordre des autres. */
-function putMyNameFirst(names: string[], myName: string): string[] {
-  const trimmed = myName.trim().toLowerCase();
-  if (!trimmed) return names;
-  const index = names.findIndex((n) => n.trim().toLowerCase() === trimmed);
+/** Fait remonter "Moi" en tête de liste, sans changer l'ordre des autres. */
+function putMyNameFirst(names: string[]): string[] {
+  const index = names.findIndex((n) => n.trim().toLowerCase() === MY_NAME.toLowerCase());
   if (index <= 0) return names;
   const next = [...names];
   const [mine] = next.splice(index, 1);
@@ -38,8 +46,28 @@ const MONTH_NAMES = [
   'Décembre',
 ];
 
+const UNDO_TOAST_DURATION_MS = 4000;
+
 function randomId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Un mois est "terminé" dès qu'il est strictement antérieur au mois courant. */
+function isMonthFinished(year: number, month: number): boolean {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  return year < currentYear || (year === currentYear && month < currentMonth);
+}
+
+type ScanCategory = 'current' | 'future' | 'past';
+
+function categorizeScan(scan: ScanRecord): ScanCategory {
+  const now = new Date();
+  const currentKey = now.getFullYear() * 12 + (now.getMonth() + 1);
+  const scanKey = scan.year * 12 + scan.month;
+  if (scanKey === currentKey) return 'current';
+  return scanKey > currentKey ? 'future' : 'past';
 }
 
 function daysInMonth(year: number, month: number): number {
@@ -81,15 +109,37 @@ export default function PlanningEditorScreen() {
     () => scans.find((s) => s.year === year && s.month === month) ?? null,
     [scans, year, month]
   );
+  const [showPastMonths, setShowPastMonths] = useState(false);
+  // Mois en cours en tête, puis les mois à venir dans l'ordre chronologique,
+  // et enfin les mois passés du plus récent au plus ancien (affichés en muted).
+  const sortedScans = useMemo(() => {
+    const rank = { current: 0, future: 1, past: 2 } as const;
+    return scans
+      .map((scan) => ({ scan, category: categorizeScan(scan), key: scan.year * 12 + scan.month }))
+      .sort((a, b) => {
+        if (a.category !== b.category) return rank[a.category] - rank[b.category];
+        return a.category === 'past' ? b.key - a.key : a.key - b.key;
+      });
+  }, [scans]);
+  const pastScanCount = useMemo(() => sortedScans.filter((s) => s.category === 'past').length, [sortedScans]);
+  const visibleSortedScans = useMemo(
+    () => sortedScans.filter((s) => showPastMonths || s.category !== 'past'),
+    [sortedScans, showPastMonths]
+  );
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const allCodes = useMemo(() => Array.from(new Set(groups.flatMap((g) => g.codes))).sort(), [groups]);
-  const [myName, setMyName] = useState('');
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [remindersEnabled, setRemindersEnabled] = useState(false);
+  // Bandeau "Annuler" après une suppression par swipe, auto-masqué après
+  // quelques secondes (voir showUndoToast/handleUndoDelete).
+  const [undoToast, setUndoToast] = useState<ScanRecord | null>(null);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,7 +154,6 @@ export default function PlanningEditorScreen() {
         setScans(loadedScans);
         setRoster(employeeRoster);
         setCodeOptions(options);
-        setMyName(settings.myName);
         setGroups(teamGroups);
         setRemindersEnabled(settings.remindersEnabled === true);
         // Rattrape le décalage si l'app n'a pas été ouverte depuis un moment.
@@ -130,7 +179,9 @@ export default function PlanningEditorScreen() {
   }, [roster, step, employees, days.length]);
 
   // Le titre natif de l'écran affiche directement "Planning de X" (personne
-  // éditée, ou mois/année en liste), plutôt qu'un second titre en double.
+  // éditée, ou mois/année en liste), plutôt qu'un second titre en double. En
+  // revue, une flèche de retour apparaît à gauche (liste des salariés → liste
+  // des plannings) : elle remplace l'ancien lien texte "← Liste des plannings".
   useEffect(() => {
     let title = 'Saisie';
     if (step === 'review') {
@@ -139,8 +190,24 @@ export default function PlanningEditorScreen() {
           ? `Planning de ${employees[editingRow] || 'Employé sans nom'}`
           : `Planning de ${MONTH_NAMES[month - 1]} ${year}`;
     }
-    navigation.setOptions({ title });
-  }, [navigation, step, editingRow, employees, month, year]);
+    navigation.setOptions({
+      title,
+      headerTitleAlign: 'center',
+      headerLeft:
+        step === 'review'
+          ? () => (
+              <Pressable
+                onPress={editingRow !== null ? handleClosePersonEditor : goToPlanningsList}
+                hitSlop={12}
+                style={styles.headerBackButton}
+                accessibilityRole="button"
+                accessibilityLabel="Retour">
+                <Text style={styles.headerBackButtonText}>←</Text>
+              </Pressable>
+            )
+          : undefined,
+    });
+  }, [navigation, step, editingRow, employees, month, year, styles]);
 
   function toggleHoliday(iso: string) {
     setHolidays((prev) => {
@@ -152,17 +219,78 @@ export default function PlanningEditorScreen() {
   }
 
   // La liste des salariés actifs gérée dans Réglages prime ; à défaut, celle du dernier planning.
-  // Dans tous les cas, "Mon nom" remonte en tête pour se retrouver plus vite.
+  // Dans tous les cas, "Moi" remonte en tête pour se retrouver plus vite.
   function defaultEmployees(): string[] {
     const activeNames = roster.filter((r) => r.active).map((r) => r.name);
-    if (activeNames.length > 0) return putMyNameFirst(activeNames, myName);
-    if (scans[0]?.employees.length) return putMyNameFirst(scans[0].employees, myName);
+    if (activeNames.length > 0) return putMyNameFirst(activeNames);
+    if (scans[0]?.employees.length) return putMyNameFirst(scans[0].employees);
     return Array(5).fill('');
+  }
+
+  // Créer un planning pour un mois déjà terminé n'a normalement aucun intérêt :
+  // on demande confirmation plutôt que de bloquer, au cas où ce serait volontaire.
+  function handleCreateOrEditPress() {
+    if (existingScan) {
+      openScanForEditing(existingScan);
+      return;
+    }
+    if (isMonthFinished(year, month)) {
+      Alert.alert(
+        'Mois déjà terminé',
+        `${MONTH_NAMES[month - 1]} ${year} est déjà passé. Créer un planning pour ce mois n'a normalement aucun intérêt.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Créer quand même', style: 'destructive', onPress: createManualPlanning },
+        ]
+      );
+      return;
+    }
+    createManualPlanning();
+  }
+
+  // Suppression déclenchée par le swipe (≥60% de la largeur de la carte) :
+  // pas de confirmation avant coup (ça casserait l'intérêt du swipe direct),
+  // mais un petit bandeau après coup avec "Annuler" pour rattraper un geste
+  // involontaire — auto-masqué après quelques secondes, pas besoin de le fermer.
+  function handleDeleteScan(scan: ScanRecord) {
+    deleteScan(scan.id)
+      .then(() => {
+        setScans((prev) => prev.filter((s) => s.id !== scan.id));
+        showUndoToast(scan);
+      })
+      .catch((err) => {
+        console.error('deleteScan failed', err);
+        Alert.alert(
+          'Échec de la suppression',
+          err instanceof Error ? err.message : "Une erreur inconnue s'est produite."
+        );
+      });
+  }
+
+  function showUndoToast(scan: ScanRecord) {
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    setUndoToast(scan);
+    undoTimeoutRef.current = setTimeout(() => setUndoToast(null), UNDO_TOAST_DURATION_MS);
+  }
+
+  async function handleUndoDelete() {
+    if (!undoToast) return;
+    const scan = undoToast;
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    setUndoToast(null);
+    try {
+      await saveScan(scan);
+      setScans((prev) => (prev.some((s) => s.id === scan.id) ? prev : [scan, ...prev]));
+    } catch (err) {
+      console.error('undo deleteScan failed', err);
+      Alert.alert("Échec de l'annulation", err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
+    }
   }
 
   function createManualPlanning() {
     const monthDays = buildDays(year, month);
     const fill = defaultEmployees();
+    skipNextAutosaveRef.current = true;
     setDays(monthDays);
     setEmployees(fill);
     setGrid(fill.map(() => Array(monthDays.length).fill('')));
@@ -173,6 +301,7 @@ export default function PlanningEditorScreen() {
 
   /** Reprend un planning déjà enregistré (même en plusieurs fois, sur plusieurs jours). */
   const openScanForEditing = useCallback((scan: ScanRecord) => {
+    skipNextAutosaveRef.current = true;
     setYear(scan.year);
     setMonth(scan.month);
     setDays(scan.days);
@@ -211,7 +340,7 @@ export default function PlanningEditorScreen() {
     router.push('/settings/roster');
   }
 
-  /** Enregistre l'état courant sans confirmation ; réutilisé par le bouton "Enregistrer" et l'auto-save. */
+  /** Enregistre l'état courant sans confirmation ; utilisé par l'auto-save et les retours arrière. */
   async function persistScan(): Promise<ScanRecord> {
     const existing = scans.find((s) => s.id === currentScanId);
     const scan: ScanRecord = {
@@ -241,24 +370,26 @@ export default function PlanningEditorScreen() {
     return scan;
   }
 
-  // Toujours accessible sous le titre, sans avoir à remonter en haut de
-  // l'écran : enregistre sur place et confirme brièvement, sans bloquer avec
-  // une alerte (on peut ne pas avoir fini de tout saisir d'un coup).
-  async function handleQuickSave() {
-    if (saveState === 'saving') return;
-    setSaveState('saving');
-    try {
-      await persistScan();
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 1500);
-    } catch (err) {
-      console.error('handleQuickSave failed', err);
-      setSaveState('idle');
-      Alert.alert("Échec de l'enregistrement", err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
+  // Auto-save : toute modif du planning en revue s'enregistre seule, avec un
+  // léger débounce pour ne pas écrire à chaque frappe. `skipNextAutosaveRef`
+  // évite un enregistrement parasite juste après avoir chargé un planning
+  // (createManualPlanning / openScanForEditing changent aussi days/employees/
+  // grid, sans que ce soit une vraie modif de l'utilisateur).
+  const skipNextAutosaveRef = useRef(false);
+  useEffect(() => {
+    if (step !== 'review') return;
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return;
     }
-  }
+    const timeout = setTimeout(() => {
+      persistScan().catch((err) => console.error('auto-save failed', err));
+    }, 600);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, days, employees, grid, holidays]);
 
-  /** Retour à la liste des salariés depuis l'éditeur d'une personne : enregistre automatiquement, sans alerte. */
+  /** Retour à la liste des salariés depuis l'éditeur d'une personne : enregistre immédiatement, sans alerte. */
   function handleClosePersonEditor() {
     setEditingRow(null);
     persistScan().catch((err) => console.error('auto-save failed', err));
@@ -282,32 +413,6 @@ export default function PlanningEditorScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.headerArea}>
-        {step === 'review' && (
-          <View style={styles.topActionBar}>
-            {editingRow !== null ? (
-              <Pressable style={styles.topBackButton} onPress={handleClosePersonEditor} hitSlop={8}>
-                <Text style={styles.topBackButtonText}>← Retour à la liste</Text>
-              </Pressable>
-            ) : (
-              <Pressable style={styles.topBackButton} onPress={goToPlanningsList} hitSlop={8}>
-                <Text style={styles.topBackButtonText}>← Liste des plannings</Text>
-              </Pressable>
-            )}
-            <Pressable
-              style={[styles.topSaveButton, saveState === 'saving' && styles.buttonDisabled]}
-              disabled={saveState === 'saving'}
-              onPress={handleQuickSave}>
-              {saveState === 'saving' ? (
-                <ActivityIndicator size="small" color={colors.onTint} />
-              ) : (
-                <Text style={styles.topSaveButtonText}>{saveState === 'saved' ? '✓ Enregistré' : '💾 Enregistrer'}</Text>
-              )}
-            </Pressable>
-          </View>
-        )}
-      </View>
-
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {step === 'home' && (
         <>
@@ -326,9 +431,7 @@ export default function PlanningEditorScreen() {
             />
           </View>
 
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => (existingScan ? openScanForEditing(existingScan) : createManualPlanning())}>
+          <Pressable style={styles.primaryButton} onPress={handleCreateOrEditPress}>
             <Text style={styles.primaryButtonText}>{existingScan ? '✏️ Modifier ce planning' : '✏️ Créer le planning'}</Text>
           </Pressable>
           <Text style={styles.hint}>
@@ -340,17 +443,31 @@ export default function PlanningEditorScreen() {
           {scans.length > 0 && (
             <>
               <View style={styles.separator} />
-              <Text style={styles.sectionTitle}>Reprendre un planning</Text>
-              {scans.map((scan) => (
-                <Pressable key={scan.id} style={styles.savedRow} onPress={() => openScanForEditing(scan)}>
-                  <View>
-                    <Text style={styles.savedRowTitle}>
-                      {MONTH_NAMES[scan.month - 1]} {scan.year}
-                    </Text>
-                    <Text style={styles.savedRowHint}>{scan.employees.length} salarié(s)</Text>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Reprendre un planning</Text>
+                {pastScanCount > 0 && (
+                  <View style={styles.pastToggle}>
+                    <Text style={styles.pastToggleLabel}>Mois passés</Text>
+                    <Switch value={showPastMonths} onValueChange={setShowPastMonths} />
                   </View>
-                  <Text style={styles.savedRowAction}>Modifier →</Text>
-                </Pressable>
+                )}
+              </View>
+              {visibleSortedScans.map(({ scan, category }) => (
+                <SwipeableRow key={scan.id} onDelete={() => handleDeleteScan(scan)}>
+                  <Pressable style={styles.savedRow} onPress={() => openScanForEditing(scan)}>
+                    <View>
+                      <Text style={[styles.savedRowTitle, category === 'past' && styles.savedRowTitlePast]}>
+                        {MONTH_NAMES[scan.month - 1]} {scan.year}
+                      </Text>
+                      <Text style={[styles.savedRowHint, category === 'past' && styles.savedRowHintPast]}>
+                        {scan.employees.length} salarié(s)
+                      </Text>
+                    </View>
+                    <Text style={[styles.savedRowAction, category === 'past' && styles.savedRowActionPast]}>
+                      Modifier →
+                    </Text>
+                  </Pressable>
+                </SwipeableRow>
               ))}
             </>
           )}
@@ -387,6 +504,17 @@ export default function PlanningEditorScreen() {
         </>
       )}
       </ScrollView>
+
+      {undoToast && (
+        <View style={styles.undoToast}>
+          <Text style={styles.undoToastText} numberOfLines={1}>
+            {MONTH_NAMES[undoToast.month - 1]} {undoToast.year} supprimé
+          </Text>
+          <Pressable onPress={handleUndoDelete} hitSlop={8}>
+            <Text style={styles.undoToastAction}>Annuler</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -442,51 +570,71 @@ function createStyles(colors: ThemeColors) {
       flex: 1,
       backgroundColor: colors.background,
     },
-    headerArea: {
-      paddingTop: 16,
-      paddingHorizontal: 16,
-    },
-    topActionBar: {
+    undoToast: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      bottom: 24,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 8,
-      marginBottom: 6,
-    },
-    topBackButton: {
-      flexShrink: 1,
-    },
-    topBackButtonText: {
-      color: colors.tint,
-      fontWeight: '600',
-    },
-    topSaveButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 14,
+      gap: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
       borderRadius: 8,
-      backgroundColor: colors.tint,
-      minWidth: 110,
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: '#1f1f1f',
+      elevation: 4,
+      shadowColor: '#000',
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
     },
-    topSaveButtonText: {
-      color: colors.onTint,
+    undoToastText: {
+      flex: 1,
+      color: '#fff',
+      fontSize: 14,
+    },
+    undoToastAction: {
+      color: '#7cc0ff',
       fontWeight: '700',
-      fontSize: 13,
+      fontSize: 14,
+    },
+    headerBackButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+    },
+    headerBackButtonText: {
+      fontSize: 22,
+      fontWeight: '600',
+      color: colors.tint,
     },
     container: {
       flex: 1,
     },
     content: {
       padding: 16,
-      paddingTop: 0,
       paddingBottom: 64,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 8,
+      marginBottom: 8,
     },
     sectionTitle: {
       fontSize: 16,
       fontWeight: '600',
-      marginTop: 8,
-      marginBottom: 8,
+      color: colors.text,
+    },
+    pastToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    pastToggleLabel: {
+      fontSize: 12,
+      opacity: 0.7,
       color: colors.text,
     },
     row: {
@@ -558,15 +706,23 @@ function createStyles(colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'space-between',
       borderWidth: 1,
-      borderColor: colors.borderSubtle,
+      // Opaque (pas borderSubtle, translucide) : sinon le rouge de
+      // SwipeableRow transparaît à travers le trait de bordure lui-même.
+      borderColor: colors.divider,
       borderRadius: 8,
       padding: 12,
-      marginBottom: 8,
+      // Fond opaque : cette ligne glisse par-dessus le bouton "Supprimer"
+      // (SwipeableRow) et doit le masquer complètement tant qu'on ne swipe pas.
+      backgroundColor: colors.card,
     },
     savedRowTitle: {
       fontSize: 15,
       fontWeight: '600',
       color: colors.text,
+    },
+    savedRowTitlePast: {
+      fontWeight: '400',
+      opacity: 0.55,
     },
     savedRowHint: {
       fontSize: 12,
@@ -574,12 +730,15 @@ function createStyles(colors: ThemeColors) {
       marginTop: 2,
       color: colors.text,
     },
+    savedRowHintPast: {
+      opacity: 0.45,
+    },
     savedRowAction: {
       color: colors.tint,
       fontWeight: '600',
     },
-    buttonDisabled: {
-      opacity: 0.4,
+    savedRowActionPast: {
+      opacity: 0.55,
     },
     primaryButton: {
       marginTop: 16,

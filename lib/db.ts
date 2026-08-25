@@ -176,6 +176,11 @@ export async function saveScan(scan: ScanRecord): Promise<void> {
 	await writeJson(KEYS.scans, scans);
 }
 
+export async function deleteScan(id: string): Promise<void> {
+	const scans = await getScans();
+	await writeJson(KEYS.scans, scans.filter((s) => s.id !== id));
+}
+
 export type BackupData = {
 	version: 1;
 	exportedAt: number;
