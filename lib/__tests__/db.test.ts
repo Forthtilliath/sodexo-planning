@@ -75,22 +75,22 @@ describe('getTeamGroups', () => {
     expect(groups.find((g) => g.id === 'e1-e3')?.color).toBe('#c9a227');
   });
 
-  it("réimpose la couleur par défaut du groupe même si une autre a été sauvegardée", async () => {
+  it('conserve une couleur modifiée après enregistrement (groupes éditables)', async () => {
     const groups = await getTeamGroups();
-    const tampered = groups.map((g) => (g.id === 'e1-e3' ? { ...g, color: '#000000' } : g));
-    await saveTeamGroups(tampered);
+    const edited = groups.map((g) => (g.id === 'e1-e3' ? { ...g, color: '#000000' } : g));
+    await saveTeamGroups(edited);
 
     const reloaded = await getTeamGroups();
-    expect(reloaded.find((g) => g.id === 'e1-e3')?.color).toBe('#c9a227');
+    expect(reloaded.find((g) => g.id === 'e1-e3')?.color).toBe('#000000');
   });
 
-  it("réimpose le label par défaut même si un ancien label a été sauvegardé (ex: avant l'ajout des labels lisibles)", async () => {
+  it('conserve un libellé modifié après enregistrement (groupes éditables)', async () => {
     const groups = await getTeamGroups();
-    const tampered = groups.map((g) => (g.id === 'e1-e3' ? { ...g, label: 'E1-E3' } : g));
-    await saveTeamGroups(tampered);
+    const edited = groups.map((g) => (g.id === 'e1-e3' ? { ...g, label: 'E1-E3' } : g));
+    await saveTeamGroups(edited);
 
     const reloaded = await getTeamGroups();
-    expect(reloaded.find((g) => g.id === 'e1-e3')?.label).toBe('Direction');
+    expect(reloaded.find((g) => g.id === 'e1-e3')?.label).toBe('E1-E3');
   });
 });
 
