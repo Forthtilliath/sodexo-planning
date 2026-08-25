@@ -10,7 +10,7 @@ const KEYS = {
 	codeSchedules: "@rn-planning/codeSchedules",
 };
 
-const DEFAULT_SETTINGS: Settings = { myName: "" };
+const DEFAULT_SETTINGS: Settings = {};
 
 const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
 	// Couleur "chef" pour l'encadrement.

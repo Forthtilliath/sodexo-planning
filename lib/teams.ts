@@ -1,5 +1,10 @@
 import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
+// Identifiant fixe de "ma" ligne dans un planning : app à usage personnel,
+// pas besoin d'un réglage dédié (ni de la page qui allait avec) — il suffit
+// de saisir "Moi" comme nom dans la grille pour que l'app retrouve la ligne.
+export const MY_NAME = 'Moi';
+
 export function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
 }

@@ -7,11 +7,11 @@ import MonthCalendarView from '@/components/MonthCalendarView';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { isToday } from '@/lib/dates';
-import { getCodeSchedules, getScans, getSettings, getTeamGroups } from '@/lib/db';
+import { getCodeSchedules, getScans, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
-import { computeMonthPlanning, findMyRowIndex, formatScheduleHours, type DayPlanning } from '@/lib/teams';
-import type { CodeSchedule, ScanRecord, Settings, TeamGroup } from '@/types';
+import { computeMonthPlanning, findMyRowIndex, formatScheduleHours, MY_NAME, type DayPlanning } from '@/lib/teams';
+import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
 
@@ -46,7 +46,6 @@ export default function PlanningScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [scans, setScans] = useState<ScanRecord[]>([]);
-  const [settings, setSettings] = useState<Settings>({ myName: '' });
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [schedules, setSchedules] = useState<CodeSchedule[]>([]);
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
@@ -61,14 +60,12 @@ export default function PlanningScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [loadedScans, loadedSettings, loadedGroups, loadedSchedules] = await Promise.all([
+        const [loadedScans, loadedGroups, loadedSchedules] = await Promise.all([
           getScans(),
-          getSettings(),
           getTeamGroups(),
           getCodeSchedules(),
         ]);
         setScans(loadedScans);
-        setSettings(loadedSettings);
         setGroups(loadedGroups);
         setSchedules(loadedSchedules);
         setSelectedScanId((prev) => {
@@ -105,8 +102,8 @@ export default function PlanningScreen() {
   const myRowIndex = useMemo(() => {
     if (!selectedScan) return -1;
     if (manualRowIndex !== null) return manualRowIndex;
-    return findMyRowIndex(selectedScan, settings.myName);
-  }, [selectedScan, settings.myName, manualRowIndex]);
+    return findMyRowIndex(selectedScan, MY_NAME);
+  }, [selectedScan, manualRowIndex]);
 
   // Le nom du collègue consulté est conservé (pas son index de ligne), pour
   // rester sur la même personne quand on change de planning plutôt que de
@@ -245,7 +242,7 @@ export default function PlanningScreen() {
       {selectedScan && !viewingSomeoneElse && myRowIndex < 0 && (
         <View style={styles.notFoundBox}>
           <Text style={styles.notFoundText}>
-            Nom "{settings.myName || '(non renseigné)'}" introuvable dans ce planning. Choisis ta ligne :
+            Aucune ligne "{MY_NAME}" dans ce planning. Choisis la tienne :
           </Text>
           {selectedScan.employees.map((name, index) => (
             <Pressable
