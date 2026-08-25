@@ -5,7 +5,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@forthtilliath/expo-release-updates": "^0.3.0",
-    "@forthtilliath/react-native-kit": "^0.11.0",
+    "@forthtilliath/react-native-kit": "^0.12.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.7",
     "expo-constants": "~57.0.6",
@@ -25,6 +25,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-draggable-flatlist": "^4.0.3",
+    "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
@@ -64,7 +66,7 @@
     },
     "testTimeout": 15000,
     "transformIgnorePatterns": [
-      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@forthtilliath))",
+      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@forthtilliath|react-native-gesture-handler|react-native-reanimated|react-native-draggable-flatlist))",
       "/node_modules/react-native-reanimated/plugin/",
       "/node_modules/@react-native/babel-preset/"
     ]
