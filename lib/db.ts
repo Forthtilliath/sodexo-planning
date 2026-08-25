@@ -23,12 +23,13 @@ const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
 	{ id: "c4-c5", label: "Froid", codes: ["C4", "C5"], color: "#1e88e5" },
 	// Self, chaîne, allotissement.
 	{ id: "c6-c8", label: "Chaîne", codes: ["C6", "C7", "C8"], color: "#43a047" },
-	// F1-F3 comme C6-C8, F4-F5 comme D1-D2 : même rôle/couleur, mais un code
-	// de weekend/férié distinct — donc même label que leur équivalent semaine.
-	{ id: "f1-f3", label: "Chaîne", codes: ["F1", "F2", "F3"], color: "#43a047" },
-	{ id: "f4-f5", label: "Plonge Matin", codes: ["F4", "F5"], color: "#ab47bc" },
 	// Bleu foncé, distinct du bleu plus clair de C4-C5.
 	{ id: "b1", label: "Boutique", codes: ["B1"], color: "#0d47a1" },
+	// F1-F3 comme C6-C8, F4-F5 comme D1-D2 : même rôle/couleur, mais un code
+	// de weekend/férié distinct — préfixé "WE" pour les distinguer de leur
+	// équivalent semaine dans l'affichage.
+	{ id: "f1-f3", label: "WE Chaîne", codes: ["F1", "F2", "F3"], color: "#43a047" },
+	{ id: "f4-f5", label: "WE Plonge", codes: ["F4", "F5"], color: "#ab47bc" },
 ];
 
 const DEFAULT_CODE_SCHEDULES: CodeSchedule[] = [
@@ -105,23 +106,8 @@ export async function dismissUpdateVersion(version: string): Promise<void> {
 	await saveSettings({ ...settings, dismissedUpdateVersion: version });
 }
 
-export async function getTeamGroups(): Promise<TeamGroup[]> {
-	const raw = await AsyncStorage.getItem(KEYS.teamGroups);
-	if (!raw) return DEFAULT_TEAM_GROUPS;
-	try {
-		const parsed: unknown = JSON.parse(raw);
-		if (!Array.isArray(parsed)) return DEFAULT_TEAM_GROUPS;
-		// Les groupes ne sont plus modifiables dans l'app : la couleur et le
-		// label définis dans le code priment toujours sur ceux éventuellement
-		// déjà enregistrés (ex: après un ajustement de palette ou de libellé),
-		// par id de groupe.
-		return (parsed as TeamGroup[]).map((g) => {
-			const withDefaults = DEFAULT_TEAM_GROUPS.find((d) => d.id === g.id);
-			return withDefaults ? { ...g, color: withDefaults.color, label: withDefaults.label } : g;
-		});
-	} catch {
-		return DEFAULT_TEAM_GROUPS;
-	}
+export function getTeamGroups(): Promise<TeamGroup[]> {
+	return readJson(KEYS.teamGroups, DEFAULT_TEAM_GROUPS);
 }
 
 export function saveTeamGroups(groups: TeamGroup[]): Promise<void> {
