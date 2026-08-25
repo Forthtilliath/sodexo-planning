@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
+  deleteScan,
   exportAllData,
   getCodeSchedules,
   getEmployeeRoster,
@@ -46,6 +47,26 @@ describe('saveScan / getScans', () => {
 
     expect(scans).toHaveLength(1);
     expect(scans[0].holidays).toEqual(['2026-07-01', '2026-07-02']);
+  });
+
+  it('supprime uniquement le planning ciblé', async () => {
+    await saveScan(scan);
+    await saveScan({ ...scan, id: 'scan-2', month: 8 });
+
+    await deleteScan('scan-1');
+    const scans = await getScans();
+
+    expect(scans).toHaveLength(1);
+    expect(scans[0].id).toBe('scan-2');
+  });
+
+  it('ne fait rien si l\'id à supprimer est inconnu', async () => {
+    await saveScan(scan);
+
+    await deleteScan('inconnu');
+    const scans = await getScans();
+
+    expect(scans).toHaveLength(1);
   });
 });
 
