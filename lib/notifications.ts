@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 
 import { getScans, getSettings, getTeamGroups } from './db';
-import { computeDayPlanning, findMyRowIndex } from './teams';
+import { computeDayPlanning, findMyRowIndex, MY_NAME } from './teams';
 
 export const DEFAULT_REMINDER_HOUR = 19;
 // Au-delà, plus la peine de programmer : les plannings sont saisis un mois à
@@ -47,7 +47,7 @@ async function cancelWorkReminderNotifications(): Promise<void> {
 
 /**
  * Annule tous les rappels de travail programmés puis reprogramme, pour
- * chaque jour à venir où "Mon nom" a un poste renseigné, un rappel la veille
+ * chaque jour à venir où "Moi" a un poste renseigné, un rappel la veille
  * (heure choisie dans Réglages > Notifications, 19h par défaut), en
  * mentionnant les coéquipiers du même groupe ce jour-là.
  */
@@ -62,7 +62,7 @@ export async function rescheduleWorkReminders(): Promise<void> {
   const schedules: Promise<unknown>[] = [];
 
   for (const scan of scans) {
-    const myRowIndex = findMyRowIndex(scan, settings.myName);
+    const myRowIndex = findMyRowIndex(scan, MY_NAME);
     if (myRowIndex < 0) continue;
 
     scan.days.forEach((iso, dayIndex) => {

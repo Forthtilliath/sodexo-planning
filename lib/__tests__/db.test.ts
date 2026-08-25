@@ -54,13 +54,13 @@ describe('getSettings / saveSettings', () => {
     await AsyncStorage.clear();
   });
 
-  it("renvoie des réglages par défaut (nom vide) tant que rien n'a été sauvegardé", async () => {
-    expect(await getSettings()).toEqual({ myName: '' });
+  it("renvoie des réglages par défaut (vides) tant que rien n'a été sauvegardé", async () => {
+    expect(await getSettings()).toEqual({});
   });
 
   it('conserve les réglages après enregistrement, y compris les rappels', async () => {
-    await saveSettings({ myName: 'Moi', remindersEnabled: true, reminderHour: 20 });
-    expect(await getSettings()).toEqual({ myName: 'Moi', remindersEnabled: true, reminderHour: 20 });
+    await saveSettings({ remindersEnabled: true, reminderHour: 20 });
+    expect(await getSettings()).toEqual({ remindersEnabled: true, reminderHour: 20 });
   });
 });
 
@@ -126,7 +126,7 @@ describe('exportAllData / importAllData', () => {
   });
 
   it('restaure exactement les données exportées (aller-retour sauvegarde/restauration)', async () => {
-    await saveSettings({ myName: 'Moi', remindersEnabled: true, reminderHour: 21 });
+    await saveSettings({ remindersEnabled: true, reminderHour: 21 });
     await saveEmployeeRoster([{ name: 'Alice', active: true }]);
     await saveScan(scan);
 
@@ -135,11 +135,11 @@ describe('exportAllData / importAllData', () => {
 
     // On simule une réinstallation : tout est effacé avant la restauration.
     await AsyncStorage.clear();
-    expect(await getSettings()).toEqual({ myName: '' });
+    expect(await getSettings()).toEqual({});
 
     await importAllData(backup);
 
-    expect(await getSettings()).toEqual({ myName: 'Moi', remindersEnabled: true, reminderHour: 21 });
+    expect(await getSettings()).toEqual({ remindersEnabled: true, reminderHour: 21 });
     expect(await getEmployeeRoster()).toEqual([{ name: 'Alice', active: true }]);
     expect(await getScans()).toEqual([scan]);
     expect(await getCodeSchedules()).toEqual(backup.codeSchedules);

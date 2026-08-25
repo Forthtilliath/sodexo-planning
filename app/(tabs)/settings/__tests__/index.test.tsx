@@ -16,7 +16,6 @@ describe('SettingsMenu', () => {
     await render(<SettingsMenu />);
 
     expect(screen.getByText('Sauvegarde')).toBeTruthy();
-    expect(screen.getByText('Mon nom')).toBeTruthy();
     expect(screen.getByText('Groupes de postes')).toBeTruthy();
     expect(screen.getByText('Salariés')).toBeTruthy();
     expect(screen.getByText('Notifications')).toBeTruthy();

@@ -42,7 +42,7 @@ describe('NotificationsScreen', () => {
   });
 
   it('reprend l\'heure déjà enregistrée dans les réglages', async () => {
-    await saveSettings({ myName: '', reminderHour: 21 });
+    await saveSettings({ reminderHour: 21 });
 
     await render(<NotificationsScreen />);
 
@@ -72,7 +72,7 @@ describe('NotificationsScreen', () => {
   });
 
   it('désactive le rappel et annule les notifications', async () => {
-    await saveSettings({ myName: '', remindersEnabled: true });
+    await saveSettings({ remindersEnabled: true });
 
     await render(<NotificationsScreen />);
     await fireEvent(await screen.findByRole('switch'), 'valueChange', false);
@@ -82,7 +82,7 @@ describe('NotificationsScreen', () => {
   });
 
   it("change l'heure du rappel via le sélecteur et reprogramme si activé", async () => {
-    await saveSettings({ myName: '', remindersEnabled: true });
+    await saveSettings({ remindersEnabled: true });
 
     await render(<NotificationsScreen />);
     await fireEvent.press(await screen.findByText('19h'));

@@ -60,7 +60,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it('programme un rappel la veille à 19h pour un jour travaillé à venir', async () => {
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
 
     await rescheduleWorkReminders();
@@ -74,7 +73,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it('mentionne les coéquipiers du même groupe dans le corps de la notification', async () => {
-    await saveSettings({ myName: 'Moi' });
     // D1 et D2 font partie du même groupe par défaut (voir DEFAULT_TEAM_GROUPS dans lib/db.ts).
     await saveScan(
       makeScan({ days: ['2026-07-15'], employees: ['Moi', 'Coéquipier'], grid: [['D1'], ['D2']] })
@@ -87,7 +85,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it("n'ajoute rien après le poste s'il n'y a pas de coéquipier", async () => {
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
 
     await rescheduleWorkReminders();
@@ -97,7 +94,7 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it("utilise l'heure configurée dans les réglages plutôt que l'heure par défaut", async () => {
-    await saveSettings({ myName: 'Moi', reminderHour: 21 });
+    await saveSettings({ reminderHour: 21 });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
 
     await rescheduleWorkReminders();
@@ -109,7 +106,6 @@ describe('rescheduleWorkReminders', () => {
   it("programme quand même le rappel si l'heure de la veille (même jour) n'est pas encore passée", async () => {
     // "now" est le 10 juillet à 10h : le rappel pour un jour travaillé le 11
     // tombe le 10 à 19h, donc plus tard aujourd'hui -> doit être programmé.
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-11'], grid: [['D1']] }));
 
     await rescheduleWorkReminders();
@@ -118,7 +114,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it('ne programme rien pour un jour sans code renseigné', async () => {
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['']] }));
 
     await rescheduleWorkReminders();
@@ -128,7 +123,6 @@ describe('rescheduleWorkReminders', () => {
 
   it("ne programme rien si le déclenchement est déjà passé", async () => {
     // Jour travaillé aujourd'hui : le rappel (la veille à 19h) est dans le passé.
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-10'], grid: [['D1']] }));
 
     await rescheduleWorkReminders();
@@ -137,7 +131,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it('ne programme rien au-delà de 60 jours', async () => {
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-09-20'], grid: [['D1']] })); // > 60 jours après le 10 juillet
 
     await rescheduleWorkReminders();
@@ -145,9 +138,8 @@ describe('rescheduleWorkReminders', () => {
     expect(scheduleMock).not.toHaveBeenCalled();
   });
 
-  it("ne programme rien si mon nom ne correspond à aucune ligne du planning", async () => {
-    await saveSettings({ myName: 'Quelqu’un d’autre' });
-    await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
+  it('ne programme rien si aucune ligne du planning ne s\'appelle "Moi"', async () => {
+    await saveScan(makeScan({ employees: ['Quelqu’un d’autre'], days: ['2026-07-15'], grid: [['D1']] }));
 
     await rescheduleWorkReminders();
 
@@ -155,7 +147,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it('annule les anciens rappels de travail avant de reprogrammer, sans toucher au rappel de sauvegarde', async () => {
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
     getAllScheduledMock.mockResolvedValue([
       { identifier: 'work-reminder-old-scan-0', content: {}, trigger: {} },
@@ -169,7 +160,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it("annule aussi les rappels d'une ancienne version de l'app (identifiant auto-généré, sans préfixe), pour éviter les doublons", async () => {
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ days: ['2026-07-15'], grid: [['D1']] }));
     getAllScheduledMock.mockResolvedValue([
       { identifier: 'a1b2c3d4-legacy-uuid', content: {}, trigger: {} },
@@ -183,7 +173,6 @@ describe('rescheduleWorkReminders', () => {
   });
 
   it('cumule les rappels de plusieurs plannings enregistrés', async () => {
-    await saveSettings({ myName: 'Moi' });
     await saveScan(makeScan({ id: 'scan-1', days: ['2026-07-15'], grid: [['D1']] }));
     await saveScan(makeScan({ id: 'scan-2', days: ['2026-07-16'], grid: [['C2']] }));
 
