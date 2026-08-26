@@ -193,6 +193,7 @@ export default function PlanningScreen() {
         items={(selectedScan?.employees ?? []).map((name, index) => ({
           key: String(index),
           label: `${name || `Ligne ${index + 1}`}${index === myRowIndex ? ' (moi)' : ''}`,
+          highlight: index === myRowIndex,
         }))}
         onSelect={(key) => setViewingName(selectedScan?.employees[Number(key)] ?? null)}
       />

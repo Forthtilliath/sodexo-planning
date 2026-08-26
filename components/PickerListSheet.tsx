@@ -5,7 +5,7 @@ import BottomSheet from '@/components/BottomSheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 
-type Item = { key: string; label: string };
+type Item = { key: string; label: string; highlight?: boolean };
 
 type Props = {
   visible: boolean;
@@ -29,7 +29,9 @@ export default function PickerListSheet({ visible, onClose, items, onSelect }: P
             onSelect(item.key);
             onClose();
           }}>
-          <Text style={styles.rowText}>{item.label}</Text>
+          <Text style={[styles.rowText, item.highlight && styles.rowTextHighlight]}>
+            {item.label}
+          </Text>
         </Pressable>
       ))}
     </BottomSheet>
@@ -48,6 +50,10 @@ function createStyles(colors: ThemeColors) {
     },
     rowText: {
       color: colors.text,
+    },
+    rowTextHighlight: {
+      color: colors.tint,
+      fontWeight: '600',
     },
   });
 }
