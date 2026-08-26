@@ -120,8 +120,14 @@ export default function RosterScreen() {
   }
 
   // Les codes proposés à cocher viennent des groupes de postes déjà définis :
-  // pas besoin de les retaper, et ça reste cohérent avec le reste.
+  // pas besoin de les retaper, et ça reste cohérent avec le reste. On garde
+  // aussi les codes des variantes week-end (F1-F5...) : seule la catégorie
+  // (pas le code) est masquée de la liste des affectations.
   const allKnownCodes = useMemo(() => Array.from(new Set(groups.flatMap((g) => g.codes))).sort(), [groups]);
+  // Catégories affectables à un salarié : une variante week-end (même poste,
+  // code différent) n'est pas une "catégorie" à part entière — un salarié
+  // reste rattaché à sa catégorie habituelle.
+  const assignableGroups = groups.filter((g) => !g.weekendVariant);
 
   function toggleCodeForEmployee(name: string, code: string) {
     setCodeOptions((prev) => {
@@ -207,7 +213,7 @@ export default function RosterScreen() {
   // tris, seules celles qui contiennent au moins un salarié sont affichées.
   function categoryDefs(): CategoryDef[] {
     return [
-      ...groups.map((g) => ({ groupId: g.id, label: g.label || 'Groupe sans nom', color: g.color })),
+      ...assignableGroups.map((g) => ({ groupId: g.id, label: g.label || 'Groupe sans nom', color: g.color })),
       { groupId: undefined, label: 'Sans catégorie' },
     ];
   }
@@ -228,7 +234,7 @@ export default function RosterScreen() {
     for (const def of categoryDefs()) {
       const entries = sortEntries(
         activeIndexed.filter(([e]) =>
-          def.groupId ? e.groupId === def.groupId : !groups.some((g) => g.id === e.groupId)
+          def.groupId ? e.groupId === def.groupId : !assignableGroups.some((g) => g.id === e.groupId)
         )
       );
       if (sortMode !== 'manual' && entries.length === 0) continue;
@@ -386,7 +392,7 @@ export default function RosterScreen() {
                   Aucune
                 </Text>
               </Pressable>
-              {groups.map((g) => (
+              {assignableGroups.map((g) => (
                 <Pressable
                   key={g.id}
                   style={[styles.categoryChip, openEntry.groupId === g.id && styles.categoryChipActive]}

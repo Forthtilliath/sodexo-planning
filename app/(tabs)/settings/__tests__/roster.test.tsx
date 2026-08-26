@@ -139,6 +139,22 @@ describe('RosterScreen — fiche salarié (sheet)', () => {
     expect(screen.getByText('glisse un salarié ici')).toBeTruthy();
   });
 
+  it("masque une variante week-end de la liste des catégories (en-têtes et sélecteur du sheet)", async () => {
+    await saveTeamGroups([
+      { id: 'chaine', label: 'Chaîne', codes: ['C6'], color: '#43a047' },
+      { id: 'we-chaine', label: 'WE Chaîne', codes: ['F1'], color: '#43a047', weekendVariant: true },
+    ]);
+    await saveEmployeeRoster([{ name: 'Alice', active: true }]);
+    await render(<RosterScreen />);
+
+    await screen.findByText('Alice');
+    expect(screen.getByText('Chaîne')).toBeTruthy();
+    expect(screen.queryByText('WE Chaîne')).toBeNull();
+
+    await fireEvent.press(screen.getByText('Alice'));
+    expect(screen.queryByText('WE Chaîne')).toBeNull();
+  });
+
   it('est régulier par défaut (ajouté automatiquement), et peut passer intérimaire', async () => {
     await saveEmployeeRoster([{ name: 'Alice', active: true }]);
     await render(<RosterScreen />);

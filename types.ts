@@ -16,6 +16,11 @@ export type TeamGroup = {
   label?: string;
   codes: string[];
   color?: string; // couleur hex, pour repérer le type de poste en un coup d'œil
+  // Variante week-end/férié d'un autre groupe (même poste, code différent) :
+  // ses codes restent proposés normalement, mais elle est masquée de la
+  // liste des catégories affectables à un salarié (Réglages > Salariés) —
+  // un salarié n'a pas de "catégorie week-end" à part entière.
+  weekendVariant?: boolean;
 };
 
 export type RosterEntry = {

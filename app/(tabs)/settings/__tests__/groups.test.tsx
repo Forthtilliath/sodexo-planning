@@ -19,17 +19,22 @@ jest.mock('expo-router', () => {
 // "drag" pour pouvoir déclencher un réordonnancement depuis un test.
 jest.mock('react-native-draggable-flatlist', () => {
   const { View } = require('react-native');
+  const FakeList = ({ data, renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ListFooterComponent }: any) => (
+    <View>
+      {ListHeaderComponent}
+      {data.length === 0
+        ? ListEmptyComponent
+        : data.map((item: any, index: number) => (
+            <View key={keyExtractor(item)}>
+              {renderItem({ item, index, drag: () => {}, isActive: false, getIndex: () => index })}
+            </View>
+          ))}
+      {ListFooterComponent}
+    </View>
+  );
   return {
     __esModule: true,
-    default: ({ data, renderItem, keyExtractor }: any) => (
-      <View>
-        {data.map((item: any, index: number) => (
-          <View key={keyExtractor(item)}>
-            {renderItem({ item, index, drag: () => {}, isActive: false, getIndex: () => index })}
-          </View>
-        ))}
-      </View>
-    ),
+    default: FakeList,
   };
 });
 
@@ -129,5 +134,23 @@ describe('GroupsScreen', () => {
 
     const saved = await getTeamGroups();
     expect(saved[0].color).toBe('#d32f2f');
+  });
+
+  it('affiche un badge "Week-end" en lecture seule pour une variante week-end', async () => {
+    await saveTeamGroups([{ id: 'g1', label: 'WE Chaîne', codes: ['F1'], color: '#43a047', weekendVariant: true }]);
+    await render(<GroupsScreen />);
+
+    expect(await screen.findByText('Week-end')).toBeTruthy();
+  });
+
+  it('active/désactive la variante week-end via le switch en édition, et la persiste', async () => {
+    await saveTeamGroups([{ id: 'g1', label: 'Chaîne', codes: ['C6'], color: '#43a047' }]);
+    await render(<GroupsScreen />);
+    await enterEditMode();
+
+    await fireEvent(screen.getByRole('switch'), 'valueChange', true);
+
+    const saved = await getTeamGroups();
+    expect(saved[0].weekendVariant).toBe(true);
   });
 });
