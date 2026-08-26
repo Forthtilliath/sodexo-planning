@@ -5,7 +5,7 @@ import ColorDot from '@/components/ColorDot';
 import DragHandle from '@/components/DragHandle';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { isRegular } from '@/lib/teams';
+import { isRegular, MY_NAME, normalizeName } from '@/lib/teams';
 import type { RosterEntry } from '@/types';
 
 type Props = {
@@ -26,6 +26,7 @@ export default function RosterCard({ entry, index, categoryColor, codesCount, dr
   const summaryParts = [!isRegular(entry) ? 'Intérimaire' : null, codesCount > 0 ? `${codesCount} code(s)` : null]
     .filter(Boolean)
     .join(' · ');
+  const isMe = normalizeName(entry.name) === normalizeName(MY_NAME);
 
   return (
     <View style={[styles.card, isDragging && styles.cardDragging]}>
@@ -38,7 +39,7 @@ export default function RosterCard({ entry, index, categoryColor, codesCount, dr
       <Pressable style={styles.body} onPress={onPress}>
         <ColorDot color={categoryColor} />
         <View style={styles.nameColumn}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text style={[styles.name, isMe && styles.nameMe]} numberOfLines={1}>
             {entry.name || `Salarié ${index + 1}`}
           </Text>
           {summaryParts.length > 0 && (
@@ -87,6 +88,9 @@ function createStyles(colors: ThemeColors) {
       fontSize: 15,
       fontWeight: '600',
       color: colors.text,
+    },
+    nameMe: {
+      color: colors.tint,
     },
     summary: {
       fontSize: 12,
