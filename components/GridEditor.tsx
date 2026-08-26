@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { MY_NAME, normalizeName } from '@/lib/teams';
 
 type Props = {
   days: string[]; // dates ISO, une par colonne
@@ -37,8 +38,9 @@ export default function GridEditor({
     <View>
       {employees.map((name, rowIndex) => {
         const filledCount = (grid[rowIndex] ?? []).filter((c) => c.trim()).length;
+        const isMe = normalizeName(name) === normalizeName(MY_NAME);
         return (
-          <View key={rowIndex} style={styles.row}>
+          <View key={rowIndex} style={[styles.row, isMe && styles.rowMe]}>
             {removable[rowIndex] && (
               <Pressable
                 onPress={() => onRemoveEmployee(rowIndex)}
@@ -50,7 +52,9 @@ export default function GridEditor({
               </Pressable>
             )}
             <View style={styles.nameColumn}>
-              <Text style={styles.nameText}>{name || `Employé ${rowIndex + 1}`}</Text>
+              <Text style={[styles.nameText, isMe && styles.nameTextMe]}>
+                {name || `Employé ${rowIndex + 1}`}
+              </Text>
               <Text style={styles.summaryText}>
                 {filledCount} / {days.length} jours renseignés
               </Text>
@@ -86,6 +90,11 @@ function createStyles(colors: ThemeColors) {
       borderRadius: 8,
       padding: 8,
     },
+    rowMe: {
+      borderColor: colors.tint,
+      borderWidth: 2,
+      backgroundColor: colors.tintSoft,
+    },
     removeButton: {
       paddingHorizontal: 4,
       paddingVertical: 4,
@@ -103,6 +112,9 @@ function createStyles(colors: ThemeColors) {
       fontWeight: '600',
       marginBottom: 4,
       color: colors.text,
+    },
+    nameTextMe: {
+      color: colors.tint,
     },
     summaryText: {
       fontSize: 12,
