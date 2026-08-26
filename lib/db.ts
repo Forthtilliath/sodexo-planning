@@ -123,10 +123,11 @@ export async function getEmployeeRoster(): Promise<RosterEntry[]> {
 		if (!Array.isArray(parsed)) return DEFAULT_ROSTER;
 		// Ancien format = string[] (avant l'ajout du statut actif/inactif) : on
 		// migre à la volée pour ne rien perdre des listes déjà enregistrées.
+		// Le spread préserve les champs ajoutés depuis (regular, groupId...).
 		return parsed.map((item): RosterEntry =>
 			typeof item === "string"
 				? { name: item, active: true }
-				: { name: String(item?.name ?? ""), active: item?.active !== false },
+				: { ...item, name: String(item?.name ?? ""), active: item?.active !== false },
 		);
 	} catch {
 		return DEFAULT_ROSTER;

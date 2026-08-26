@@ -18,7 +18,7 @@ import {
   saveScan,
 } from '@/lib/db';
 import { rescheduleWorkReminders } from '@/lib/notifications';
-import { MY_NAME } from '@/lib/teams';
+import { isRegular, MY_NAME } from '@/lib/teams';
 import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 /** Fait remonter "Moi" en tête de liste, sans changer l'ordre des autres. */
@@ -164,12 +164,13 @@ export default function PlanningEditorScreen() {
     }, [])
   );
 
-  // Un salarié ajouté (ou réactivé) dans Réglages pendant qu'un planning est
-  // déjà ouvert doit y apparaître directement, sans passer par "+ Ajouter une
-  // ligne" à la main.
+  // Un salarié régulier ajouté (ou réactivé) dans Réglages pendant qu'un
+  // planning est déjà ouvert doit y apparaître directement, sans passer par
+  // "+ Ajouter une ligne" à la main. Un intérimaire (non régulier), lui, doit
+  // être ajouté à la main — sinon il finirait sur tous les mois.
   useEffect(() => {
     if (step !== 'review') return;
-    const activeNames = roster.filter((r) => r.active).map((r) => r.name.trim()).filter(Boolean);
+    const activeNames = roster.filter((r) => r.active && isRegular(r)).map((r) => r.name.trim()).filter(Boolean);
     const missing = activeNames.filter(
       (name) => !employees.some((e) => e.trim().toLowerCase() === name.toLowerCase())
     );
@@ -218,10 +219,12 @@ export default function PlanningEditorScreen() {
     });
   }
 
-  // La liste des salariés actifs gérée dans Réglages prime ; à défaut, celle du dernier planning.
+  // La liste des salariés actifs et réguliers gérée dans Réglages prime ; à
+  // défaut, celle du dernier planning. Les intérimaires (non réguliers) ne
+  // sont jamais ajoutés automatiquement, seulement à la main.
   // Dans tous les cas, "Moi" remonte en tête pour se retrouver plus vite.
   function defaultEmployees(): string[] {
-    const activeNames = roster.filter((r) => r.active).map((r) => r.name);
+    const activeNames = roster.filter((r) => r.active && isRegular(r)).map((r) => r.name);
     if (activeNames.length > 0) return putMyNameFirst(activeNames);
     if (scans[0]?.employees.length) return putMyNameFirst(scans[0].employees);
     return Array(5).fill('');

@@ -20,9 +20,17 @@ export type TeamGroup = {
 
 export type RosterEntry = {
   name: string;
-  // Un salarié inactif n'apparaît plus en tête de liste ni comme proposition
-  // par défaut dans un nouveau planning, sans perdre ses codes habituels.
+  // "Archivé" dans l'UI (le champ garde son nom historique) : un salarié
+  // inactif n'apparaît plus dans la liste ni comme proposition par défaut
+  // dans un nouveau planning, sans perdre ses codes habituels ni son
+  // historique dans les plannings déjà enregistrés.
   active: boolean;
+  // Ajouté automatiquement à chaque nouveau planning ; absent = régulier
+  // (comportement historique). `false` = intérimaire, ajouté seulement à la main.
+  regular?: boolean;
+  // Id d'un groupe de postes (Réglages > Groupes de postes), pour regrouper
+  // visuellement les salariés ; absent = "Sans catégorie".
+  groupId?: string;
 };
 
 export type CodeSchedule = {
