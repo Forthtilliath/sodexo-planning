@@ -21,6 +21,11 @@ function capitalize(word: string): string {
 /** Noms des mois en français, capitalisés ("Janvier", "Février", ...) — source unique pour tout l'affichage mois/année. */
 export const MONTH_NAMES = MONTH_NAMES_LOWER.map(capitalize);
 
+/** "Août 2026" à partir d'une année et d'un mois (1-12) — libellé court utilisé pour les sélecteurs de planning. */
+export function monthYearLabel(year: number, month: number): string {
+  return `${MONTH_NAMES[month - 1]} ${year}`;
+}
+
 /** "2026-08-13" -> "Jeudi 13 Août 2026", pour l'en-tête du détail d'un jour. */
 export function formatFullDate(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
