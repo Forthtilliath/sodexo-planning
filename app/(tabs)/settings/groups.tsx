@@ -206,6 +206,17 @@ export default function GroupsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* En dehors du DraggableFlatList (donc du scroll) exprès : ce bouton
+          reste toujours visible en haut de l'écran, même après avoir scrollé
+          jusqu'en bas d'une longue liste de groupes en édition. */}
+      <Pressable
+        style={[styles.editToggle, editMode && styles.editToggleActive]}
+        onPress={() => setEditMode((v) => !v)}>
+        <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
+          {editMode ? '✓ Terminé' : '✏️ Modifier les groupes'}
+        </Text>
+      </Pressable>
+
       {/* Toute la liste tient dans un seul DraggableFlatList — un seul
           composant scrollable pour tout l'écran, header/footer inclus : nester
           un second scrollable dedans entre en conflit avec le geste de scroll
@@ -222,20 +233,10 @@ export default function GroupsScreen() {
         activationDistance={0}
         initialNumToRender={groups.length}
         ListHeaderComponent={
-          <>
-            <Text style={styles.hint}>
-              Un groupe = les codes de poste qui vont ensemble (ex: D1, D2, D3, D4). Ces codes servent aussi de
-              boutons rapides dans "Salariés".
-            </Text>
-
-            <Pressable
-              style={[styles.editToggle, editMode && styles.editToggleActive]}
-              onPress={() => setEditMode((v) => !v)}>
-              <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
-                {editMode ? '✓ Terminé' : '✏️ Modifier les groupes'}
-              </Text>
-            </Pressable>
-          </>
+          <Text style={styles.hint}>
+            Un groupe = les codes de poste qui vont ensemble (ex: D1, D2, D3, D4). Ces codes servent aussi de boutons
+            rapides dans "Salariés".
+          </Text>
         }
         ListEmptyComponent={<Text style={styles.hint}>Aucun groupe configuré.</Text>}
         ListFooterComponent={
@@ -294,6 +295,8 @@ function createStyles(colors: ThemeColors) {
       borderWidth: 1,
       borderColor: colors.tint,
       alignItems: 'center',
+      marginHorizontal: 16,
+      marginTop: 12,
       marginBottom: 12,
     },
     editToggleActive: {
