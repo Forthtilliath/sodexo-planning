@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 
+import AddEmployeeSheet from '@/components/AddEmployeeSheet';
 import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
 import PersonDayEditor from '@/components/PersonDayEditor';
-import SwipeableRow from '@/components/SwipeableRow';
+import SavedScansList from '@/components/SavedScansList';
+import SelectField from '@/components/SelectField';
+import UndoToast from '@/components/UndoToast';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { MONTH_NAMES } from '@/lib/dates';
 import {
   deleteScan,
   getEmployeeCodeOptions,
@@ -17,8 +21,9 @@ import {
   getTeamGroups,
   saveScan,
 } from '@/lib/db';
+import { randomId } from '@/lib/id';
 import { rescheduleWorkReminders } from '@/lib/notifications';
-import { isRegular, MY_NAME } from '@/lib/teams';
+import { isRegular, MY_NAME, normalizeName } from '@/lib/teams';
 import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 /** Fait remonter "Moi" en tête de liste, sans changer l'ordre des autres. */
@@ -31,26 +36,7 @@ function putMyNameFirst(names: string[]): string[] {
   return next;
 }
 
-const MONTH_NAMES = [
-  'Janvier',
-  'Février',
-  'Mars',
-  'Avril',
-  'Mai',
-  'Juin',
-  'Juillet',
-  'Août',
-  'Septembre',
-  'Octobre',
-  'Novembre',
-  'Décembre',
-];
-
 const UNDO_TOAST_DURATION_MS = 4000;
-
-function randomId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 /** Un mois est "terminé" dès qu'il est strictement antérieur au mois courant. */
 function isMonthFinished(year: number, month: number): boolean {
@@ -58,16 +44,6 @@ function isMonthFinished(year: number, month: number): boolean {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   return year < currentYear || (year === currentYear && month < currentMonth);
-}
-
-type ScanCategory = 'current' | 'future' | 'past';
-
-function categorizeScan(scan: ScanRecord): ScanCategory {
-  const now = new Date();
-  const currentKey = now.getFullYear() * 12 + (now.getMonth() + 1);
-  const scanKey = scan.year * 12 + scan.month;
-  if (scanKey === currentKey) return 'current';
-  return scanKey > currentKey ? 'future' : 'past';
 }
 
 function daysInMonth(year: number, month: number): number {
@@ -109,29 +85,13 @@ export default function PlanningEditorScreen() {
     () => scans.find((s) => s.year === year && s.month === month) ?? null,
     [scans, year, month]
   );
-  const [showPastMonths, setShowPastMonths] = useState(false);
-  // Mois en cours en tête, puis les mois à venir dans l'ordre chronologique,
-  // et enfin les mois passés du plus récent au plus ancien (affichés en muted).
-  const sortedScans = useMemo(() => {
-    const rank = { current: 0, future: 1, past: 2 } as const;
-    return scans
-      .map((scan) => ({ scan, category: categorizeScan(scan), key: scan.year * 12 + scan.month }))
-      .sort((a, b) => {
-        if (a.category !== b.category) return rank[a.category] - rank[b.category];
-        return a.category === 'past' ? b.key - a.key : a.key - b.key;
-      });
-  }, [scans]);
-  const pastScanCount = useMemo(() => sortedScans.filter((s) => s.category === 'past').length, [sortedScans]);
-  const visibleSortedScans = useMemo(
-    () => sortedScans.filter((s) => showPastMonths || s.category !== 'past'),
-    [sortedScans, showPastMonths]
-  );
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const allCodes = useMemo(() => Array.from(new Set(groups.flatMap((g) => g.codes))).sort(), [groups]);
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
   const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [showAddEmployeeSheet, setShowAddEmployeeSheet] = useState(false);
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   // Bandeau "Annuler" après une suppression par swipe, auto-masqué après
   // quelques secondes (voir showUndoToast/handleUndoDelete).
@@ -337,10 +297,43 @@ export default function PlanningEditorScreen() {
   }
 
   // Les noms viennent du roster (Réglages) et se synchronisent automatiquement
-  // dans le planning ouvert : "+ Ajouter" y redirige plutôt que de créer une
-  // ligne sans nom.
+  // dans le planning ouvert : "+ Nouveau salarié" y redirige plutôt que de
+  // créer une ligne sans nom.
   function goToRoster() {
     router.push('/settings/roster');
+  }
+
+  /** Ajoute un salarié déjà connu (typiquement un intérimaire) à ce mois précis, via le sheet "+ Ajouter salarié". */
+  function addExistingEmployee(name: string) {
+    if (employees.some((e) => normalizeName(e) === normalizeName(name))) return;
+    setEmployees((prev) => [...prev, name]);
+    setGrid((prev) => [...prev, Array(days.length).fill('')]);
+  }
+
+  // Un salarié régulier actif est resynchronisé automatiquement (voir
+  // l'effet ci-dessus) : le retirer n'aurait aucun effet, il réapparaîtrait
+  // aussitôt. Un régulier archivé, lui, reste délibérément non retirable ici
+  // (l'archivage garde son historique dans les plannings existants — voir
+  // Réglages > Salariés) ; il ne réapparaîtrait pas non plus dans le sheet
+  // "+ Ajouter salarié", qui ne propose que des salariés actifs.
+  const removableEmployees = useMemo(
+    () =>
+      employees.map((name) => {
+        const entry = roster.find((r) => normalizeName(r.name) === normalizeName(name));
+        return !entry || !isRegular(entry);
+      }),
+    [employees, roster]
+  );
+
+  /** Retrait par erreur d'un salarié ajouté par erreur (voir removableEmployees) — pas de confirmation, ré-ajoutable en un tap via le sheet. */
+  function removeEmployee(rowIndex: number) {
+    setEmployees((prev) => prev.filter((_, i) => i !== rowIndex));
+    setGrid((prev) => prev.filter((_, i) => i !== rowIndex));
+    setEditingRow((prev) => {
+      if (prev === null) return prev;
+      if (prev === rowIndex) return null;
+      return prev > rowIndex ? prev - 1 : prev;
+    });
   }
 
   /** Enregistre l'état courant sans confirmation ; utilisé par l'auto-save et les retours arrière. */
@@ -443,37 +436,7 @@ export default function PlanningEditorScreen() {
               : 'Grille pré-remplie avec ta liste de salariés (Réglages) ; complète-la avec le mode sélection multiple.'}
           </Text>
 
-          {scans.length > 0 && (
-            <>
-              <View style={styles.separator} />
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Reprendre un planning</Text>
-                {pastScanCount > 0 && (
-                  <View style={styles.pastToggle}>
-                    <Text style={styles.pastToggleLabel}>Mois passés</Text>
-                    <Switch value={showPastMonths} onValueChange={setShowPastMonths} />
-                  </View>
-                )}
-              </View>
-              {visibleSortedScans.map(({ scan, category }) => (
-                <SwipeableRow key={scan.id} onDelete={() => handleDeleteScan(scan)}>
-                  <Pressable style={styles.savedRow} onPress={() => openScanForEditing(scan)}>
-                    <View>
-                      <Text style={[styles.savedRowTitle, category === 'past' && styles.savedRowTitlePast]}>
-                        {MONTH_NAMES[scan.month - 1]} {scan.year}
-                      </Text>
-                      <Text style={[styles.savedRowHint, category === 'past' && styles.savedRowHintPast]}>
-                        {scan.employees.length} salarié(s)
-                      </Text>
-                    </View>
-                    <Text style={[styles.savedRowAction, category === 'past' && styles.savedRowActionPast]}>
-                      Modifier →
-                    </Text>
-                  </Pressable>
-                </SwipeableRow>
-              ))}
-            </>
-          )}
+          <SavedScansList scans={scans} onOpen={openScanForEditing} onDelete={handleDeleteScan} />
         </>
       )}
 
@@ -496,8 +459,19 @@ export default function PlanningEditorScreen() {
                 days={days}
                 employees={employees}
                 grid={grid}
-                onAddEmployee={goToRoster}
+                removable={removableEmployees}
+                onNewEmployee={goToRoster}
+                onPickExisting={() => setShowAddEmployeeSheet(true)}
+                onRemoveEmployee={removeEmployee}
                 onOpenRow={setEditingRow}
+              />
+              <AddEmployeeSheet
+                visible={showAddEmployeeSheet}
+                onClose={() => setShowAddEmployeeSheet(false)}
+                roster={roster}
+                groups={groups}
+                excludeNames={employees}
+                onPick={addExistingEmployee}
               />
               <Pressable style={styles.resetButton} onPress={reset}>
                 <Text style={styles.resetButtonText}>Recommencer</Text>
@@ -509,60 +483,11 @@ export default function PlanningEditorScreen() {
       </ScrollView>
 
       {undoToast && (
-        <View style={styles.undoToast}>
-          <Text style={styles.undoToastText} numberOfLines={1}>
-            {MONTH_NAMES[undoToast.month - 1]} {undoToast.year} supprimé
-          </Text>
-          <Pressable onPress={handleUndoDelete} hitSlop={8}>
-            <Text style={styles.undoToastAction}>Annuler</Text>
-          </Pressable>
-        </View>
+        <UndoToast
+          message={`${MONTH_NAMES[undoToast.month - 1]} ${undoToast.year} supprimé`}
+          onAction={handleUndoDelete}
+        />
       )}
-    </View>
-  );
-}
-
-function SelectField({
-  label,
-  valueLabel,
-  options,
-  onSelect,
-}: {
-  label: string;
-  valueLabel: string;
-  options: { value: number; label: string }[];
-  onSelect: (value: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-
-  return (
-    <View style={styles.labeledInput}>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <Pressable style={styles.selectButton} onPress={() => setOpen(true)}>
-        <Text style={styles.selectButtonText}>{valueLabel}</Text>
-        <Text style={styles.selectChevron}>▾</Text>
-      </Pressable>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setOpen(false)}>
-          <View style={styles.modalCard}>
-            <ScrollView>
-              {options.map((opt) => (
-                <Pressable
-                  key={opt.value}
-                  style={styles.modalOption}
-                  onPress={() => {
-                    onSelect(opt.value);
-                    setOpen(false);
-                  }}>
-                  <Text style={styles.modalOptionText}>{opt.label}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -572,35 +497,6 @@ function createStyles(colors: ThemeColors) {
     screen: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    undoToast: {
-      position: 'absolute',
-      left: 16,
-      right: 16,
-      bottom: 24,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-      backgroundColor: '#1f1f1f',
-      elevation: 4,
-      shadowColor: '#000',
-      shadowOpacity: 0.3,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 2 },
-    },
-    undoToastText: {
-      flex: 1,
-      color: '#fff',
-      fontSize: 14,
-    },
-    undoToastAction: {
-      color: '#7cc0ff',
-      fontWeight: '700',
-      fontSize: 14,
     },
     headerBackButton: {
       paddingHorizontal: 12,
@@ -618,130 +514,15 @@ function createStyles(colors: ThemeColors) {
       padding: 16,
       paddingBottom: 64,
     },
-    sectionHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 8,
-      marginBottom: 8,
-    },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    pastToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    pastToggleLabel: {
-      fontSize: 12,
-      opacity: 0.7,
-      color: colors.text,
-    },
     row: {
       flexDirection: 'row',
       gap: 12,
-    },
-    labeledInput: {
-      flex: 1,
-    },
-    inputLabel: {
-      fontSize: 12,
-      opacity: 0.7,
-      marginBottom: 4,
-      color: colors.text,
-    },
-    selectButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 10,
-    },
-    selectButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    selectChevron: {
-      opacity: 0.5,
-      color: colors.text,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-    },
-    modalCard: {
-      width: '100%',
-      maxHeight: '70%',
-      backgroundColor: colors.modalCard,
-      borderRadius: 12,
-      paddingVertical: 8,
-    },
-    modalOption: {
-      paddingVertical: 14,
-      paddingHorizontal: 20,
-    },
-    modalOptionText: {
-      fontSize: 16,
-      color: colors.text,
     },
     hint: {
       fontSize: 12,
       opacity: 0.7,
       marginTop: 4,
       color: colors.text,
-    },
-    separator: {
-      height: 1,
-      marginVertical: 20,
-      backgroundColor: colors.borderSubtle,
-    },
-    savedRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderWidth: 1,
-      // Opaque (pas borderSubtle, translucide) : sinon le rouge de
-      // SwipeableRow transparaît à travers le trait de bordure lui-même.
-      borderColor: colors.divider,
-      borderRadius: 8,
-      padding: 12,
-      // Fond opaque : cette ligne glisse par-dessus le bouton "Supprimer"
-      // (SwipeableRow) et doit le masquer complètement tant qu'on ne swipe pas.
-      backgroundColor: colors.card,
-    },
-    savedRowTitle: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    savedRowTitlePast: {
-      fontWeight: '400',
-      opacity: 0.55,
-    },
-    savedRowHint: {
-      fontSize: 12,
-      opacity: 0.7,
-      marginTop: 2,
-      color: colors.text,
-    },
-    savedRowHintPast: {
-      opacity: 0.45,
-    },
-    savedRowAction: {
-      color: colors.tint,
-      fontWeight: '600',
-    },
-    savedRowActionPast: {
-      opacity: 0.55,
     },
     primaryButton: {
       marginTop: 16,

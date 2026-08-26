@@ -2,43 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 
-import BottomSheet from '@/components/BottomSheet';
+import DayListRow from '@/components/DayListRow';
 import MonthCalendarView from '@/components/MonthCalendarView';
+import PickerListSheet from '@/components/PickerListSheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { isToday } from '@/lib/dates';
+import { isToday, MONTH_NAMES } from '@/lib/dates';
 import { getCodeSchedules, getScans, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
-import { computeMonthPlanning, findMyRowIndex, formatScheduleHours, MY_NAME, type DayPlanning } from '@/lib/teams';
+import { computeMonthPlanning, findMyRowIndex, MY_NAME, type DayPlanning } from '@/lib/teams';
 import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
 
-const MONTH_NAMES = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-];
-
-function formatDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00`);
-  const weekday = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'][date.getDay()];
-  return `${weekday} ${date.getDate()}`;
-}
-
 function monthYearLabel(scan: ScanRecord): string {
-  const month = MONTH_NAMES[scan.month - 1];
-  return `${month.charAt(0).toUpperCase()}${month.slice(1)} ${scan.year}`;
+  return `${MONTH_NAMES[scan.month - 1]} ${scan.year}`;
 }
 
 export default function PlanningScreen() {
@@ -208,36 +187,22 @@ export default function PlanningScreen() {
         </View>
       )}
 
-      <BottomSheet visible={colleaguePickerOpen} onClose={() => setColleaguePickerOpen(false)}>
-        {selectedScan?.employees.map((name, index) => (
-          <Pressable
-            key={index}
-            style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
-            onPress={() => {
-              setViewingName(name);
-              setColleaguePickerOpen(false);
-            }}>
-            <Text style={styles.employeeRowText}>
-              {name || `Ligne ${index + 1}`}
-              {index === myRowIndex ? ' (moi)' : ''}
-            </Text>
-          </Pressable>
-        ))}
-      </BottomSheet>
+      <PickerListSheet
+        visible={colleaguePickerOpen}
+        onClose={() => setColleaguePickerOpen(false)}
+        items={(selectedScan?.employees ?? []).map((name, index) => ({
+          key: String(index),
+          label: `${name || `Ligne ${index + 1}`}${index === myRowIndex ? ' (moi)' : ''}`,
+        }))}
+        onSelect={(key) => setViewingName(selectedScan?.employees[Number(key)] ?? null)}
+      />
 
-      <BottomSheet visible={pastMonthsPickerOpen} onClose={() => setPastMonthsPickerOpen(false)}>
-        {pastScans.map((scan, index) => (
-          <Pressable
-            key={scan.id}
-            style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
-            onPress={() => {
-              setSelectedScanId(scan.id);
-              setPastMonthsPickerOpen(false);
-            }}>
-            <Text style={styles.employeeRowText}>{monthYearLabel(scan)}</Text>
-          </Pressable>
-        ))}
-      </BottomSheet>
+      <PickerListSheet
+        visible={pastMonthsPickerOpen}
+        onClose={() => setPastMonthsPickerOpen(false)}
+        items={pastScans.map((scan) => ({ key: scan.id, label: monthYearLabel(scan) }))}
+        onSelect={setSelectedScanId}
+      />
 
       {selectedScan && !viewingSomeoneElse && myRowIndex < 0 && (
         <View style={styles.notFoundBox}>
@@ -286,37 +251,15 @@ export default function PlanningScreen() {
           </Pressable>
 
           {viewMode === 'list' ? (
-            planning.map((day) => {
-              const isHoliday = selectedScan?.holidays?.includes(day.date) ?? false;
-              const isCurrentDay = isToday(day.date);
-              return (
-                <View
-                  key={day.date}
-                  style={[styles.dayRow, isHoliday && styles.dayRowHoliday, isCurrentDay && styles.dayRowToday]}>
-                  <View style={styles.dayDate}>
-                    <Text style={styles.dayDateText}>{formatDate(day.date)}</Text>
-                  </View>
-                  <View style={styles.dayInfo}>
-                    <View style={styles.dayCodeRow}>
-                      {day.group?.color && <View style={[styles.groupDot, { backgroundColor: day.group.color }]} />}
-                      <Text style={styles.dayCode}>
-                        {day.code || '—'}
-                        {showHours && day.schedule && (
-                          <Text style={styles.daySchedule}> ({formatScheduleHours(day.schedule)})</Text>
-                        )}
-                        {day.teammates.length > 0 && (
-                          <Text style={styles.dayTeammates}>
-                            {' '}
-                            · {day.teammates.map((t) => `${t.code} ${t.name}`).join(', ')}
-                          </Text>
-                        )}
-                      </Text>
-                    </View>
-                  </View>
-                  {isHoliday && <Text style={styles.dayHolidayTag}>Férié</Text>}
-                </View>
-              );
-            })
+            planning.map((day) => (
+              <DayListRow
+                key={day.date}
+                day={day}
+                isHoliday={selectedScan?.holidays?.includes(day.date) ?? false}
+                isCurrentDay={isToday(day.date)}
+                showHours={showHours}
+              />
+            ))
           ) : (
             <MonthCalendarView
               planning={planning}
@@ -488,64 +431,6 @@ function createStyles(colors: ThemeColors) {
     hoursToggleLabel: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.text,
-    },
-    dayRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.divider,
-    },
-    dayRowHoliday: {
-      borderLeftWidth: 2,
-      borderLeftColor: colors.holiday,
-      paddingLeft: 8,
-    },
-    dayRowToday: {
-      borderLeftWidth: 3,
-      borderLeftColor: colors.tint,
-      paddingLeft: 8,
-    },
-    dayHolidayTag: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.holiday,
-    },
-    dayDate: {
-      width: 64,
-    },
-    dayDateText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-    dayInfo: {
-      flex: 1,
-    },
-    dayCodeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    groupDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-    },
-    dayCode: {
-      fontWeight: 'bold',
-      color: colors.text,
-    },
-    daySchedule: {
-      fontSize: 13,
-      fontWeight: '600',
-      opacity: 0.7,
-      color: colors.text,
-    },
-    dayTeammates: {
-      fontSize: 13,
-      fontWeight: '400',
-      opacity: 0.8,
       color: colors.text,
     },
     exportButton: {

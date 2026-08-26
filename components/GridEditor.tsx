@@ -8,12 +8,28 @@ type Props = {
   days: string[]; // dates ISO, une par colonne
   employees: string[];
   grid: string[][];
-  onAddEmployee: () => void;
+  // Un salarié régulier actif est ajouté/retiré automatiquement (voir
+  // l'écran Saisie) : le retirer à la main n'aurait aucun effet, il
+  // réapparaîtrait aussitôt. Seuls les autres (intérimaires, noms
+  // personnalisés...) proposent un bouton de retrait.
+  removable: boolean[];
+  onNewEmployee: () => void;
+  onPickExisting: () => void;
+  onRemoveEmployee: (rowIndex: number) => void;
   onOpenRow: (rowIndex: number) => void;
 };
 
 /** Liste des salariés du planning : un par ligne, avec un résumé de remplissage et un accès à l'éditeur par personne. */
-export default function GridEditor({ days, employees, grid, onAddEmployee, onOpenRow }: Props) {
+export default function GridEditor({
+  days,
+  employees,
+  grid,
+  removable,
+  onNewEmployee,
+  onPickExisting,
+  onRemoveEmployee,
+  onOpenRow,
+}: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -23,6 +39,16 @@ export default function GridEditor({ days, employees, grid, onAddEmployee, onOpe
         const filledCount = (grid[rowIndex] ?? []).filter((c) => c.trim()).length;
         return (
           <View key={rowIndex} style={styles.row}>
+            {removable[rowIndex] && (
+              <Pressable
+                onPress={() => onRemoveEmployee(rowIndex)}
+                hitSlop={10}
+                style={styles.removeButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Retirer ${name || `Employé ${rowIndex + 1}`} de ce mois`}>
+                <Text style={styles.removeButtonText}>×</Text>
+              </Pressable>
+            )}
             <View style={styles.nameColumn}>
               <Text style={styles.nameText}>{name || `Employé ${rowIndex + 1}`}</Text>
               <Text style={styles.summaryText}>
@@ -36,9 +62,14 @@ export default function GridEditor({ days, employees, grid, onAddEmployee, onOpe
         );
       })}
 
-      <Pressable style={styles.addButton} onPress={onAddEmployee}>
-        <Text style={styles.addButtonText}>+ Ajouter un salarié</Text>
-      </Pressable>
+      <View style={styles.addRow}>
+        <Pressable style={styles.addButton} onPress={onPickExisting}>
+          <Text style={styles.addButtonText}>+ Ajouter salarié</Text>
+        </Pressable>
+        <Pressable style={styles.addButton} onPress={onNewEmployee}>
+          <Text style={styles.addButtonText}>+ Nouveau salarié</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -47,13 +78,22 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     row: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       gap: 8,
       marginBottom: 8,
       borderWidth: 1,
       borderColor: colors.borderSubtle,
       borderRadius: 8,
       padding: 8,
+    },
+    removeButton: {
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+    },
+    removeButtonText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.dangerStrong,
     },
     nameColumn: {
       flex: 1,
@@ -80,8 +120,13 @@ function createStyles(colors: ThemeColors) {
       fontWeight: '600',
       fontSize: 13,
     },
-    addButton: {
+    addRow: {
+      flexDirection: 'row',
+      gap: 8,
       marginTop: 8,
+    },
+    addButton: {
+      flex: 1,
       paddingVertical: 8,
       borderRadius: 8,
       borderWidth: 1,
