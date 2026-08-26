@@ -460,6 +460,8 @@ export default function PlanningEditorScreen() {
                 employees={employees}
                 grid={grid}
                 removable={removableEmployees}
+                roster={roster}
+                groups={groups}
                 onNewEmployee={goToRoster}
                 onPickExisting={() => setShowAddEmployeeSheet(true)}
                 onRemoveEmployee={removeEmployee}
