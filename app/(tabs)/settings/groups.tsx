@@ -1,59 +1,16 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 
-import BottomSheet from '@/components/BottomSheet';
+import AddButton from '@/components/AddButton';
+import ColorPalettePicker, { COLOR_PALETTE } from '@/components/ColorPalettePicker';
+import GroupCard from '@/components/GroupCard';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getTeamGroups, saveTeamGroups } from '@/lib/db';
+import { randomId } from '@/lib/id';
 import type { TeamGroup } from '@/types';
-
-// Deux teintes (claire/foncée) par famille de couleur, dans l'ordre de l'arc-
-// en-ciel pour que la grille se parcoure naturellement, plus quelques neutres
-// à la fin. L'historique du projet montre plusieurs ajustements passés à
-// cause de couleurs trop proches (un rose confondu avec du rouge, un autre
-// avec du vert-teal) — d'où des familles bien espacées sur la roue des teintes.
-const COLOR_PALETTE = [
-  // Rouge
-  '#ef5350', '#d32f2f',
-  // Orange foncé
-  '#ff7043', '#e64a19',
-  // Orange
-  '#ffa726', '#f57c00',
-  // Ambre
-  '#ffca28', '#ffa000',
-  // Jaune
-  '#fdd835', '#f9a825',
-  // Citron vert
-  '#c0ca33', '#9e9d24',
-  // Vert clair
-  '#8bc34a', '#689f38',
-  // Vert
-  '#4caf50', '#388e3c',
-  // Turquoise
-  '#009688', '#00796b',
-  // Cyan
-  '#00bcd4', '#0097a7',
-  // Bleu clair
-  '#03a9f4', '#0288d1',
-  // Bleu
-  '#2196f3', '#1976d2',
-  // Indigo
-  '#3f51b5', '#303f9f',
-  // Violet foncé
-  '#673ab7', '#512da8',
-  // Violet
-  '#9c27b0', '#7b1fa2',
-  // Rose
-  '#e91e63', '#c2185b',
-  // Neutres
-  '#6d4c41', '#757575', '#546e7a',
-];
-
-function randomId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 /** Couleur de la palette pas encore utilisée par un groupe existant, pour qu'un nouveau groupe ne récupère pas toujours la même. */
 function nextColor(groups: TeamGroup[]): string {
@@ -119,7 +76,6 @@ export default function GroupsScreen() {
 
   function updateColor(id: string, color: string) {
     setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, color } : g)));
-    setColorPickerId(null);
   }
 
   function toggleWeekendVariant(id: string) {
@@ -129,78 +85,18 @@ export default function GroupsScreen() {
   const colorPickerGroup = groups.find((g) => g.id === colorPickerId);
 
   function renderGroupItem({ item: group, drag, isActive }: RenderItemParams<TeamGroup>) {
-    if (!editMode) {
-      return (
-        <View style={[styles.groupCard, group.color && { borderLeftColor: group.color, borderLeftWidth: 4 }]}>
-          <View style={styles.groupHeader}>
-            {group.color && <View style={[styles.colorDot, { backgroundColor: group.color }]} />}
-            <Text style={styles.groupLabelText}>{group.label || 'Groupe sans nom'}</Text>
-            {group.weekendVariant && (
-              <View style={styles.weekendBadge}>
-                <Text style={styles.weekendBadgeText}>Week-end</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.groupCodesText}>{group.codes.join(', ') || 'Aucun code'}</Text>
-          {group.weekendVariant && (
-            <Text style={styles.weekendHint}>Masqué de la liste des catégories affectables aux salariés.</Text>
-          )}
-        </View>
-      );
-    }
     return (
-      <View style={[styles.groupCard, isActive && styles.groupCardDragging]}>
-        <View style={styles.groupHeader}>
-          <Pressable
-            onPressIn={drag}
-            disabled={isActive}
-            hitSlop={10}
-            style={styles.dragHandle}
-            accessibilityRole="button"
-            accessibilityLabel={`Réordonner ${group.label || 'ce groupe'}`}>
-            <Text style={styles.dragHandleText}>⠿</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.colorDot, { backgroundColor: group.color ?? colors.border }]}
-            onPress={() => setColorPickerId(group.id)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Changer la couleur du groupe"
-          />
-          <TextInput
-            style={styles.groupLabelInput}
-            value={group.label}
-            onChangeText={(v) => updateLabel(group.id, v)}
-            placeholder="Nom du groupe"
-            placeholderTextColor={colors.border}
-          />
-          <Pressable
-            onPress={() => removeGroup(group.id, group.label ?? '')}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Supprimer ${group.label || 'ce groupe'}`}>
-            <Text style={styles.removeText}>×</Text>
-          </Pressable>
-        </View>
-        <TextInput
-          style={styles.codesInput}
-          value={group.codes.join(', ')}
-          onChangeText={(v) => updateCodes(group.id, v)}
-          placeholder="D1, D2, D3, D4"
-          placeholderTextColor={colors.border}
-          autoCapitalize="characters"
-        />
-        <View style={styles.weekendRow}>
-          <View style={styles.weekendRowText}>
-            <Text style={styles.weekendRowLabel}>Variante week-end</Text>
-            <Text style={styles.weekendHint}>
-              Mêmes postes, code différent le week-end/férié. Masquée de la liste des catégories affectables aux
-              salariés — ses codes restent proposés normalement.
-            </Text>
-          </View>
-          <Switch value={!!group.weekendVariant} onValueChange={() => toggleWeekendVariant(group.id)} />
-        </View>
-      </View>
+      <GroupCard
+        group={group}
+        editMode={editMode}
+        isActive={isActive}
+        onDrag={drag}
+        onColorPress={() => setColorPickerId(group.id)}
+        onLabelChange={(label) => updateLabel(group.id, label)}
+        onCodesChange={(codesText) => updateCodes(group.id, codesText)}
+        onRemove={() => removeGroup(group.id, group.label ?? '')}
+        onToggleWeekendVariant={() => toggleWeekendVariant(group.id)}
+      />
     );
   }
 
@@ -239,33 +135,16 @@ export default function GroupsScreen() {
           </Text>
         }
         ListEmptyComponent={<Text style={styles.hint}>Aucun groupe configuré.</Text>}
-        ListFooterComponent={
-          editMode ? (
-            <Pressable style={styles.addButton} onPress={addGroup}>
-              <Text style={styles.addButtonText}>+ Ajouter un groupe</Text>
-            </Pressable>
-          ) : null
-        }
+        ListFooterComponent={editMode ? <AddButton label="+ Ajouter un groupe" onPress={addGroup} /> : null}
       />
 
-      <BottomSheet visible={colorPickerGroup !== undefined} onClose={() => setColorPickerId(null)}>
-        <Text style={styles.paletteTitle}>Couleur de "{colorPickerGroup?.label || 'ce groupe'}"</Text>
-        <View style={styles.paletteGrid}>
-          {COLOR_PALETTE.map((color) => (
-            <Pressable
-              key={color}
-              style={[
-                styles.paletteSwatch,
-                { backgroundColor: color },
-                colorPickerGroup?.color === color && styles.paletteSwatchSelected,
-              ]}
-              onPress={() => colorPickerGroup && updateColor(colorPickerGroup.id, color)}
-              accessibilityRole="button"
-              accessibilityLabel={`Couleur ${color}`}
-            />
-          ))}
-        </View>
-      </BottomSheet>
+      <ColorPalettePicker
+        visible={colorPickerGroup !== undefined}
+        onClose={() => setColorPickerId(null)}
+        title={`Couleur de "${colorPickerGroup?.label || 'ce groupe'}"`}
+        selectedColor={colorPickerGroup?.color}
+        onSelect={(color) => colorPickerGroup && updateColor(colorPickerGroup.id, color)}
+      />
     </View>
   );
 }
@@ -309,137 +188,6 @@ function createStyles(colors: ThemeColors) {
     },
     editToggleTextActive: {
       color: colors.onTint,
-    },
-    groupLabelText: {
-      fontWeight: '700',
-      color: colors.text,
-    },
-    groupCodesText: {
-      opacity: 0.8,
-      color: colors.text,
-    },
-    groupCard: {
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderRadius: 8,
-      padding: 10,
-      marginBottom: 10,
-      backgroundColor: colors.background,
-    },
-    groupCardDragging: {
-      borderColor: colors.tint,
-      shadowColor: '#000',
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 6,
-    },
-    groupHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 6,
-    },
-    weekendBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-      backgroundColor: colors.borderSubtle,
-    },
-    weekendBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.text,
-      opacity: 0.7,
-    },
-    weekendHint: {
-      fontSize: 11,
-      opacity: 0.6,
-      marginTop: 4,
-      color: colors.text,
-    },
-    weekendRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginTop: 10,
-    },
-    weekendRowText: {
-      flex: 1,
-    },
-    weekendRowLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    dragHandle: {
-      paddingHorizontal: 4,
-      paddingVertical: 4,
-    },
-    dragHandleText: {
-      fontSize: 20,
-      opacity: 0.5,
-      color: colors.text,
-    },
-    colorDot: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-    },
-    groupLabelInput: {
-      flex: 1,
-      borderBottomWidth: 1,
-      borderColor: colors.border,
-      paddingVertical: 4,
-      color: colors.text,
-    },
-    removeText: {
-      color: colors.dangerStrong,
-      fontWeight: '700',
-      fontSize: 20,
-      paddingHorizontal: 4,
-    },
-    codesInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 6,
-      padding: 8,
-      color: colors.text,
-    },
-    addButton: {
-      marginTop: 4,
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.border,
-      alignItems: 'center',
-    },
-    addButtonText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-    paletteTitle: {
-      fontSize: 15,
-      fontWeight: '600',
-      marginBottom: 12,
-      paddingHorizontal: 20,
-      color: colors.text,
-    },
-    paletteGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 14,
-      paddingHorizontal: 20,
-    },
-    paletteSwatch: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-    },
-    paletteSwatchSelected: {
-      borderWidth: 3,
-      borderColor: colors.text,
     },
   });
 }
