@@ -5,9 +5,10 @@ import { router, useFocusEffect, useNavigation } from 'expo-router';
 import DayListRow from '@/components/DayListRow';
 import MonthCalendarView from '@/components/MonthCalendarView';
 import PickerListSheet from '@/components/PickerListSheet';
+import ScanMonthSelector from '@/components/ScanMonthSelector';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { isToday, MONTH_NAMES } from '@/lib/dates';
+import { isToday } from '@/lib/dates';
 import { getCodeSchedules, getEmployeeRoster, getScans, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
@@ -15,10 +16,6 @@ import { computeMonthPlanning, findMyRowIndex, MY_NAME, normalizeName, type DayP
 import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
-
-function monthYearLabel(scan: ScanRecord): string {
-  return `${MONTH_NAMES[scan.month - 1]} ${scan.year}`;
-}
 
 export default function PlanningScreen() {
   const navigation = useNavigation();
@@ -32,7 +29,6 @@ export default function PlanningScreen() {
   const [manualRowIndex, setManualRowIndex] = useState<number | null>(null);
   const [viewingName, setViewingName] = useState<string | null>(null);
   const [colleaguePickerOpen, setColleaguePickerOpen] = useState(false);
-  const [pastMonthsPickerOpen, setPastMonthsPickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showHours, setShowHours] = useState(false);
@@ -65,20 +61,11 @@ export default function PlanningScreen() {
 
   const selectedScan = useMemo(() => scans.find((s) => s.id === selectedScanId) ?? null, [scans, selectedScanId]);
 
-  // Sépare les plannings du mois courant/à venir (affichés en haut) de ceux
-  // déjà passés (rangés dans une popup dédiée, plus loin dans la page).
-  const { visibleScans, pastScans } = useMemo(() => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    const visible: ScanRecord[] = [];
-    const past: ScanRecord[] = [];
-    for (const scan of scans) {
-      const isPast = scan.year < currentYear || (scan.year === currentYear && scan.month < currentMonth);
-      (isPast ? past : visible).push(scan);
-    }
-    past.sort((a, b) => b.year - a.year || b.month - a.month);
-    return { visibleScans: visible, pastScans: past };
+  // Tri chronologique (du plus ancien au plus récent) pour le sélecteur de
+  // plannings — l'ordre de stockage (par date de scan) ne correspond pas
+  // forcément à l'ordre des mois.
+  const sortedScans = useMemo(() => {
+    return [...scans].sort((a, b) => a.year - b.year || a.month - b.month);
   }, [scans]);
 
   const myRowIndex = useMemo(() => {
@@ -177,29 +164,7 @@ export default function PlanningScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.scanPickerRow}>
-        {pastScans.length > 0 && (
-          <Pressable
-            style={styles.pastMonthsButton}
-            onPress={() => setPastMonthsPickerOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Mois précédents">
-            <Text style={styles.pastMonthsButtonText}>🕓</Text>
-          </Pressable>
-        )}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scanPicker}>
-          {visibleScans.map((scan) => (
-            <Pressable
-              key={scan.id}
-              style={[styles.scanChip, scan.id === selectedScanId && styles.scanChipActive]}
-              onPress={() => setSelectedScanId(scan.id)}>
-              <Text style={[styles.scanChipText, scan.id === selectedScanId && styles.scanChipTextActive]}>
-                {monthYearLabel(scan)}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
+      <ScanMonthSelector scans={sortedScans} selectedScanId={selectedScanId} onSelect={setSelectedScanId} />
 
       {selectedScan && selectedScan.employees.length > 0 && (
         <View style={styles.viewerRow}>
@@ -227,13 +192,6 @@ export default function PlanningScreen() {
         onClose={() => setColleaguePickerOpen(false)}
         sections={colleagueSections}
         onSelect={(key) => setViewingName(selectedScan?.employees[Number(key)] ?? null)}
-      />
-
-      <PickerListSheet
-        visible={pastMonthsPickerOpen}
-        onClose={() => setPastMonthsPickerOpen(false)}
-        items={pastScans.map((scan) => ({ key: scan.id, label: monthYearLabel(scan) }))}
-        onSelect={setSelectedScanId}
       />
 
       {selectedScan && !viewingSomeoneElse && myRowIndex < 0 && (
@@ -330,46 +288,6 @@ function createStyles(colors: ThemeColors) {
     content: {
       padding: 16,
       paddingBottom: 48,
-    },
-    scanPickerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    pastMonthsButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 8,
-    },
-    pastMonthsButtonText: {
-      fontSize: 16,
-    },
-    scanPicker: {
-      flex: 1,
-    },
-    scanChip: {
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginRight: 8,
-    },
-    scanChipActive: {
-      backgroundColor: colors.tint,
-      borderColor: colors.tint,
-    },
-    scanChipText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-    scanChipTextActive: {
-      color: colors.onTint,
     },
     viewerRow: {
       flexDirection: 'row',
