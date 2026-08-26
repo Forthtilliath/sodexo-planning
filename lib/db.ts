@@ -27,9 +27,10 @@ const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
 	{ id: "b1", label: "Boutique", codes: ["B1"], color: "#0d47a1" },
 	// F1-F3 comme C6-C8, F4-F5 comme D1-D2 : même rôle/couleur, mais un code
 	// de weekend/férié distinct — préfixé "WE" pour les distinguer de leur
-	// équivalent semaine dans l'affichage.
-	{ id: "f1-f3", label: "WE Chaîne", codes: ["F1", "F2", "F3"], color: "#43a047" },
-	{ id: "f4-f5", label: "WE Plonge", codes: ["F4", "F5"], color: "#ab47bc" },
+	// équivalent semaine dans l'affichage, et exclus des catégories
+	// affectables à un salarié (voir `weekendVariant` sur TeamGroup).
+	{ id: "f1-f3", label: "WE Chaîne", codes: ["F1", "F2", "F3"], color: "#43a047", weekendVariant: true },
+	{ id: "f4-f5", label: "WE Plonge", codes: ["F4", "F5"], color: "#ab47bc", weekendVariant: true },
 ];
 
 const DEFAULT_CODE_SCHEDULES: CodeSchedule[] = [
@@ -106,8 +107,18 @@ export async function dismissUpdateVersion(version: string): Promise<void> {
 	await saveSettings({ ...settings, dismissedUpdateVersion: version });
 }
 
-export function getTeamGroups(): Promise<TeamGroup[]> {
-	return readJson(KEYS.teamGroups, DEFAULT_TEAM_GROUPS);
+// Ids des groupes par défaut marqués variante week-end, pour rattraper une
+// sauvegarde faite avant l'ajout de `weekendVariant` (ex: WE Chaîne/WE
+// Plonge enregistrés tels quels par une simple ouverture de l'écran avant
+// cet ajout). Ne complète que les groupes qui n'ont encore aucune valeur —
+// un choix explicite (y compris `false`) de l'utilisateur n'est jamais écrasé.
+const WEEKEND_VARIANT_DEFAULT_IDS = new Set(DEFAULT_TEAM_GROUPS.filter((g) => g.weekendVariant).map((g) => g.id));
+
+export async function getTeamGroups(): Promise<TeamGroup[]> {
+	const groups = await readJson(KEYS.teamGroups, DEFAULT_TEAM_GROUPS);
+	return groups.map((g) =>
+		g.weekendVariant === undefined && WEEKEND_VARIANT_DEFAULT_IDS.has(g.id) ? { ...g, weekendVariant: true } : g
+	);
 }
 
 export function saveTeamGroups(groups: TeamGroup[]): Promise<void> {
