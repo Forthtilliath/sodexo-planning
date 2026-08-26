@@ -51,3 +51,6 @@ yarn-error.*
 *.md
 !README.md
 !CHANGELOG.md
+
+# Claude Code — skill local (build/run/pilotage émulateur), pas partagé sur ce repo
+.claude/skills/run-sodexo-planning/
