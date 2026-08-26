@@ -139,6 +139,13 @@ describe('getEmployeeRoster', () => {
     await saveEmployeeRoster([{ name: 'Alice', active: false }]);
     expect(await getEmployeeRoster()).toEqual([{ name: 'Alice', active: false }]);
   });
+
+  it('conserve regular et groupId après enregistrement (pas perdus par la migration)', async () => {
+    await saveEmployeeRoster([{ name: 'Alice', active: true, regular: false, groupId: 'chaine' }]);
+    expect(await getEmployeeRoster()).toEqual([
+      { name: 'Alice', active: true, regular: false, groupId: 'chaine' },
+    ]);
+  });
 });
 
 describe('exportAllData / importAllData', () => {
