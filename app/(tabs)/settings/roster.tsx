@@ -259,13 +259,20 @@ export default function RosterScreen() {
               historique.
             </Text>
 
-            <TextInput
-              style={styles.searchInput}
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Rechercher un salarié…"
-              placeholderTextColor={colors.border}
-            />
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.searchInput}
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Rechercher un salarié…"
+                placeholderTextColor={colors.border}
+              />
+              {searching && (
+                <Pressable style={styles.searchClearButton} onPress={() => setSearch('')}>
+                  <Text style={styles.searchClearText}>×</Text>
+                </Pressable>
+              )}
+            </View>
 
             <View style={styles.sortRow}>
               {(
@@ -365,13 +372,28 @@ function createStyles(colors: ThemeColors) {
       marginBottom: 8,
       color: colors.text,
     },
+    searchRow: {
+      marginBottom: 10,
+      justifyContent: 'center',
+    },
     searchInput: {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
       padding: 10,
-      marginBottom: 10,
+      paddingRight: 36,
       color: colors.text,
+    },
+    searchClearButton: {
+      position: 'absolute',
+      right: 4,
+      padding: 8,
+    },
+    searchClearText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      opacity: 0.6,
     },
     sortRow: {
       flexDirection: 'row',
