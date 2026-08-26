@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import GridEditor from '@/components/GridEditor';
+import type { RosterEntry, TeamGroup } from '@/types';
 
 const days = ['2026-07-01', '2026-07-02', '2026-07-03'];
 
@@ -15,6 +16,8 @@ describe('GridEditor', () => {
           ['', '', ''],
         ]}
         removable={[false, false]}
+        roster={[]}
+        groups={[]}
         onNewEmployee={jest.fn()}
         onPickExisting={jest.fn()}
         onRemoveEmployee={jest.fn()}
@@ -35,6 +38,8 @@ describe('GridEditor', () => {
         employees={['']}
         grid={[['', '', '']]}
         removable={[false]}
+        roster={[]}
+        groups={[]}
         onNewEmployee={jest.fn()}
         onPickExisting={jest.fn()}
         onRemoveEmployee={jest.fn()}
@@ -53,6 +58,8 @@ describe('GridEditor', () => {
         employees={['Alice']}
         grid={[['D1', '', 'D2']]}
         removable={[false]}
+        roster={[]}
+        groups={[]}
         onNewEmployee={jest.fn()}
         onPickExisting={jest.fn()}
         onRemoveEmployee={jest.fn()}
@@ -73,6 +80,8 @@ describe('GridEditor', () => {
         employees={[]}
         grid={[]}
         removable={[]}
+        roster={[]}
+        groups={[]}
         onNewEmployee={onNewEmployee}
         onPickExisting={onPickExisting}
         onRemoveEmployee={jest.fn()}
@@ -98,6 +107,8 @@ describe('GridEditor', () => {
           ['', '', ''],
         ]}
         removable={[false, true]}
+        roster={[]}
+        groups={[]}
         onNewEmployee={jest.fn()}
         onPickExisting={jest.fn()}
         onRemoveEmployee={onRemoveEmployee}
@@ -108,5 +119,39 @@ describe('GridEditor', () => {
     expect(screen.queryByLabelText('Retirer Alice de ce mois')).toBeNull();
     await fireEvent.press(screen.getByLabelText('Retirer Bob de ce mois'));
     expect(onRemoveEmployee).toHaveBeenCalledWith(1);
+  });
+
+  it('regroupe les salariés par catégorie (dans l\'ordre des groupes), avec "Sans catégorie" en dernier', async () => {
+    const groups: TeamGroup[] = [
+      { id: 'chaine', label: 'Chaîne', codes: ['C6'], color: '#43a047' },
+      { id: 'we-chaine', label: 'WE Chaîne', codes: ['F1'], color: '#43a047', weekendVariant: true },
+    ];
+    const roster: RosterEntry[] = [
+      { name: 'Alice', active: true, groupId: 'chaine' },
+      { name: 'Bob', active: true },
+    ];
+
+    await render(
+      <GridEditor
+        days={days}
+        employees={['Bob', 'Alice']}
+        grid={[
+          ['', '', ''],
+          ['', '', ''],
+        ]}
+        removable={[false, false]}
+        roster={roster}
+        groups={groups}
+        onNewEmployee={jest.fn()}
+        onPickExisting={jest.fn()}
+        onRemoveEmployee={jest.fn()}
+        onOpenRow={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('Chaîne')).toBeTruthy();
+    expect(screen.getByText('Sans catégorie')).toBeTruthy();
+    expect(screen.getByText('Alice')).toBeTruthy();
+    expect(screen.getByText('Bob')).toBeTruthy();
   });
 });
