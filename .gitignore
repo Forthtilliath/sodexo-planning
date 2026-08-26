@@ -42,3 +42,12 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# logs
+*.log
+
+# fichiers .md ignorés par défaut ; ajouter une exception manuelle
+# (!fichier.md) si un autre doit être suivi par git.
+*.md
+!README.md
+!CHANGELOG.md
