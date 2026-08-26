@@ -1,30 +1,30 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 
+import BottomSheet from '@/components/BottomSheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
-import { CODE_DISPLAY_ORDER, majorityCode, normalizeName } from '@/lib/teams';
+import { CODE_DISPLAY_ORDER, isRegular, majorityCode, normalizeName } from '@/lib/teams';
 import type { RosterEntry, TeamGroup } from '@/types';
 
 type SortMode = 'manual' | 'alpha' | 'majority';
+type IndexedEntry = readonly [RosterEntry, number];
 
-/** Déplace l'entrée `index` d'un cran parmi les autres entrées qui partagent le même statut actif/inactif. */
-function moveWithinGroup(entries: RosterEntry[], index: number, direction: -1 | 1): RosterEntry[] {
-  const active = entries[index].active;
-  const groupIndices = entries.reduce<number[]>((acc, e, i) => {
-    if (e.active === active) acc.push(i);
-    return acc;
-  }, []);
-  const posInGroup = groupIndices.indexOf(index);
-  const swapPos = posInGroup + direction;
-  if (swapPos < 0 || swapPos >= groupIndices.length) return entries;
-  const swapIndex = groupIndices[swapPos];
-  const next = [...entries];
-  [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  return next;
-}
+// Une "catégorie" de la liste = un groupe de postes, plus une catégorie
+// "Sans catégorie" en dernier pour ceux qui n'en ont pas.
+type CategoryDef = { groupId: string | undefined; label: string; color?: string };
+
+// Toute la liste (en-têtes de catégorie + salariés) tient dans un seul
+// DraggableFlatList — un seul composant scrollable pour tout l'écran, header
+// et footer inclus (recherche, tri, bouton d'ajout, archivés...) : nester un
+// second scrollable dedans (même un DraggableFlatList "Nestable") entre en
+// conflit avec le geste de scroll et bloque tout défilement.
+type RosterListItem =
+  | { type: 'header'; key: string; def: CategoryDef; count: number }
+  | { type: 'entry'; key: string; index: number };
 
 export default function RosterScreen() {
   const colors = useThemeColors();
@@ -33,8 +33,8 @@ export default function RosterScreen() {
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
   const [loaded, setLoaded] = useState(false);
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const [showInactive, setShowInactive] = useState(false);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('manual');
 
@@ -66,15 +66,6 @@ export default function RosterScreen() {
     saveEmployeeCodeOptions(codeOptions);
   }, [codeOptions, loaded]);
 
-  function toggleExpanded(index: number) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  }
-
   function addName() {
     setRoster((prev) => [...prev, { name: '', active: true }]);
   }
@@ -85,7 +76,10 @@ export default function RosterScreen() {
       {
         text: 'Supprimer',
         style: 'destructive',
-        onPress: () => setRoster((prev) => prev.filter((_, i) => i !== index)),
+        onPress: () => {
+          setRoster((prev) => prev.filter((_, i) => i !== index));
+          setOpenIndex(null);
+        },
       },
     ]);
   }
@@ -94,12 +88,35 @@ export default function RosterScreen() {
     setRoster((prev) => prev.map((e, i) => (i === index ? { ...e, name: value } : e)));
   }
 
-  function toggleActive(index: number) {
+  // "Archivé" dans l'UI ; le champ garde son nom historique `active` (inversé).
+  function toggleArchived(index: number) {
     setRoster((prev) => prev.map((e, i) => (i === index ? { ...e, active: !e.active } : e)));
   }
 
-  function moveName(index: number, direction: -1 | 1) {
-    setRoster((prev) => moveWithinGroup(prev, index, direction));
+  function toggleRegular(index: number) {
+    setRoster((prev) => prev.map((e, i) => (i === index ? { ...e, regular: !isRegular(e) } : e)));
+  }
+
+  function setCategory(index: number, groupId: string | undefined) {
+    setRoster((prev) => prev.map((e, i) => (i === index ? { ...e, groupId } : e)));
+  }
+
+  // En tri Manuel, les catégories (groupes de postes) sont les en-têtes de la
+  // liste glissable : on reconstitue l'ordre + la catégorie de chaque salarié
+  // actif depuis la position finale de son en-tête, puis on recolle les
+  // salariés archivés (jamais dans cette liste) tels quels.
+  function applyManualDragEnd(data: RosterListItem[]) {
+    let currentGroupId: string | undefined;
+    const newActive: RosterEntry[] = [];
+    for (const item of data) {
+      if (item.type === 'header') {
+        currentGroupId = item.def.groupId;
+      } else {
+        newActive.push({ ...roster[item.index], groupId: currentGroupId });
+      }
+    }
+    const archived = roster.filter((e) => !e.active);
+    setRoster([...newActive, ...archived]);
   }
 
   // Les codes proposés à cocher viennent des groupes de postes déjà définis :
@@ -117,99 +134,6 @@ export default function RosterScreen() {
     });
   }
 
-  if (!loaded) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.hint}>Chargement des salariés…</Text>
-      </View>
-    );
-  }
-
-  function renderCard(entry: RosterEntry, index: number) {
-    const isExpanded = expanded.has(index);
-    const codesCount = (codeOptions[entry.name] ?? []).length;
-    const group = roster.filter((e) => e.active === entry.active);
-    const posInGroup = group.indexOf(entry);
-
-    return (
-      <View key={index} style={styles.rosterCard}>
-        <Pressable style={styles.cardHeader} onPress={() => toggleExpanded(index)}>
-          <Text style={styles.cardName} numberOfLines={1}>
-            {entry.name || `Salarié ${index + 1}`}
-          </Text>
-          <Text style={styles.cardSummary}>{codesCount > 0 ? `${codesCount} code(s)` : ''}</Text>
-          <Text style={styles.chevron}>{isExpanded ? '▲' : '▼'}</Text>
-        </Pressable>
-
-        {isExpanded && (
-          <View style={styles.cardBody}>
-            <View style={styles.rosterRow}>
-              {sortMode === 'manual' && !searching && (
-                <View style={styles.rosterMoveColumn}>
-                  <Pressable
-                    style={[styles.moveButton, posInGroup === 0 && styles.moveButtonDisabled]}
-                    disabled={posInGroup === 0}
-                    onPress={() => moveName(index, -1)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Monter ${entry.name || `Salarié ${index + 1}`}`}>
-                    <Text style={styles.moveButtonText}>↑</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.moveButton, posInGroup === group.length - 1 && styles.moveButtonDisabled]}
-                    disabled={posInGroup === group.length - 1}
-                    onPress={() => moveName(index, 1)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Descendre ${entry.name || `Salarié ${index + 1}`}`}>
-                    <Text style={styles.moveButtonText}>↓</Text>
-                  </Pressable>
-                </View>
-              )}
-              <TextInput
-                style={styles.rosterNameInput}
-                value={entry.name}
-                onChangeText={(v) => updateName(index, v)}
-                placeholder={`Salarié ${index + 1}`}
-                placeholderTextColor={colors.border}
-              />
-              <Pressable
-                onPress={() => removeName(index, entry.name)}
-                hitSlop={8}
-                style={styles.rosterRemoveButton}
-                accessibilityRole="button"
-                accessibilityLabel={`Supprimer ${entry.name || `Salarié ${index + 1}`}`}>
-                <Text style={styles.removeText}>×</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.activeRow}>
-              <Text style={styles.activeLabel}>{entry.active ? 'Actif' : 'Inactif'}</Text>
-              <Switch value={entry.active} onValueChange={() => toggleActive(index)} />
-            </View>
-
-            {allKnownCodes.length > 0 ? (
-              <View style={styles.codeChipsRow}>
-                {allKnownCodes.map((code) => {
-                  const active = (codeOptions[entry.name] ?? []).includes(code);
-                  return (
-                    <Pressable
-                      key={code}
-                      style={[styles.codeChip, active && styles.codeChipActive]}
-                      onPress={() => toggleCodeForEmployee(entry.name, code)}>
-                      <Text style={[styles.codeChipText, active && styles.codeChipTextActive]}>{code}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : (
-              <Text style={styles.hint}>Ajoute d'abord des groupes de postes pour voir les codes ici.</Text>
-            )}
-          </View>
-        )}
-      </View>
-    );
-  }
-
   function majorityRank(name: string): number {
     const code = majorityCode(codeOptions[name] ?? []);
     if (!code) return CODE_DISPLAY_ORDER.length + 1;
@@ -217,7 +141,7 @@ export default function RosterScreen() {
     return idx === -1 ? CODE_DISPLAY_ORDER.length : idx;
   }
 
-  function sortEntries(entries: (readonly [RosterEntry, number])[]): (readonly [RosterEntry, number])[] {
+  function sortEntries(entries: IndexedEntry[]): IndexedEntry[] {
     if (sortMode === 'alpha') {
       return [...entries].sort((a, b) => a[0].name.localeCompare(b[0].name, 'fr', { sensitivity: 'base' }));
     }
@@ -230,77 +154,282 @@ export default function RosterScreen() {
     return entries;
   }
 
-  const searching = search.trim().length > 0;
-  const matchesSearch = ([entry]: readonly [RosterEntry, number]) =>
-    !searching || normalizeName(entry.name).includes(normalizeName(search));
+  if (!loaded) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+        <Text style={styles.hint}>Chargement des salariés…</Text>
+      </View>
+    );
+  }
 
-  const activeEntries = sortEntries(
-    roster.map((e, i) => [e, i] as const).filter(([e]) => e.active).filter(matchesSearch)
-  );
-  const inactiveEntries = sortEntries(
-    roster.map((e, i) => [e, i] as const).filter(([e]) => !e.active).filter(matchesSearch)
-  );
-  const inactiveVisible = showInactive || searching;
+  const openEntry = openIndex !== null ? roster[openIndex] : null;
+
+  function renderRow(entry: RosterEntry, index: number, dragHandle?: () => void, isDragging?: boolean) {
+    const codesCount = (codeOptions[entry.name] ?? []).length;
+    const category = groups.find((g) => g.id === entry.groupId);
+    const summaryParts = [!isRegular(entry) ? 'Intérimaire' : null, codesCount > 0 ? `${codesCount} code(s)` : null]
+      .filter(Boolean)
+      .join(' · ');
+
+    return (
+      <View key={index} style={[styles.rosterCard, isDragging && styles.rosterCardDragging]}>
+        {dragHandle && (
+          <Pressable
+            onPressIn={dragHandle}
+            hitSlop={10}
+            style={styles.dragHandle}
+            accessibilityRole="button"
+            accessibilityLabel={`Réordonner ${entry.name || `Salarié ${index + 1}`}`}>
+            <Text style={styles.dragHandleText}>⠿</Text>
+          </Pressable>
+        )}
+        <Pressable style={styles.rosterCardBody} onPress={() => setOpenIndex(index)}>
+          {category?.color && <View style={[styles.categoryDot, { backgroundColor: category.color }]} />}
+          <View style={styles.cardNameColumn}>
+            <Text style={styles.cardName} numberOfLines={1}>
+              {entry.name || `Salarié ${index + 1}`}
+            </Text>
+            {summaryParts.length > 0 && (
+              <Text style={styles.cardSummary} numberOfLines={1}>
+                {summaryParts}
+              </Text>
+            )}
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Toutes les catégories, "Sans catégorie" en dernier. En tri Manuel elles
+  // restent listées même vides (cibles de dépôt valides) ; dans les autres
+  // tris, seules celles qui contiennent au moins un salarié sont affichées.
+  function categoryDefs(): CategoryDef[] {
+    return [
+      ...groups.map((g) => ({ groupId: g.id, label: g.label || 'Groupe sans nom', color: g.color })),
+      { groupId: undefined, label: 'Sans catégorie' },
+    ];
+  }
+
+  const searching = search.trim().length > 0;
+  const matchesSearch = ([entry]: IndexedEntry) => !searching || normalizeName(entry.name).includes(normalizeName(search));
+
+  const activeIndexed = roster.map((e, i) => [e, i] as const).filter(([e]) => e.active).filter(matchesSearch);
+  const archivedIndexed = roster.map((e, i) => [e, i] as const).filter(([e]) => !e.active).filter(matchesSearch);
+  const archivedVisible = showArchived || searching;
+
+  function buildListItems(): RosterListItem[] {
+    // La recherche traverse toutes les catégories : un seul groupe plat, sans en-tête.
+    if (searching) {
+      return sortEntries(activeIndexed).map(([, index]) => ({ type: 'entry', key: `e-${index}`, index }) as const);
+    }
+    const items: RosterListItem[] = [];
+    for (const def of categoryDefs()) {
+      const entries = sortEntries(
+        activeIndexed.filter(([e]) =>
+          def.groupId ? e.groupId === def.groupId : !groups.some((g) => g.id === e.groupId)
+        )
+      );
+      if (sortMode !== 'manual' && entries.length === 0) continue;
+      items.push({ type: 'header', key: `h-${def.groupId ?? 'none'}`, def, count: entries.length });
+      for (const [, index] of entries) {
+        items.push({ type: 'entry', key: `e-${index}`, index });
+      }
+    }
+    return items;
+  }
+
+  const listItems = buildListItems();
+  // Le glissé ne recatégorise/réordonne qu'en tri Manuel hors recherche ; dans
+  // les autres modes, aucune poignée n'est rendue donc aucun glissé ne peut
+  // être initié — cette garde n'est qu'un filet de sécurité sur onDragEnd.
+  const draggingEnabled = sortMode === 'manual' && !searching;
+
+  function renderListItem({ item, drag, isActive }: RenderItemParams<RosterListItem>) {
+    if (item.type === 'header') {
+      return (
+        <View style={styles.categoryHeader}>
+          {item.def.color && <View style={[styles.categoryDot, { backgroundColor: item.def.color }]} />}
+          <Text style={styles.categoryHeaderText}>{item.def.label}</Text>
+          {item.count === 0 && <Text style={styles.categoryEmptyHint}>glisse un salarié ici</Text>}
+        </View>
+      );
+    }
+    return renderRow(roster[item.index], item.index, draggingEnabled ? drag : undefined, isActive);
+  }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.hint}>
-        Touche un salarié pour voir/modifier ses codes habituels. Désactive ceux qui ne travaillent plus avec toi —
-        ils disparaissent des propositions de planning sans perdre leur historique.
-      </Text>
+    <View style={styles.container}>
+      <DraggableFlatList
+        // `style` ne dimensionne que la FlatList interne ; le vrai wrapper
+        // englobant (celui qui gère le geste et la mesure du conteneur) est
+        // dimensionné séparément via `containerStyle` — sans lui, ce wrapper
+        // reste haut de zéro et tout l'écran (y compris header/footer) reste invisible.
+        style={styles.flatList}
+        containerStyle={styles.flatList}
+        contentContainerStyle={styles.content}
+        data={listItems}
+        keyExtractor={(item) => item.key}
+        renderItem={renderListItem}
+        onDragEnd={({ data }) => draggingEnabled && applyManualDragEnd(data)}
+        activationDistance={0}
+        initialNumToRender={listItems.length}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.hint}>
+              Touche un salarié pour voir/modifier ses codes, sa catégorie et son statut. Archive ceux qui ne
+              travaillent plus avec toi — ils disparaissent de la liste et des nouveaux plannings, sans perdre leur
+              historique.
+            </Text>
 
-      <TextInput
-        style={styles.searchInput}
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Rechercher un salarié…"
-        placeholderTextColor={colors.border}
+            <TextInput
+              style={styles.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Rechercher un salarié…"
+              placeholderTextColor={colors.border}
+            />
+
+            <View style={styles.sortRow}>
+              {(
+                [
+                  { mode: 'manual', label: '↕️ Manuel' },
+                  { mode: 'alpha', label: '🔤 A-Z' },
+                  { mode: 'majority', label: '🎯 Poste' },
+                ] as const
+              ).map(({ mode, label }) => (
+                <Pressable
+                  key={mode}
+                  style={[styles.sortButton, sortMode === mode && styles.sortButtonActive]}
+                  onPress={() => setSortMode(mode)}>
+                  <Text style={[styles.sortButtonText, sortMode === mode && styles.sortButtonTextActive]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {draggingEnabled && (
+              <Text style={styles.hint}>
+                Glisse un salarié par sa poignée ⠿ pour le réordonner, ou dépose-le sous une autre catégorie pour l'y
+                déplacer.
+              </Text>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          searching ? <Text style={styles.hint}>Aucun salarié actif ne correspond à "{search}".</Text> : null
+        }
+        ListFooterComponent={
+          <>
+            {!searching && (
+              <Pressable style={styles.addButton} onPress={addName}>
+                <Text style={styles.addButtonText}>+ Ajouter un salarié</Text>
+              </Pressable>
+            )}
+
+            {archivedIndexed.length > 0 && (
+              <>
+                {!searching && (
+                  <Pressable style={styles.archivedToggle} onPress={() => setShowArchived((v) => !v)}>
+                    <Text style={styles.archivedToggleText}>
+                      {showArchived ? '▲' : '▼'} Salariés archivés ({archivedIndexed.length})
+                    </Text>
+                  </Pressable>
+                )}
+                {archivedVisible && archivedIndexed.map(([entry, index]) => renderRow(entry, index))}
+              </>
+            )}
+
+            {!searching && <Text style={styles.hint}>{roster.filter((e) => e.active).length} salarié(s) actif(s)</Text>}
+          </>
+        }
       />
 
-      <View style={styles.sortRow}>
-        {(
-          [
-            { mode: 'manual', label: '↕️ Manuel' },
-            { mode: 'alpha', label: '🔤 A-Z' },
-            { mode: 'majority', label: '🎯 Poste' },
-          ] as const
-        ).map(({ mode, label }) => (
-          <Pressable
-            key={mode}
-            style={[styles.sortButton, sortMode === mode && styles.sortButtonActive]}
-            onPress={() => setSortMode(mode)}>
-            <Text style={[styles.sortButtonText, sortMode === mode && styles.sortButtonTextActive]}>{label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <BottomSheet visible={openEntry !== null} onClose={() => setOpenIndex(null)}>
+        {openEntry && openIndex !== null && (
+          <View style={styles.sheetContent}>
+            <TextInput
+              style={styles.rosterNameInput}
+              value={openEntry.name}
+              onChangeText={(v) => updateName(openIndex, v)}
+              placeholder={`Salarié ${openIndex + 1}`}
+              placeholderTextColor={colors.border}
+            />
 
-      {activeEntries.length === 0 && searching ? (
-        <Text style={styles.hint}>Aucun salarié actif ne correspond à "{search}".</Text>
-      ) : (
-        activeEntries.map(([entry, index]) => renderCard(entry, index))
-      )}
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>Archivé</Text>
+              <Switch value={!openEntry.active} onValueChange={() => toggleArchived(openIndex)} />
+            </View>
+            <Text style={styles.switchHint}>
+              N'apparaît plus dans la liste ni dans les nouveaux mois, mais reste dans les plannings existants.
+            </Text>
 
-      {!searching && (
-        <Pressable style={styles.addButton} onPress={addName}>
-          <Text style={styles.addButtonText}>+ Ajouter un salarié</Text>
-        </Pressable>
-      )}
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>Salarié régulier</Text>
+              <Switch value={isRegular(openEntry)} onValueChange={() => toggleRegular(openIndex)} />
+            </View>
+            <Text style={styles.switchHint}>
+              Ajouté automatiquement à chaque nouveau planning. Désactive pour un intérimaire de passage.
+            </Text>
 
-      {inactiveEntries.length > 0 && (
-        <>
-          {!searching && (
-            <Pressable style={styles.inactiveToggle} onPress={() => setShowInactive((v) => !v)}>
-              <Text style={styles.inactiveToggleText}>
-                {showInactive ? '▲' : '▼'} Salariés désactivés ({inactiveEntries.length})
-              </Text>
+            <Text style={styles.sectionLabel}>Catégorie principale</Text>
+            <Text style={styles.switchHint}>
+              Sert uniquement à trier et regrouper la liste — un salarié peut occasionnellement travailler ailleurs.
+            </Text>
+            <View style={styles.categoryPickerRow}>
+              <Pressable
+                style={[styles.categoryChip, !openEntry.groupId && styles.categoryChipActive]}
+                onPress={() => setCategory(openIndex, undefined)}>
+                <Text style={[styles.categoryChipText, !openEntry.groupId && styles.categoryChipTextActive]}>
+                  Aucune
+                </Text>
+              </Pressable>
+              {groups.map((g) => (
+                <Pressable
+                  key={g.id}
+                  style={[styles.categoryChip, openEntry.groupId === g.id && styles.categoryChipActive]}
+                  onPress={() => setCategory(openIndex, g.id)}>
+                  {g.color && <View style={[styles.categoryChipDot, { backgroundColor: g.color }]} />}
+                  <Text
+                    style={[styles.categoryChipText, openEntry.groupId === g.id && styles.categoryChipTextActive]}>
+                    {g.label || 'Sans nom'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.sectionLabel}>Codes habituels</Text>
+            {allKnownCodes.length > 0 ? (
+              <View style={styles.codeChipsRow}>
+                {allKnownCodes.map((code) => {
+                  const active = (codeOptions[openEntry.name] ?? []).includes(code);
+                  return (
+                    <Pressable
+                      key={code}
+                      style={[styles.codeChip, active && styles.codeChipActive]}
+                      onPress={() => toggleCodeForEmployee(openEntry.name, code)}>
+                      <Text style={[styles.codeChipText, active && styles.codeChipTextActive]}>{code}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.hint}>Ajoute d'abord des groupes de postes pour voir les codes ici.</Text>
+            )}
+
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => removeName(openIndex, openEntry.name)}
+              accessibilityRole="button"
+              accessibilityLabel={`Supprimer ${openEntry.name || 'ce salarié'}`}>
+              <Text style={styles.deleteButtonText}>🗑️ Supprimer ce salarié</Text>
             </Pressable>
-          )}
-          {inactiveVisible && inactiveEntries.map(([entry, index]) => renderCard(entry, index))}
-        </>
-      )}
-
-      {!searching && <Text style={styles.hint}>{roster.filter((e) => e.active).length} salarié(s) actif(s)</Text>}
-    </ScrollView>
+          </View>
+        )}
+      </BottomSheet>
+    </View>
   );
 }
 
@@ -309,6 +438,9 @@ function createStyles(colors: ThemeColors) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    flatList: {
+      flex: 1,
     },
     content: {
       padding: 16,
@@ -360,21 +492,69 @@ function createStyles(colors: ThemeColors) {
     sortButtonTextActive: {
       color: colors.onTint,
     },
+    categoryHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 12,
+      marginBottom: 6,
+    },
+    categoryHeaderText: {
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      opacity: 0.6,
+      color: colors.text,
+    },
+    categoryEmptyHint: {
+      fontSize: 11,
+      fontStyle: 'italic',
+      opacity: 0.4,
+      color: colors.text,
+    },
+    categoryDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
     rosterCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       borderWidth: 1,
       borderColor: colors.borderSubtle,
       borderRadius: 8,
+      padding: 12,
       marginBottom: 8,
-      overflow: 'hidden',
+      backgroundColor: colors.card,
     },
-    cardHeader: {
+    rosterCardDragging: {
+      borderColor: colors.tint,
+      shadowColor: '#000',
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+    },
+    dragHandle: {
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+    },
+    dragHandleText: {
+      fontSize: 20,
+      opacity: 0.5,
+      color: colors.text,
+    },
+    rosterCardBody: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      padding: 12,
+      gap: 10,
+    },
+    cardNameColumn: {
+      flex: 1,
     },
     cardName: {
-      flex: 1,
       fontSize: 15,
       fontWeight: '600',
       color: colors.text,
@@ -382,74 +562,111 @@ function createStyles(colors: ThemeColors) {
     cardSummary: {
       fontSize: 12,
       opacity: 0.6,
+      marginTop: 2,
       color: colors.text,
     },
     chevron: {
-      fontSize: 12,
-      opacity: 0.5,
+      fontSize: 20,
+      opacity: 0.4,
       color: colors.text,
     },
-    cardBody: {
-      padding: 8,
-      paddingTop: 0,
-    },
-    rosterRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 6,
-    },
-    rosterMoveColumn: {
-      gap: 2,
-    },
-    moveButton: {
-      width: 28,
-      height: 18,
-      borderRadius: 4,
+    addButton: {
+      marginTop: 4,
+      padding: 12,
+      borderRadius: 8,
       borderWidth: 1,
+      borderStyle: 'dashed',
       borderColor: colors.border,
       alignItems: 'center',
-      justifyContent: 'center',
     },
-    moveButtonDisabled: {
-      opacity: 0.3,
-    },
-    moveButtonText: {
-      fontSize: 11,
+    addButtonText: {
+      fontWeight: '600',
       color: colors.text,
     },
+    archivedToggle: {
+      marginTop: 16,
+      marginBottom: 4,
+    },
+    archivedToggleText: {
+      fontSize: 13,
+      fontWeight: '600',
+      opacity: 0.6,
+      color: colors.text,
+    },
+    sheetContent: {
+      paddingHorizontal: 20,
+    },
     rosterNameInput: {
-      flex: 1,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
-      padding: 8,
-      color: colors.text,
-    },
-    rosterRemoveButton: {
-      paddingHorizontal: 8,
-      paddingVertical: 8,
-    },
-    removeText: {
-      color: colors.dangerStrong,
-      fontWeight: '700',
+      padding: 10,
+      marginBottom: 16,
       fontSize: 16,
-    },
-    activeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
-    },
-    activeLabel: {
-      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+    },
+    switchLabel: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    switchHint: {
+      fontSize: 12,
+      opacity: 0.6,
+      marginBottom: 16,
+      color: colors.text,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      marginBottom: 8,
+      color: colors.text,
+    },
+    categoryPickerRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 16,
+    },
+    categoryChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoryChipActive: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    categoryChipDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    categoryChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    categoryChipTextActive: {
+      color: colors.onTint,
     },
     codeChipsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,
+      marginBottom: 20,
     },
     codeChip: {
       paddingVertical: 6,
@@ -470,28 +687,15 @@ function createStyles(colors: ThemeColors) {
     codeChipTextActive: {
       color: colors.onTint,
     },
-    addButton: {
-      marginTop: 4,
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.border,
+    deleteButton: {
       alignItems: 'center',
+      paddingVertical: 12,
+      borderRadius: 8,
+      backgroundColor: colors.dangerSoft,
     },
-    addButtonText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-    inactiveToggle: {
-      marginTop: 16,
-      marginBottom: 4,
-    },
-    inactiveToggleText: {
-      fontSize: 13,
-      fontWeight: '600',
-      opacity: 0.6,
-      color: colors.text,
+    deleteButtonText: {
+      color: colors.dangerStrong,
+      fontWeight: '700',
     },
   });
 }
