@@ -8,11 +8,11 @@ import PickerListSheet from '@/components/PickerListSheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { isToday, MONTH_NAMES } from '@/lib/dates';
-import { getCodeSchedules, getScans, getTeamGroups } from '@/lib/db';
+import { getCodeSchedules, getEmployeeRoster, getScans, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { buildIcs } from '@/lib/ics';
-import { computeMonthPlanning, findMyRowIndex, MY_NAME, type DayPlanning } from '@/lib/teams';
-import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
+import { computeMonthPlanning, findMyRowIndex, MY_NAME, normalizeName, type DayPlanning } from '@/lib/teams';
+import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
 
@@ -27,6 +27,7 @@ export default function PlanningScreen() {
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [schedules, setSchedules] = useState<CodeSchedule[]>([]);
+  const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [manualRowIndex, setManualRowIndex] = useState<number | null>(null);
   const [viewingName, setViewingName] = useState<string | null>(null);
@@ -39,14 +40,16 @@ export default function PlanningScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [loadedScans, loadedGroups, loadedSchedules] = await Promise.all([
+        const [loadedScans, loadedGroups, loadedSchedules, loadedRoster] = await Promise.all([
           getScans(),
           getTeamGroups(),
           getCodeSchedules(),
+          getEmployeeRoster(),
         ]);
         setScans(loadedScans);
         setGroups(loadedGroups);
         setSchedules(loadedSchedules);
+        setRoster(loadedRoster);
         setSelectedScanId((prev) => {
           if (prev) return prev;
           const now = new Date();
@@ -102,6 +105,38 @@ export default function PlanningScreen() {
       title: viewingSomeoneElse ? `Planning de ${selectedScan?.employees[viewingIndex] || '—'}` : 'Mon planning',
     });
   }, [navigation, viewingSomeoneElse, selectedScan, viewingIndex]);
+
+  // Même regroupement que Réglages > Salariés / l'éditeur de saisie : les
+  // groupes de postes assignables dans l'ordre, "Sans catégorie" en dernier,
+  // catégories vides masquées. L'ordre des salariés au sein d'une catégorie
+  // suit celui de la liste `employees` (pas de tri alphabétique ici).
+  const colleagueSections = useMemo(() => {
+    const employees = selectedScan?.employees ?? [];
+    const groupIdByName = new Map(roster.map((r) => [normalizeName(r.name), r.groupId]));
+    const assignableGroups = groups.filter((g) => !g.weekendVariant);
+    const defs = [
+      ...assignableGroups.map((g) => ({ key: g.id, label: g.label || 'Groupe sans nom', color: g.color, groupId: g.id as string | undefined })),
+      { key: 'none', label: 'Sans catégorie', color: undefined, groupId: undefined as string | undefined },
+    ];
+    return defs
+      .map((def) => ({
+        key: def.key,
+        label: def.label,
+        color: def.color,
+        items: employees
+          .map((name, index) => ({ name, index }))
+          .filter(({ name }) => {
+            const groupId = groupIdByName.get(normalizeName(name));
+            return def.groupId ? groupId === def.groupId : !assignableGroups.some((g) => g.id === groupId);
+          })
+          .map(({ name, index }) => ({
+            key: String(index),
+            label: `${name || `Ligne ${index + 1}`}${index === myRowIndex ? ' (moi)' : ''}`,
+            highlight: index === myRowIndex,
+          })),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [selectedScan, roster, groups, myRowIndex]);
 
   const planning: DayPlanning[] = useMemo(() => {
     if (!selectedScan || displayRowIndex < 0) return [];
@@ -190,11 +225,7 @@ export default function PlanningScreen() {
       <PickerListSheet
         visible={colleaguePickerOpen}
         onClose={() => setColleaguePickerOpen(false)}
-        items={(selectedScan?.employees ?? []).map((name, index) => ({
-          key: String(index),
-          label: `${name || `Ligne ${index + 1}`}${index === myRowIndex ? ' (moi)' : ''}`,
-          highlight: index === myRowIndex,
-        }))}
+        sections={colleagueSections}
         onSelect={(key) => setViewingName(selectedScan?.employees[Number(key)] ?? null)}
       />
 
@@ -392,11 +423,13 @@ function createStyles(colors: ThemeColors) {
       marginBottom: 12,
     },
     viewModeButton: {
+      flex: 1,
       paddingVertical: 8,
       paddingHorizontal: 14,
       borderRadius: 8,
       borderWidth: 1,
       borderColor: colors.border,
+      alignItems: 'center',
     },
     viewModeButtonActive: {
       backgroundColor: colors.tint,
