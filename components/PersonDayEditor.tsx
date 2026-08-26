@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import OptionsModal from '@/components/OptionsModal';
 import type { ThemeColors } from '@/constants/Colors';
 import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
 import { hexToSoftBackground } from '@/lib/colors';
@@ -225,29 +226,12 @@ export default function PersonDayEditor({
       <Text style={styles.hint}>Touche un ou plusieurs jours puis un poste — ça remplit tous les jours sélectionnés d'un coup.</Text>
       {holidays.size > 0 && <Text style={styles.holidayLegend}>🟧 Bordure orange = jour férié</Text>}
 
-      <Modal
+      <OptionsModal
         visible={otherCodeModalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOtherCodeModalOpen(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setOtherCodeModalOpen(false)}>
-          <View style={styles.modalCard}>
-            <ScrollView>
-              {otherCodes.map((code) => (
-                <Pressable
-                  key={code}
-                  style={styles.modalOption}
-                  onPress={() => {
-                    applyQuickCode(code);
-                    setOtherCodeModalOpen(false);
-                  }}>
-                  <Text style={styles.modalOptionText}>{code}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </Pressable>
-      </Modal>
+        onClose={() => setOtherCodeModalOpen(false)}
+        options={otherCodes.map((code) => ({ value: code, label: code }))}
+        onSelect={applyQuickCode}
+      />
     </View>
   );
 }
@@ -416,29 +400,6 @@ function createStyles(colors: ThemeColors) {
     },
     bulkClearText: {
       color: colors.danger,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-    },
-    modalCard: {
-      width: '100%',
-      maxHeight: '70%',
-      backgroundColor: colors.modalCard,
-      borderRadius: 12,
-      paddingVertical: 8,
-    },
-    modalOption: {
-      paddingVertical: 14,
-      paddingHorizontal: 20,
-    },
-    modalOptionText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
     },
   });
 }

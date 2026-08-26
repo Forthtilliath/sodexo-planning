@@ -14,7 +14,10 @@ describe('GridEditor', () => {
           ['D1', '', 'D2'],
           ['', '', ''],
         ]}
-        onAddEmployee={jest.fn()}
+        removable={[false, false]}
+        onNewEmployee={jest.fn()}
+        onPickExisting={jest.fn()}
+        onRemoveEmployee={jest.fn()}
         onOpenRow={jest.fn()}
       />
     );
@@ -26,7 +29,18 @@ describe('GridEditor', () => {
   });
 
   it('affiche un nom par défaut quand le salarié est sans nom', async () => {
-    await render(<GridEditor days={days} employees={['']} grid={[['', '', '']]} onAddEmployee={jest.fn()} onOpenRow={jest.fn()} />);
+    await render(
+      <GridEditor
+        days={days}
+        employees={['']}
+        grid={[['', '', '']]}
+        removable={[false]}
+        onNewEmployee={jest.fn()}
+        onPickExisting={jest.fn()}
+        onRemoveEmployee={jest.fn()}
+        onOpenRow={jest.fn()}
+      />
+    );
 
     expect(screen.getByText('Employé 1')).toBeTruthy();
   });
@@ -34,18 +48,65 @@ describe('GridEditor', () => {
   it('ouvre le planning de la ligne sur "Planning →"', async () => {
     const onOpenRow = jest.fn();
     await render(
-      <GridEditor days={days} employees={['Alice']} grid={[['D1', '', 'D2']]} onAddEmployee={jest.fn()} onOpenRow={onOpenRow} />
+      <GridEditor
+        days={days}
+        employees={['Alice']}
+        grid={[['D1', '', 'D2']]}
+        removable={[false]}
+        onNewEmployee={jest.fn()}
+        onPickExisting={jest.fn()}
+        onRemoveEmployee={jest.fn()}
+        onOpenRow={onOpenRow}
+      />
     );
 
     await fireEvent.press(screen.getByText('Planning →'));
     expect(onOpenRow).toHaveBeenCalledWith(0);
   });
 
-  it('appelle onAddEmployee sur "+ Ajouter un salarié"', async () => {
-    const onAddEmployee = jest.fn();
-    await render(<GridEditor days={days} employees={[]} grid={[]} onAddEmployee={onAddEmployee} onOpenRow={jest.fn()} />);
+  it('appelle onPickExisting sur "+ Ajouter salarié" et onNewEmployee sur "+ Nouveau salarié"', async () => {
+    const onPickExisting = jest.fn();
+    const onNewEmployee = jest.fn();
+    await render(
+      <GridEditor
+        days={days}
+        employees={[]}
+        grid={[]}
+        removable={[]}
+        onNewEmployee={onNewEmployee}
+        onPickExisting={onPickExisting}
+        onRemoveEmployee={jest.fn()}
+        onOpenRow={jest.fn()}
+      />
+    );
 
-    await fireEvent.press(screen.getByText('+ Ajouter un salarié'));
-    expect(onAddEmployee).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByText('+ Ajouter salarié'));
+    expect(onPickExisting).toHaveBeenCalledTimes(1);
+
+    await fireEvent.press(screen.getByText('+ Nouveau salarié'));
+    expect(onNewEmployee).toHaveBeenCalledTimes(1);
+  });
+
+  it('ne propose de retrait que pour les salariés marqués retirables', async () => {
+    const onRemoveEmployee = jest.fn();
+    await render(
+      <GridEditor
+        days={days}
+        employees={['Alice', 'Bob']}
+        grid={[
+          ['', '', ''],
+          ['', '', ''],
+        ]}
+        removable={[false, true]}
+        onNewEmployee={jest.fn()}
+        onPickExisting={jest.fn()}
+        onRemoveEmployee={onRemoveEmployee}
+        onOpenRow={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByLabelText('Retirer Alice de ce mois')).toBeNull();
+    await fireEvent.press(screen.getByLabelText('Retirer Bob de ce mois'));
+    expect(onRemoveEmployee).toHaveBeenCalledWith(1);
   });
 });

@@ -9,7 +9,7 @@ export function dayNumber(iso: string): number {
 }
 
 const WEEKDAY_NAMES = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-const MONTH_NAMES = [
+const MONTH_NAMES_LOWER = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ];
@@ -18,11 +18,14 @@ function capitalize(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
+/** Noms des mois en français, capitalisés ("Janvier", "Février", ...) — source unique pour tout l'affichage mois/année. */
+export const MONTH_NAMES = MONTH_NAMES_LOWER.map(capitalize);
+
 /** "2026-08-13" -> "Jeudi 13 Août 2026", pour l'en-tête du détail d'un jour. */
 export function formatFullDate(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
   const weekday = capitalize(WEEKDAY_NAMES[date.getDay()]);
-  const month = capitalize(MONTH_NAMES[date.getMonth()]);
+  const month = MONTH_NAMES[date.getMonth()];
   return `${weekday} ${date.getDate()} ${month} ${date.getFullYear()}`;
 }
 
