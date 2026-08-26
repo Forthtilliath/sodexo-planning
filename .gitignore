@@ -33,8 +33,8 @@ yarn-error.*
 # local env files
 .env*.local
 
-# Claude Code — réglages locaux (permissions personnelles, non partagées)
-.claude/settings.local.json
+# Claude Code 
+.claude
 
 # typescript
 *.tsbuildinfo
@@ -51,6 +51,3 @@ yarn-error.*
 *.md
 !README.md
 !CHANGELOG.md
-
-# Claude Code — skill local (build/run/pilotage émulateur), pas partagé sur ce repo
-.claude/skills/run-sodexo-planning/
