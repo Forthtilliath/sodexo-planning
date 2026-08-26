@@ -1,5 +1,30 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "permissions": {
+    "deny": [
+      "Read(./node_modules/**)",
+      "Read(./ios/build/**)",
+      "Read(./ios/Pods/**)",
+      "Read(./ios/DerivedData/**)",
+      "Read(./android/build/**)",
+      "Read(./android/.gradle/**)",
+      "Read(./android/app/build/**)",
+      "Read(./build/**)",
+      "Read(./dist/**)",
+      "Read(./.expo/**)",
+      "Read(./coverage/**)",
+      "Read(./.turbo/**)",
+      "Read(./.cache/**)",
+      "Read(./tmp/**)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/*.lock)",
+      "Read(**/*.log)",
+      "Read(**/*.tsbuildinfo)",
+      "Read(**/*.sqlite)",
+      "Read(**/*.db)"
+    ]
   }
 }
