@@ -165,7 +165,9 @@ describe('RosterScreen — fiche salarié (sheet)', () => {
 
     await fireEvent(regularSwitch, 'valueChange', false);
 
-    await waitFor(async () => expect((await getEmployeeRoster())[0].regular).toBe(false));
+    await waitFor(async () =>
+      expect((await getEmployeeRoster()).find((e) => e.name === 'Alice')?.regular).toBe(false)
+    );
   });
 
   it('archive un salarié via le switch "Archivé", qui le déplace dans la section archivée', async () => {
@@ -192,7 +194,9 @@ describe('RosterScreen — fiche salarié (sheet)', () => {
     const chaineNodes = screen.getAllByText('Chaîne');
     await fireEvent.press(chaineNodes[chaineNodes.length - 1]);
 
-    await waitFor(async () => expect((await getEmployeeRoster())[0].groupId).toBe('chaine'));
+    await waitFor(async () =>
+      expect((await getEmployeeRoster()).find((e) => e.name === 'Alice')?.groupId).toBe('chaine')
+    );
   });
 
   it('supprime le salarié depuis le sheet, après confirmation', async () => {
