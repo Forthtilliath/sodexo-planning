@@ -96,6 +96,41 @@ describe('getTeamGroups', () => {
     expect(groups.find((g) => g.id === 'e1-e3')?.color).toBe('#c9a227');
   });
 
+  it('marque les variantes week-end (F1-F5) comme telles par défaut', async () => {
+    const groups = await getTeamGroups();
+    expect(groups.find((g) => g.id === 'f1-f3')?.weekendVariant).toBe(true);
+    expect(groups.find((g) => g.id === 'f4-f5')?.weekendVariant).toBe(true);
+    expect(groups.find((g) => g.id === 'c6-c8')?.weekendVariant).toBeUndefined();
+  });
+
+  it('conserve weekendVariant après enregistrement (groupes éditables)', async () => {
+    const groups = await getTeamGroups();
+    const edited = groups.map((g) => (g.id === 'e1-e3' ? { ...g, weekendVariant: true } : g));
+    await saveTeamGroups(edited);
+
+    const reloaded = await getTeamGroups();
+    expect(reloaded.find((g) => g.id === 'e1-e3')?.weekendVariant).toBe(true);
+  });
+
+  it("rattrape weekendVariant sur F1-F5 pour une sauvegarde faite avant son ajout, sans écraser un choix explicite", async () => {
+    // Simule une sauvegarde antérieure à l'ajout du champ : F1-F3 sans
+    // weekendVariant, et E1-E3 explicitement à false (jamais écrasé).
+    const groups = await getTeamGroups();
+    const legacy = groups.map((g) => {
+      if (g.id === 'f1-f3') {
+        const { weekendVariant, ...rest } = g;
+        void weekendVariant;
+        return rest;
+      }
+      return g.id === 'e1-e3' ? { ...g, weekendVariant: false } : g;
+    });
+    await saveTeamGroups(legacy);
+
+    const reloaded = await getTeamGroups();
+    expect(reloaded.find((g) => g.id === 'f1-f3')?.weekendVariant).toBe(true);
+    expect(reloaded.find((g) => g.id === 'e1-e3')?.weekendVariant).toBe(false);
+  });
+
   it('conserve une couleur modifiée après enregistrement (groupes éditables)', async () => {
     const groups = await getTeamGroups();
     const edited = groups.map((g) => (g.id === 'e1-e3' ? { ...g, color: '#000000' } : g));

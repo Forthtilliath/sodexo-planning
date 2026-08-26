@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 
 import BottomSheet from '@/components/BottomSheet';
@@ -122,9 +122,32 @@ export default function GroupsScreen() {
     setColorPickerId(null);
   }
 
+  function toggleWeekendVariant(id: string) {
+    setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, weekendVariant: !g.weekendVariant } : g)));
+  }
+
   const colorPickerGroup = groups.find((g) => g.id === colorPickerId);
 
-  function renderEditableGroup({ item: group, drag, isActive }: RenderItemParams<TeamGroup>) {
+  function renderGroupItem({ item: group, drag, isActive }: RenderItemParams<TeamGroup>) {
+    if (!editMode) {
+      return (
+        <View style={[styles.groupCard, group.color && { borderLeftColor: group.color, borderLeftWidth: 4 }]}>
+          <View style={styles.groupHeader}>
+            {group.color && <View style={[styles.colorDot, { backgroundColor: group.color }]} />}
+            <Text style={styles.groupLabelText}>{group.label || 'Groupe sans nom'}</Text>
+            {group.weekendVariant && (
+              <View style={styles.weekendBadge}>
+                <Text style={styles.weekendBadgeText}>Week-end</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.groupCodesText}>{group.codes.join(', ') || 'Aucun code'}</Text>
+          {group.weekendVariant && (
+            <Text style={styles.weekendHint}>Masqué de la liste des catégories affectables aux salariés.</Text>
+          )}
+        </View>
+      );
+    }
     return (
       <View style={[styles.groupCard, isActive && styles.groupCardDragging]}>
         <View style={styles.groupHeader}>
@@ -167,59 +190,62 @@ export default function GroupsScreen() {
           placeholderTextColor={colors.border}
           autoCapitalize="characters"
         />
+        <View style={styles.weekendRow}>
+          <View style={styles.weekendRowText}>
+            <Text style={styles.weekendRowLabel}>Variante week-end</Text>
+            <Text style={styles.weekendHint}>
+              Mêmes postes, code différent le week-end/férié. Masquée de la liste des catégories affectables aux
+              salariés — ses codes restent proposés normalement.
+            </Text>
+          </View>
+          <Switch value={!!group.weekendVariant} onValueChange={() => toggleWeekendVariant(group.id)} />
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.hint}>
-        Un groupe = les codes de poste qui vont ensemble (ex: D1, D2, D3, D4). Ces codes servent aussi de boutons
-        rapides dans "Salariés".
-      </Text>
+    <View style={styles.container}>
+      {/* Toute la liste tient dans un seul DraggableFlatList — un seul
+          composant scrollable pour tout l'écran, header/footer inclus : nester
+          un second scrollable dedans entre en conflit avec le geste de scroll
+          et bloque tout défilement. `containerStyle` (pas `style`) dimensionne
+          le vrai wrapper englobant du composant. */}
+      <DraggableFlatList
+        style={styles.flatList}
+        containerStyle={styles.flatList}
+        contentContainerStyle={styles.content}
+        data={groups}
+        keyExtractor={(group) => group.id}
+        renderItem={renderGroupItem}
+        onDragEnd={({ data }) => editMode && setGroups(data)}
+        activationDistance={0}
+        initialNumToRender={groups.length}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.hint}>
+              Un groupe = les codes de poste qui vont ensemble (ex: D1, D2, D3, D4). Ces codes servent aussi de
+              boutons rapides dans "Salariés".
+            </Text>
 
-      <Pressable
-        style={[styles.editToggle, editMode && styles.editToggleActive]}
-        onPress={() => setEditMode((v) => !v)}>
-        <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
-          {editMode ? '✓ Terminé' : '✏️ Modifier les groupes'}
-        </Text>
-      </Pressable>
-
-      {groups.length === 0 && <Text style={styles.hint}>Aucun groupe configuré.</Text>}
-
-      {editMode ? (
-        <DraggableFlatList
-          data={groups}
-          keyExtractor={(group) => group.id}
-          renderItem={renderEditableGroup}
-          onDragEnd={({ data }) => setGroups(data)}
-          // Liste courte, imbriquée dans le ScrollView de l'écran : pas de
-          // scroll ni de virtualisation propres, on laisse le ScrollView
-          // parent s'en charger (voir "Nested VirtualizedLists").
-          scrollEnabled={false}
-          initialNumToRender={groups.length}
-          activationDistance={0}
-        />
-      ) : (
-        groups.map((group) => (
-          <View
-            key={group.id}
-            style={[styles.groupCard, group.color && { borderLeftColor: group.color, borderLeftWidth: 4 }]}>
-            <View style={styles.groupHeader}>
-              {group.color && <View style={[styles.colorDot, { backgroundColor: group.color }]} />}
-              <Text style={styles.groupLabelText}>{group.label || 'Groupe sans nom'}</Text>
-            </View>
-            <Text style={styles.groupCodesText}>{group.codes.join(', ') || 'Aucun code'}</Text>
-          </View>
-        ))
-      )}
-
-      {editMode && (
-        <Pressable style={styles.addButton} onPress={addGroup}>
-          <Text style={styles.addButtonText}>+ Ajouter un groupe</Text>
-        </Pressable>
-      )}
+            <Pressable
+              style={[styles.editToggle, editMode && styles.editToggleActive]}
+              onPress={() => setEditMode((v) => !v)}>
+              <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
+                {editMode ? '✓ Terminé' : '✏️ Modifier les groupes'}
+              </Text>
+            </Pressable>
+          </>
+        }
+        ListEmptyComponent={<Text style={styles.hint}>Aucun groupe configuré.</Text>}
+        ListFooterComponent={
+          editMode ? (
+            <Pressable style={styles.addButton} onPress={addGroup}>
+              <Text style={styles.addButtonText}>+ Ajouter un groupe</Text>
+            </Pressable>
+          ) : null
+        }
+      />
 
       <BottomSheet visible={colorPickerGroup !== undefined} onClose={() => setColorPickerId(null)}>
         <Text style={styles.paletteTitle}>Couleur de "{colorPickerGroup?.label || 'ce groupe'}"</Text>
@@ -239,7 +265,7 @@ export default function GroupsScreen() {
           ))}
         </View>
       </BottomSheet>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -248,6 +274,9 @@ function createStyles(colors: ThemeColors) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    flatList: {
+      flex: 1,
     },
     content: {
       padding: 16,
@@ -307,6 +336,38 @@ function createStyles(colors: ThemeColors) {
       alignItems: 'center',
       gap: 8,
       marginBottom: 6,
+    },
+    weekendBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+      backgroundColor: colors.borderSubtle,
+    },
+    weekendBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.text,
+      opacity: 0.7,
+    },
+    weekendHint: {
+      fontSize: 11,
+      opacity: 0.6,
+      marginTop: 4,
+      color: colors.text,
+    },
+    weekendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 10,
+    },
+    weekendRowText: {
+      flex: 1,
+    },
+    weekendRowLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
     },
     dragHandle: {
       paddingHorizontal: 4,
