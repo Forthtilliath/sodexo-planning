@@ -11,10 +11,10 @@ import RosterEntrySheet from '@/components/RosterEntrySheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
-import { CODE_DISPLAY_ORDER, isRegular, majorityCode, normalizeName } from '@/lib/teams';
+import { isRegular, normalizeName } from '@/lib/teams';
 import type { RosterEntry, TeamGroup } from '@/types';
 
-type SortMode = 'manual' | 'alpha' | 'majority';
+type SortMode = 'manual' | 'alpha';
 type IndexedEntry = readonly [RosterEntry, number];
 
 // Une "catégorie" de la liste = un groupe de postes, plus une catégorie
@@ -144,22 +144,9 @@ export default function RosterScreen() {
     });
   }
 
-  function majorityRank(name: string): number {
-    const code = majorityCode(codeOptions[name] ?? []);
-    if (!code) return CODE_DISPLAY_ORDER.length + 1;
-    const idx = CODE_DISPLAY_ORDER.indexOf(code);
-    return idx === -1 ? CODE_DISPLAY_ORDER.length : idx;
-  }
-
   function sortEntries(entries: IndexedEntry[]): IndexedEntry[] {
     if (sortMode === 'alpha') {
       return [...entries].sort((a, b) => a[0].name.localeCompare(b[0].name, 'fr', { sensitivity: 'base' }));
-    }
-    if (sortMode === 'majority') {
-      return [...entries].sort((a, b) => {
-        const rankDiff = majorityRank(a[0].name) - majorityRank(b[0].name);
-        return rankDiff !== 0 ? rankDiff : a[0].name.localeCompare(b[0].name, 'fr', { sensitivity: 'base' });
-      });
     }
     return entries;
   }
@@ -285,7 +272,6 @@ export default function RosterScreen() {
                 [
                   { mode: 'manual', label: '↕️ Manuel' },
                   { mode: 'alpha', label: '🔤 A-Z' },
-                  { mode: 'majority', label: '🎯 Poste' },
                 ] as const
               ).map(({ mode, label }) => (
                 <Pressable

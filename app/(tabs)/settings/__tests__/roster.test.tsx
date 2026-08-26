@@ -42,14 +42,13 @@ import RosterScreen from '@/app/(tabs)/settings/roster';
 import { getEmployeeRoster, saveEmployeeCodeOptions, saveEmployeeRoster, saveTeamGroups } from '@/lib/db';
 import type { RosterEntry } from '@/types';
 
-// Ordre de sauvegarde volontairement différent des tris alphabétique et par
-// poste majoritaire, pour bien distinguer les trois modes dans les tests.
+// Ordre de sauvegarde volontairement différent du tri alphabétique, pour
+// bien distinguer les deux modes dans les tests.
 const roster: RosterEntry[] = [
   { name: 'Zoé', active: true },
   { name: 'Alice', active: true },
   { name: 'Bob', active: true },
 ];
-// D1 (rang 3) < C2 (rang 10) < B1 (rang 14) dans CODE_DISPLAY_ORDER.
 const codeOptions = { Zoé: ['C2'], Alice: ['B1'], Bob: ['D1'] };
 
 function orderOf(...names: string[]): number[] {
@@ -90,15 +89,6 @@ describe('RosterScreen — recherche et tri', () => {
     const [alice, bob, zoe] = orderOf('Alice', 'Bob', 'Zoé');
     expect(alice).toBeLessThan(bob);
     expect(bob).toBeLessThan(zoe);
-  });
-
-  it('trie par poste majoritaire (E1-E3, D1-D4, C6-C8, C2-C5, B1)', async () => {
-    await render(<RosterScreen />);
-    await fireEvent.press(await screen.findByText('🎯 Poste'));
-
-    const [bob, zoe, alice] = orderOf('Bob', 'Zoé', 'Alice');
-    expect(bob).toBeLessThan(zoe);
-    expect(zoe).toBeLessThan(alice);
   });
 
   it('affiche une poignée de glissé en tri Manuel par défaut, la cache avec un tri automatique', async () => {
