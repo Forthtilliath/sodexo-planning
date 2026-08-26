@@ -165,6 +165,7 @@ describe('getEmployeeRoster', () => {
     await AsyncStorage.setItem('@rn-planning/roster', JSON.stringify(['Alice', 'Bob']));
     const roster = await getEmployeeRoster();
     expect(roster).toEqual([
+      { name: 'Moi', active: true },
       { name: 'Alice', active: true },
       { name: 'Bob', active: true },
     ]);
@@ -172,13 +173,25 @@ describe('getEmployeeRoster', () => {
 
   it('conserve le statut actif/inactif après enregistrement', async () => {
     await saveEmployeeRoster([{ name: 'Alice', active: false }]);
-    expect(await getEmployeeRoster()).toEqual([{ name: 'Alice', active: false }]);
+    expect(await getEmployeeRoster()).toEqual([
+      { name: 'Moi', active: true },
+      { name: 'Alice', active: false },
+    ]);
   });
 
   it('conserve regular et groupId après enregistrement (pas perdus par la migration)', async () => {
     await saveEmployeeRoster([{ name: 'Alice', active: true, regular: false, groupId: 'chaine' }]);
     expect(await getEmployeeRoster()).toEqual([
+      { name: 'Moi', active: true },
       { name: 'Alice', active: true, regular: false, groupId: 'chaine' },
+    ]);
+  });
+
+  it('ne duplique pas "Moi" quand il est déjà présent dans la liste enregistrée', async () => {
+    await saveEmployeeRoster([{ name: 'Alice', active: true }, { name: 'Moi', active: true, regular: false }]);
+    expect(await getEmployeeRoster()).toEqual([
+      { name: 'Alice', active: true },
+      { name: 'Moi', active: true, regular: false },
     ]);
   });
 });
@@ -203,7 +216,10 @@ describe('exportAllData / importAllData', () => {
     await importAllData(backup);
 
     expect(await getSettings()).toEqual({ remindersEnabled: true, reminderHour: 21 });
-    expect(await getEmployeeRoster()).toEqual([{ name: 'Alice', active: true }]);
+    expect(await getEmployeeRoster()).toEqual([
+      { name: 'Moi', active: true },
+      { name: 'Alice', active: true },
+    ]);
     expect(await getScans()).toEqual([scan]);
     expect(await getCodeSchedules()).toEqual(backup.codeSchedules);
   });
