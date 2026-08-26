@@ -1,3 +1,4 @@
+import { MY_NAME, normalizeName } from "@/lib/teams";
 import type { CodeSchedule, RosterEntry, ScanRecord, Settings, TeamGroup } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -54,6 +55,7 @@ const DEFAULT_CODE_SCHEDULES: CodeSchedule[] = [
 // incompatible...), on retrouve au moins la liste des noms sans tout retaper.
 // Ne s'applique jamais si une liste a déjà été sauvegardée, même vide.
 const DEFAULT_ROSTER: RosterEntry[] = [
+	MY_NAME,
 	"BICE Cécilia",
 	"MARTIN Nicolas",
 	"CLAIR Benjamin",
@@ -125,6 +127,14 @@ export function saveTeamGroups(groups: TeamGroup[]): Promise<void> {
 	return writeJson(KEYS.teamGroups, groups);
 }
 
+// "Moi" doit toujours pouvoir être choisi comme ligne dans un planning (voir
+// MY_NAME) : on la garantit en tête du roster, y compris pour une liste déjà
+// enregistrée avant l'ajout de cette entrée par défaut.
+function ensureMyEntry(entries: RosterEntry[]): RosterEntry[] {
+	if (entries.some((e) => normalizeName(e.name) === normalizeName(MY_NAME))) return entries;
+	return [{ name: MY_NAME, active: true }, ...entries];
+}
+
 /** Liste des salariés, gérée dans Réglages et réutilisée à chaque planning. */
 export async function getEmployeeRoster(): Promise<RosterEntry[]> {
 	const raw = await AsyncStorage.getItem(KEYS.roster);
@@ -135,11 +145,12 @@ export async function getEmployeeRoster(): Promise<RosterEntry[]> {
 		// Ancien format = string[] (avant l'ajout du statut actif/inactif) : on
 		// migre à la volée pour ne rien perdre des listes déjà enregistrées.
 		// Le spread préserve les champs ajoutés depuis (regular, groupId...).
-		return parsed.map((item): RosterEntry =>
+		const migrated = parsed.map((item): RosterEntry =>
 			typeof item === "string"
 				? { name: item, active: true }
 				: { ...item, name: String(item?.name ?? ""), active: item?.active !== false },
 		);
+		return ensureMyEntry(migrated);
 	} catch {
 		return DEFAULT_ROSTER;
 	}
