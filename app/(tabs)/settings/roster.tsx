@@ -1,9 +1,13 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 
+import AddButton from '@/components/AddButton';
 import BottomSheet from '@/components/BottomSheet';
+import CategoryHeader from '@/components/CategoryHeader';
+import RosterCard from '@/components/RosterCard';
+import RosterEntrySheet from '@/components/RosterEntrySheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
@@ -172,39 +176,18 @@ export default function RosterScreen() {
   const openEntry = openIndex !== null ? roster[openIndex] : null;
 
   function renderRow(entry: RosterEntry, index: number, dragHandle?: () => void, isDragging?: boolean) {
-    const codesCount = (codeOptions[entry.name] ?? []).length;
     const category = groups.find((g) => g.id === entry.groupId);
-    const summaryParts = [!isRegular(entry) ? 'Intérimaire' : null, codesCount > 0 ? `${codesCount} code(s)` : null]
-      .filter(Boolean)
-      .join(' · ');
-
     return (
-      <View key={index} style={[styles.rosterCard, isDragging && styles.rosterCardDragging]}>
-        {dragHandle && (
-          <Pressable
-            onPressIn={dragHandle}
-            hitSlop={10}
-            style={styles.dragHandle}
-            accessibilityRole="button"
-            accessibilityLabel={`Réordonner ${entry.name || `Salarié ${index + 1}`}`}>
-            <Text style={styles.dragHandleText}>⠿</Text>
-          </Pressable>
-        )}
-        <Pressable style={styles.rosterCardBody} onPress={() => setOpenIndex(index)}>
-          {category?.color && <View style={[styles.categoryDot, { backgroundColor: category.color }]} />}
-          <View style={styles.cardNameColumn}>
-            <Text style={styles.cardName} numberOfLines={1}>
-              {entry.name || `Salarié ${index + 1}`}
-            </Text>
-            {summaryParts.length > 0 && (
-              <Text style={styles.cardSummary} numberOfLines={1}>
-                {summaryParts}
-              </Text>
-            )}
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-      </View>
+      <RosterCard
+        key={index}
+        entry={entry}
+        index={index}
+        categoryColor={category?.color}
+        codesCount={(codeOptions[entry.name] ?? []).length}
+        dragHandle={dragHandle}
+        isDragging={isDragging}
+        onPress={() => setOpenIndex(index)}
+      />
     );
   }
 
@@ -255,11 +238,11 @@ export default function RosterScreen() {
   function renderListItem({ item, drag, isActive }: RenderItemParams<RosterListItem>) {
     if (item.type === 'header') {
       return (
-        <View style={styles.categoryHeader}>
-          {item.def.color && <View style={[styles.categoryDot, { backgroundColor: item.def.color }]} />}
-          <Text style={styles.categoryHeaderText}>{item.def.label}</Text>
-          {item.count === 0 && <Text style={styles.categoryEmptyHint}>glisse un salarié ici</Text>}
-        </View>
+        <CategoryHeader
+          label={item.def.label}
+          color={item.def.color}
+          hint={item.count === 0 ? 'glisse un salarié ici' : undefined}
+        />
       );
     }
     return renderRow(roster[item.index], item.index, draggingEnabled ? drag : undefined, isActive);
@@ -329,11 +312,7 @@ export default function RosterScreen() {
         }
         ListFooterComponent={
           <>
-            {!searching && (
-              <Pressable style={styles.addButton} onPress={addName}>
-                <Text style={styles.addButtonText}>+ Ajouter un salarié</Text>
-              </Pressable>
-            )}
+            {!searching && <AddButton label="+ Ajouter un salarié" onPress={addName} />}
 
             {archivedIndexed.length > 0 && (
               <>
@@ -355,84 +334,19 @@ export default function RosterScreen() {
 
       <BottomSheet visible={openEntry !== null} onClose={() => setOpenIndex(null)}>
         {openEntry && openIndex !== null && (
-          <View style={styles.sheetContent}>
-            <TextInput
-              style={styles.rosterNameInput}
-              value={openEntry.name}
-              onChangeText={(v) => updateName(openIndex, v)}
-              placeholder={`Salarié ${openIndex + 1}`}
-              placeholderTextColor={colors.border}
-            />
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Archivé</Text>
-              <Switch value={!openEntry.active} onValueChange={() => toggleArchived(openIndex)} />
-            </View>
-            <Text style={styles.switchHint}>
-              N'apparaît plus dans la liste ni dans les nouveaux mois, mais reste dans les plannings existants.
-            </Text>
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Salarié régulier</Text>
-              <Switch value={isRegular(openEntry)} onValueChange={() => toggleRegular(openIndex)} />
-            </View>
-            <Text style={styles.switchHint}>
-              Ajouté automatiquement à chaque nouveau planning. Désactive pour un intérimaire de passage.
-            </Text>
-
-            <Text style={styles.sectionLabel}>Catégorie principale</Text>
-            <Text style={styles.switchHint}>
-              Sert uniquement à trier et regrouper la liste — un salarié peut occasionnellement travailler ailleurs.
-            </Text>
-            <View style={styles.categoryPickerRow}>
-              <Pressable
-                style={[styles.categoryChip, !openEntry.groupId && styles.categoryChipActive]}
-                onPress={() => setCategory(openIndex, undefined)}>
-                <Text style={[styles.categoryChipText, !openEntry.groupId && styles.categoryChipTextActive]}>
-                  Aucune
-                </Text>
-              </Pressable>
-              {assignableGroups.map((g) => (
-                <Pressable
-                  key={g.id}
-                  style={[styles.categoryChip, openEntry.groupId === g.id && styles.categoryChipActive]}
-                  onPress={() => setCategory(openIndex, g.id)}>
-                  {g.color && <View style={[styles.categoryChipDot, { backgroundColor: g.color }]} />}
-                  <Text
-                    style={[styles.categoryChipText, openEntry.groupId === g.id && styles.categoryChipTextActive]}>
-                    {g.label || 'Sans nom'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={styles.sectionLabel}>Codes habituels</Text>
-            {allKnownCodes.length > 0 ? (
-              <View style={styles.codeChipsRow}>
-                {allKnownCodes.map((code) => {
-                  const active = (codeOptions[openEntry.name] ?? []).includes(code);
-                  return (
-                    <Pressable
-                      key={code}
-                      style={[styles.codeChip, active && styles.codeChipActive]}
-                      onPress={() => toggleCodeForEmployee(openEntry.name, code)}>
-                      <Text style={[styles.codeChipText, active && styles.codeChipTextActive]}>{code}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : (
-              <Text style={styles.hint}>Ajoute d'abord des groupes de postes pour voir les codes ici.</Text>
-            )}
-
-            <Pressable
-              style={styles.deleteButton}
-              onPress={() => removeName(openIndex, openEntry.name)}
-              accessibilityRole="button"
-              accessibilityLabel={`Supprimer ${openEntry.name || 'ce salarié'}`}>
-              <Text style={styles.deleteButtonText}>🗑️ Supprimer ce salarié</Text>
-            </Pressable>
-          </View>
+          <RosterEntrySheet
+            entry={openEntry}
+            index={openIndex}
+            assignableGroups={assignableGroups}
+            allKnownCodes={allKnownCodes}
+            employeeCodes={codeOptions[openEntry.name] ?? []}
+            onChangeName={(v) => updateName(openIndex, v)}
+            onToggleArchived={() => toggleArchived(openIndex)}
+            onToggleRegular={() => toggleRegular(openIndex)}
+            onSetCategory={(groupId) => setCategory(openIndex, groupId)}
+            onToggleCode={(code) => toggleCodeForEmployee(openEntry.name, code)}
+            onDelete={() => removeName(openIndex, openEntry.name)}
+          />
         )}
       </BottomSheet>
     </View>
@@ -498,97 +412,6 @@ function createStyles(colors: ThemeColors) {
     sortButtonTextActive: {
       color: colors.onTint,
     },
-    categoryHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 12,
-      marginBottom: 6,
-    },
-    categoryHeaderText: {
-      fontSize: 12,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      opacity: 0.6,
-      color: colors.text,
-    },
-    categoryEmptyHint: {
-      fontSize: 11,
-      fontStyle: 'italic',
-      opacity: 0.4,
-      color: colors.text,
-    },
-    categoryDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-    },
-    rosterCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 8,
-      backgroundColor: colors.card,
-    },
-    rosterCardDragging: {
-      borderColor: colors.tint,
-      shadowColor: '#000',
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 6,
-    },
-    dragHandle: {
-      paddingHorizontal: 4,
-      paddingVertical: 4,
-    },
-    dragHandleText: {
-      fontSize: 20,
-      opacity: 0.5,
-      color: colors.text,
-    },
-    rosterCardBody: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    cardNameColumn: {
-      flex: 1,
-    },
-    cardName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    cardSummary: {
-      fontSize: 12,
-      opacity: 0.6,
-      marginTop: 2,
-      color: colors.text,
-    },
-    chevron: {
-      fontSize: 20,
-      opacity: 0.4,
-      color: colors.text,
-    },
-    addButton: {
-      marginTop: 4,
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.border,
-      alignItems: 'center',
-    },
-    addButtonText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
     archivedToggle: {
       marginTop: 16,
       marginBottom: 4,
@@ -598,110 +421,6 @@ function createStyles(colors: ThemeColors) {
       fontWeight: '600',
       opacity: 0.6,
       color: colors.text,
-    },
-    sheetContent: {
-      paddingHorizontal: 20,
-    },
-    rosterNameInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 10,
-      marginBottom: 16,
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    switchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 4,
-    },
-    switchLabel: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    switchHint: {
-      fontSize: 12,
-      opacity: 0.6,
-      marginBottom: 16,
-      color: colors.text,
-    },
-    sectionLabel: {
-      fontSize: 13,
-      fontWeight: '700',
-      marginBottom: 8,
-      color: colors.text,
-    },
-    categoryPickerRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginBottom: 16,
-    },
-    categoryChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    categoryChipActive: {
-      backgroundColor: colors.tint,
-      borderColor: colors.tint,
-    },
-    categoryChipDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-    categoryChipText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    categoryChipTextActive: {
-      color: colors.onTint,
-    },
-    codeChipsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginBottom: 20,
-    },
-    codeChip: {
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    codeChipActive: {
-      backgroundColor: colors.tint,
-      borderColor: colors.tint,
-    },
-    codeChipText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    codeChipTextActive: {
-      color: colors.onTint,
-    },
-    deleteButton: {
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 8,
-      backgroundColor: colors.dangerSoft,
-    },
-    deleteButtonText: {
-      color: colors.dangerStrong,
-      fontWeight: '700',
     },
   });
 }
