@@ -1,8 +1,9 @@
 import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
-// Identifiant fixe de "ma" ligne dans un planning : app à usage personnel,
-// pas besoin d'un réglage dédié (ni de la page qui allait avec) — il suffit
-// de saisir "Moi" comme nom dans la grille pour que l'app retrouve la ligne.
+// Nom par défaut de "ma" ligne dans un planning : c'est ce nom, saisi comme
+// nom de ligne dans la grille, que l'app cherche pour retrouver la ligne.
+// Personnalisable dans Réglages › Mon nom (voir Settings.myName / getMyName) ;
+// cette constante reste le fallback quand aucun nom n'a été choisi.
 export const MY_NAME = 'Moi';
 
 /** Un salarié régulier (par défaut, champ absent) est ajouté automatiquement à chaque nouveau planning ; un intérimaire (`regular: false`) ne l'est pas. */

@@ -97,6 +97,60 @@ export function saveSettings(settings: Settings): Promise<void> {
 	return writeJson(KEYS.settings, settings);
 }
 
+/** Nom de "ma" ligne dans un planning (Réglages › Mon nom) ; "Moi" par défaut. */
+export async function getMyName(): Promise<string> {
+	const settings = await getSettings();
+	return settings.myName?.trim() || MY_NAME;
+}
+
+/**
+ * Renomme "ma" ligne partout : réglage, entrée du roster, lignes des plannings
+ * déjà enregistrés et clés des codes habituels. Refuse un nom vide ou déjà
+ * porté par un autre salarié (fusion involontaire).
+ */
+export async function renameMe(newName: string): Promise<void> {
+	const trimmed = newName.trim();
+	if (!trimmed) throw new Error("Le nom ne peut pas être vide.");
+
+	const oldName = await getMyName();
+	if (normalizeName(trimmed) === normalizeName(oldName)) return;
+
+	const [settings, roster, codeOptions, scans] = await Promise.all([
+		getSettings(),
+		getEmployeeRoster(),
+		getEmployeeCodeOptions(),
+		getScans(),
+	]);
+
+	if (roster.some((e) => normalizeName(e.name) !== normalizeName(oldName) && normalizeName(e.name) === normalizeName(trimmed))) {
+		throw new Error(`"${trimmed}" est déjà un salarié de la liste. Choisis un autre nom.`);
+	}
+
+	const nextRoster = roster.map((e) =>
+		normalizeName(e.name) === normalizeName(oldName) ? { ...e, name: trimmed } : e
+	);
+
+	const nextScans = scans.map((scan) => ({
+		...scan,
+		employees: scan.employees.map((name) => (normalizeName(name) === normalizeName(oldName) ? trimmed : name)),
+	}));
+
+	const nextCodeOptions = { ...codeOptions };
+	for (const key of Object.keys(nextCodeOptions)) {
+		if (normalizeName(key) === normalizeName(oldName) && key !== trimmed) {
+			nextCodeOptions[trimmed] = nextCodeOptions[key];
+			delete nextCodeOptions[key];
+		}
+	}
+
+	await Promise.all([
+		saveSettings({ ...settings, myName: trimmed }),
+		saveEmployeeRoster(nextRoster),
+		saveEmployeeCodeOptions(nextCodeOptions),
+		writeJson(KEYS.scans, nextScans),
+	]);
+}
+
 /** Horodatage de la dernière vérification de mise à jour (voir components/UpdateBanner.tsx). */
 export async function recordUpdateCheck(lastCheckedAt: number): Promise<void> {
 	const settings = await getSettings();
@@ -127,17 +181,17 @@ export function saveTeamGroups(groups: TeamGroup[]): Promise<void> {
 	return writeJson(KEYS.teamGroups, groups);
 }
 
-// "Moi" doit toujours pouvoir être choisi comme ligne dans un planning (voir
-// MY_NAME) : on la garantit en tête du roster, y compris pour une liste déjà
-// enregistrée avant l'ajout de cette entrée par défaut.
-function ensureMyEntry(entries: RosterEntry[]): RosterEntry[] {
-	if (entries.some((e) => normalizeName(e.name) === normalizeName(MY_NAME))) return entries;
-	return [{ name: MY_NAME, active: true }, ...entries];
+// "Ma" ligne (nom configurable, "Moi" par défaut — voir getMyName) doit
+// toujours pouvoir être choisie comme ligne dans un planning : on la garantit
+// en tête du roster, y compris pour une liste enregistrée sans cette entrée.
+function ensureMyEntry(entries: RosterEntry[], myName: string): RosterEntry[] {
+	if (entries.some((e) => normalizeName(e.name) === normalizeName(myName))) return entries;
+	return [{ name: myName, active: true }, ...entries];
 }
 
 /** Liste des salariés, gérée dans Réglages et réutilisée à chaque planning. */
 export async function getEmployeeRoster(): Promise<RosterEntry[]> {
-	const raw = await AsyncStorage.getItem(KEYS.roster);
+	const [raw, myName] = await Promise.all([AsyncStorage.getItem(KEYS.roster), getMyName()]);
 	if (!raw) return DEFAULT_ROSTER;
 	try {
 		const parsed: unknown = JSON.parse(raw);
@@ -150,7 +204,7 @@ export async function getEmployeeRoster(): Promise<RosterEntry[]> {
 				? { name: item, active: true }
 				: { ...item, name: String(item?.name ?? ""), active: item?.active !== false },
 		);
-		return ensureMyEntry(migrated);
+		return ensureMyEntry(migrated, myName);
 	} catch {
 		return DEFAULT_ROSTER;
 	}
