@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import MyNameProvider from '@/components/MyNameProvider';
 import ThemePreferenceProvider from '@/components/ThemePreferenceProvider';
 import UpdateBanner from '@/components/UpdateBanner';
 import { useResolvedScheme } from '@/hooks/useThemeColors';
@@ -21,7 +22,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemePreferenceProvider>
-        <RootLayoutNav />
+        <MyNameProvider>
+          <RootLayoutNav />
+        </MyNameProvider>
       </ThemePreferenceProvider>
     </GestureHandlerRootView>
   );
