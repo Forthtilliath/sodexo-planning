@@ -10,6 +10,7 @@ import SavedScansList from '@/components/SavedScansList';
 import SelectField from '@/components/SelectField';
 import UndoToast from '@/components/UndoToast';
 import type { ThemeColors } from '@/constants/Colors';
+import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { MONTH_NAMES } from '@/lib/dates';
 import {
@@ -23,12 +24,12 @@ import {
 } from '@/lib/db';
 import { randomId } from '@/lib/id';
 import { rescheduleWorkReminders } from '@/lib/notifications';
-import { isRegular, MY_NAME, normalizeName } from '@/lib/teams';
+import { isRegular, normalizeName } from '@/lib/teams';
 import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
-/** Fait remonter "Moi" en tête de liste, sans changer l'ordre des autres. */
-function putMyNameFirst(names: string[]): string[] {
-  const index = names.findIndex((n) => n.trim().toLowerCase() === MY_NAME.toLowerCase());
+/** Fait remonter "ma" ligne en tête de liste, sans changer l'ordre des autres. */
+function putMyNameFirst(names: string[], myName: string): string[] {
+  const index = names.findIndex((n) => normalizeName(n) === normalizeName(myName));
   if (index <= 0) return names;
   const next = [...names];
   const [mine] = next.splice(index, 1);
@@ -68,6 +69,7 @@ export default function PlanningEditorScreen() {
   const navigation = useNavigation();
   const editParams = useLocalSearchParams<{ scanId?: string; editRow?: string }>();
   const colors = useThemeColors();
+  const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [step, setStep] = useState<Step>('home');
 
@@ -185,8 +187,8 @@ export default function PlanningEditorScreen() {
   // Dans tous les cas, "Moi" remonte en tête pour se retrouver plus vite.
   function defaultEmployees(): string[] {
     const activeNames = roster.filter((r) => r.active && isRegular(r)).map((r) => r.name);
-    if (activeNames.length > 0) return putMyNameFirst(activeNames);
-    if (scans[0]?.employees.length) return putMyNameFirst(scans[0].employees);
+    if (activeNames.length > 0) return putMyNameFirst(activeNames, myName);
+    if (scans[0]?.employees.length) return putMyNameFirst(scans[0].employees, myName);
     return Array(5).fill('');
   }
 

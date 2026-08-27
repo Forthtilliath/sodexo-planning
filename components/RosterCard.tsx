@@ -4,8 +4,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ColorDot from '@/components/ColorDot';
 import DragHandle from '@/components/DragHandle';
 import type { ThemeColors } from '@/constants/Colors';
+import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { isRegular, MY_NAME, normalizeName } from '@/lib/teams';
+import { isRegular, normalizeName } from '@/lib/teams';
 import type { RosterEntry } from '@/types';
 
 type Props = {
@@ -21,12 +22,13 @@ type Props = {
 /** Une ligne de la liste des salariés : nom, résumé (intérimaire/codes) et accès au détail. */
 export default function RosterCard({ entry, index, categoryColor, codesCount, dragHandle, isDragging, onPress }: Props) {
   const colors = useThemeColors();
+  const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const summaryParts = [!isRegular(entry) ? 'Intérimaire' : null, codesCount > 0 ? `${codesCount} code(s)` : null]
     .filter(Boolean)
     .join(' · ');
-  const isMe = normalizeName(entry.name) === normalizeName(MY_NAME);
+  const isMe = normalizeName(entry.name) === normalizeName(myName);
 
   return (
     <View style={[styles.card, isDragging && styles.cardDragging]}>
