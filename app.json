@@ -45,6 +45,14 @@
           }
         }
       ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Autorise Sodexo Planning à enregistrer le planning dans tes photos.",
+          "photosPermission": false,
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
       "./plugins/withShortCxxPath.js"
     ],
     "experiments": {
