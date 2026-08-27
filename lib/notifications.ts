@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 
-import { getScans, getSettings, getTeamGroups } from './db';
-import { computeDayPlanning, findMyRowIndex, MY_NAME } from './teams';
+import { getMyName, getScans, getSettings, getTeamGroups } from './db';
+import { computeDayPlanning, findMyRowIndex } from './teams';
 
 export const DEFAULT_REMINDER_HOUR = 19;
 // Au-delà, plus la peine de programmer : les plannings sont saisis un mois à
@@ -54,7 +54,12 @@ async function cancelWorkReminderNotifications(): Promise<void> {
 export async function rescheduleWorkReminders(): Promise<void> {
   await cancelWorkReminderNotifications();
 
-  const [scans, settings, groups] = await Promise.all([getScans(), getSettings(), getTeamGroups()]);
+  const [scans, settings, groups, myName] = await Promise.all([
+    getScans(),
+    getSettings(),
+    getTeamGroups(),
+    getMyName(),
+  ]);
   const reminderHour = settings.reminderHour ?? DEFAULT_REMINDER_HOUR;
   const now = Date.now();
   const cutoff = now + MAX_DAYS_AHEAD * 24 * 60 * 60 * 1000;
@@ -62,7 +67,7 @@ export async function rescheduleWorkReminders(): Promise<void> {
   const schedules: Promise<unknown>[] = [];
 
   for (const scan of scans) {
-    const myRowIndex = findMyRowIndex(scan, MY_NAME);
+    const myRowIndex = findMyRowIndex(scan, myName);
     if (myRowIndex < 0) continue;
 
     scan.days.forEach((iso, dayIndex) => {

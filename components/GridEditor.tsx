@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import CategoryHeader from '@/components/CategoryHeader';
 import type { ThemeColors } from '@/constants/Colors';
+import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { MY_NAME, normalizeName } from '@/lib/teams';
+import { normalizeName } from '@/lib/teams';
 import type { RosterEntry, TeamGroup } from '@/types';
 
 type Props = {
@@ -46,6 +47,7 @@ export default function GridEditor({
   onOpenRow,
 }: Props) {
   const colors = useThemeColors();
+  const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Même regroupement que Réglages > Salariés / le sheet "+ Ajouter salarié" :
@@ -77,7 +79,7 @@ export default function GridEditor({
   function renderRow(rowIndex: number) {
     const name = employees[rowIndex];
     const filledCount = (grid[rowIndex] ?? []).filter((c) => c.trim()).length;
-    const isMe = normalizeName(name) === normalizeName(MY_NAME);
+    const isMe = normalizeName(name) === normalizeName(myName);
     return (
       <View key={rowIndex} style={[styles.row, isMe && styles.rowMe]}>
         {removable[rowIndex] && (

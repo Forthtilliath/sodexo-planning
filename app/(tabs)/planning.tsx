@@ -8,13 +8,14 @@ import MonthCalendarView from '@/components/MonthCalendarView';
 import PickerListSheet from '@/components/PickerListSheet';
 import ScanMonthSelector from '@/components/ScanMonthSelector';
 import type { ThemeColors } from '@/constants/Colors';
+import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { isToday, monthYearLabel } from '@/lib/dates';
 import { getCodeSchedules, getEmployeeRoster, getScans, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { savePlanningImage, sharePlanningImage } from '@/lib/exportImage';
 import { buildIcs } from '@/lib/ics';
-import { computeMonthPlanning, findMyRowIndex, MY_NAME, normalizeName, type DayPlanning } from '@/lib/teams';
+import { computeMonthPlanning, findMyRowIndex, normalizeName, type DayPlanning } from '@/lib/teams';
 import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
@@ -22,6 +23,7 @@ type ViewMode = 'list' | 'calendar';
 export default function PlanningScreen() {
   const navigation = useNavigation();
   const colors = useThemeColors();
+  const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
@@ -75,8 +77,8 @@ export default function PlanningScreen() {
   const myRowIndex = useMemo(() => {
     if (!selectedScan) return -1;
     if (manualRowIndex !== null) return manualRowIndex;
-    return findMyRowIndex(selectedScan, MY_NAME);
-  }, [selectedScan, manualRowIndex]);
+    return findMyRowIndex(selectedScan, myName);
+  }, [selectedScan, manualRowIndex, myName]);
 
   // Le nom du collègue consulté est conservé (pas son index de ligne), pour
   // rester sur la même personne quand on change de planning plutôt que de
@@ -220,7 +222,7 @@ export default function PlanningScreen() {
       {selectedScan && !viewingSomeoneElse && myRowIndex < 0 && (
         <View style={styles.notFoundBox}>
           <Text style={styles.notFoundText}>
-            Aucune ligne "{MY_NAME}" dans ce planning. Choisis la tienne :
+            Aucune ligne "{myName}" dans ce planning. Choisis la tienne :
           </Text>
           {selectedScan.employees.map((name, index) => (
             <Pressable
