@@ -6,6 +6,8 @@ export type Settings = {
   backupReminderEnabled?: boolean;
   // Thème de l'app ; absent = "system" (suit le thème du téléphone).
   theme?: 'light' | 'dark' | 'system';
+  // Nom de "ma" ligne dans un planning (repère "moi") ; absent = "Moi".
+  myName?: string;
   // Suivi de la vérification de mise à jour (voir components/UpdateBanner.tsx).
   lastUpdateCheckAt?: number | null;
   dismissedUpdateVersion?: string | null;
