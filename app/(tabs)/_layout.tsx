@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { ColorValue, Text } from 'react-native';
 
+import { useHeaderOptions } from '@/hooks/useHeaderOptions';
 import { useThemeColors } from '@/hooks/useThemeColors';
 
 function TabIcon({ emoji, color }: { emoji: string; color: ColorValue }) {
@@ -9,6 +10,7 @@ function TabIcon({ emoji, color }: { emoji: string; color: ColorValue }) {
 
 export default function TabLayout() {
   const colors = useThemeColors();
+  const headerOptions = useHeaderOptions();
 
   return (
     <Tabs
@@ -16,8 +18,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.tabIconSelected,
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.borderSubtle },
-        headerStyle: { backgroundColor: colors.card },
-        headerTintColor: colors.text,
+        ...headerOptions,
       }}>
       <Tabs.Screen
         name="index"

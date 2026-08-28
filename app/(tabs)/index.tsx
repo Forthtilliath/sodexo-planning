@@ -153,7 +153,6 @@ export default function PlanningEditorScreen() {
     }
     navigation.setOptions({
       title,
-      headerTitleAlign: 'center',
       headerLeft:
         step === 'review'
           ? () => (
@@ -507,7 +506,7 @@ function createStyles(colors: ThemeColors) {
     headerBackButtonText: {
       fontSize: 22,
       fontWeight: '600',
-      color: colors.tint,
+      color: colors.headerText,
     },
     container: {
       flex: 1,
