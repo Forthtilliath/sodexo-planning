@@ -16,6 +16,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { loadChangelog } = require('./lib/loadChangelog');
+const { resolveJdkHome } = require('./lib/resolveJdk');
 
 const root = path.join(__dirname, '..');
 const bumpType = process.argv[2];
@@ -25,6 +26,26 @@ function run(cmd, cwd = root) {
   execSync(cmd, { cwd, stdio: 'inherit' });
 }
 
+// La JBR d'Android Studio (JDK 25) casse `assembleRelease` (voir lib/resolveJdk.js).
+// On bascule sur un JDK 17 si besoin, pour tous les sous-processus Gradle.
+let jdk;
+try {
+  jdk = resolveJdkHome();
+} catch (err) {
+  console.error(`\n❌ ${err.message}`);
+  process.exit(1);
+}
+if (jdk) {
+  process.env.JAVA_HOME = jdk.javaHome;
+  process.env.PATH = path.join(jdk.javaHome, 'bin') + path.delimiter + process.env.PATH;
+  console.log(
+    `\nℹ️  JDK ${jdk.currentMajor ?? '?'} incompatible → build avec le JDK ${jdk.major} : ${jdk.javaHome}`
+  );
+}
+
+const androidDir = path.join(root, 'android');
+const gradlewPath = path.join(androidDir, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
+
 if (bumpType) {
   if (!['patch', 'minor', 'major'].includes(bumpType)) {
     console.error('Usage: node scripts/release.js [patch|minor|major]');
@@ -33,10 +54,16 @@ if (bumpType) {
   run(`node scripts/bump-version.js ${bumpType}`);
 }
 
+// Un démon Gradle encore actif verrouille android/ et fait échouer
+// `prebuild --clean` en EBUSY — on l'arrête d'abord.
+if (fs.existsSync(gradlewPath)) {
+  try {
+    run(`"${gradlewPath}" --stop`, androidDir);
+  } catch {}
+}
+
 run('npx expo prebuild --clean --platform android');
 
-const androidDir = path.join(root, 'android');
-const gradlewPath = path.join(androidDir, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
 run(`"${gradlewPath}" assembleRelease`, androidDir);
 
 const apkPath = path.join(root, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
