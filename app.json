@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -36,8 +36,21 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
+          "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "image": "./assets/images/splash-icon-dark.png",
+            "backgroundColor": "#293897"
+          }
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Autorise Sodexo Planning à enregistrer le planning dans tes photos.",
+          "photosPermission": false,
+          "isAccessMediaLocationEnabled": false
         }
       ],
       "./plugins/withShortCxxPath.js"

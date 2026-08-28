@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { captureRef } from 'react-native-view-shot';
 
 import DayListRow from '@/components/DayListRow';
 import MonthCalendarView from '@/components/MonthCalendarView';
@@ -8,9 +9,10 @@ import PickerListSheet from '@/components/PickerListSheet';
 import ScanMonthSelector from '@/components/ScanMonthSelector';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { isToday } from '@/lib/dates';
+import { isToday, monthYearLabel } from '@/lib/dates';
 import { getCodeSchedules, getEmployeeRoster, getScans, getTeamGroups } from '@/lib/db';
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
+import { savePlanningImage, sharePlanningImage } from '@/lib/exportImage';
 import { buildIcs } from '@/lib/ics';
 import { computeMonthPlanning, findMyRowIndex, MY_NAME, normalizeName, type DayPlanning } from '@/lib/teams';
 import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
@@ -30,8 +32,10 @@ export default function PlanningScreen() {
   const [viewingName, setViewingName] = useState<string | null>(null);
   const [colleaguePickerOpen, setColleaguePickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showHours, setShowHours] = useState(false);
+  const captureAreaRef = useRef<View>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -153,6 +157,25 @@ export default function PlanningScreen() {
     }
   }
 
+  async function handleImage() {
+    if (!selectedScan || displayRowIndex < 0 || !captureAreaRef.current) return;
+    setImageBusy(true);
+    try {
+      const uri = await captureRef(captureAreaRef, { format: 'png', quality: 1, result: 'tmpfile' });
+      const showErr = (err: unknown) =>
+        Alert.alert('Action impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
+      Alert.alert('Planning en image', 'Que veux-tu faire ?', [
+        { text: 'Enregistrer', onPress: () => savePlanningImage(uri).catch(showErr) },
+        { text: 'Partager', onPress: () => sharePlanningImage(uri).catch(showErr) },
+        { text: 'Annuler', style: 'cancel' },
+      ]);
+    } catch (err) {
+      Alert.alert('Image impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
+    } finally {
+      setImageBusy(false);
+    }
+  }
+
   if (scans.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -240,25 +263,42 @@ export default function PlanningScreen() {
             <Switch value={showHours} onValueChange={setShowHours} />
           </Pressable>
 
-          {viewMode === 'list' ? (
-            planning.map((day) => (
-              <DayListRow
-                key={day.date}
-                day={day}
-                isHoliday={selectedScan?.holidays?.includes(day.date) ?? false}
-                isCurrentDay={isToday(day.date)}
+          <View ref={captureAreaRef} collapsable={false} style={styles.captureArea}>
+            <Text style={styles.captureTitle}>
+              {viewingSomeoneElse
+                ? `Planning de ${selectedScan.employees[viewingIndex] || 'ce/cette collègue'}`
+                : `Planning de ${selectedScan.employees[displayRowIndex] || 'moi'}`}
+            </Text>
+            <Text style={styles.captureSubtitle}>
+              {monthYearLabel(selectedScan.year, selectedScan.month)}
+            </Text>
+
+            {viewMode === 'list' ? (
+              planning.map((day) => (
+                <DayListRow
+                  key={day.date}
+                  day={day}
+                  isHoliday={selectedScan?.holidays?.includes(day.date) ?? false}
+                  isCurrentDay={isToday(day.date)}
+                  showHours={showHours}
+                />
+              ))
+            ) : (
+              <MonthCalendarView
+                planning={planning}
+                holidays={selectedScan.holidays ?? []}
                 showHours={showHours}
+                scan={selectedScan}
+                groups={groups}
               />
-            ))
-          ) : (
-            <MonthCalendarView
-              planning={planning}
-              holidays={selectedScan.holidays ?? []}
-              showHours={showHours}
-              scan={selectedScan}
-              groups={groups}
-            />
-          )}
+            )}
+          </View>
+
+          <Pressable style={styles.imageButton} disabled={imageBusy} onPress={handleImage}>
+            <Text style={styles.imageButtonText}>
+              {imageBusy ? 'Génération de l’image…' : '🖼️ Planning en image'}
+            </Text>
+          </Pressable>
 
           <Pressable style={styles.exportButton} disabled={exporting} onPress={handleExport}>
             <Text style={styles.exportButtonText}>
@@ -385,8 +425,36 @@ function createStyles(colors: ThemeColors) {
       fontWeight: '600',
       color: colors.text,
     },
+    captureArea: {
+      backgroundColor: colors.background,
+      paddingTop: 4,
+      paddingBottom: 8,
+    },
+    captureTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    captureSubtitle: {
+      fontSize: 13,
+      opacity: 0.7,
+      marginBottom: 12,
+      color: colors.text,
+    },
+    imageButton: {
+      marginTop: 16,
+      paddingVertical: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.tint,
+      alignItems: 'center',
+    },
+    imageButtonText: {
+      color: colors.tint,
+      fontWeight: '700',
+    },
     exportButton: {
-      marginTop: 20,
+      marginTop: 12,
       paddingVertical: 14,
       borderRadius: 8,
       backgroundColor: colors.tint,
