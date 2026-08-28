@@ -1,6 +1,7 @@
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -8,7 +9,8 @@ import 'react-native-reanimated';
 
 import ThemePreferenceProvider from '@/components/ThemePreferenceProvider';
 import UpdateBanner from '@/components/UpdateBanner';
-import { useResolvedScheme } from '@/hooks/useThemeColors';
+import { useHeaderOptions } from '@/hooks/useHeaderOptions';
+import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
 
 // Catch any errors thrown by the Layout component, avec un écran de secours
 // lisible (voir components/ErrorFallback.tsx) plutôt que l'écran noir de debug par défaut.
@@ -29,6 +31,8 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const scheme = useResolvedScheme();
+  const colors = useThemeColors();
+  const headerOptions = useHeaderOptions();
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -48,11 +52,26 @@ function RootLayoutNav() {
     return null;
   }
 
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: colors.tint,
+      card: colors.headerBackground,
+      background: colors.background,
+      text: colors.text,
+      border: colors.borderSubtle,
+    },
+  };
+
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navTheme}>
       <View style={{ flex: 1 }}>
+        {/* Icônes claires : l'en-tête bleu Sodexo passe sous la barre d'état. */}
+        <StatusBar style="light" />
         <UpdateBanner />
-        <Stack>
+        <Stack screenOptions={headerOptions}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
       </View>
