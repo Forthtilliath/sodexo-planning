@@ -11,6 +11,26 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.0',
+    date: '2026-08-28',
+    changes: [
+      "Nouveau : identité visuelle Sodexo — nouvelle icône, écran de démarrage (avec variante sombre) et en-têtes bleu Sodexo dans toute l'app.",
+      'Nouveau : export du planning en image, à partager directement depuis "Mon planning".',
+      'Nouveau : écran "Mon nom" dans Réglages pour personnaliser le libellé de ta ligne dans le planning.',
+      "Nouveau : Saisie repensée — garde-fous à la création d'un planning, enregistrement automatique, suppression d'une ligne par balayage et sélecteur de salariés intégré.",
+      "Nouveau : écran Salariés redessiné, avec réorganisation par glisser-déposer et fiche d'édition en bas d'écran.",
+      'Nouveau : groupes de postes modifiables — renommage et réordonnancement par glisser-déposer, avec une option "variante week-end/férié".',
+      'Nouveau : Réglages réorganisés en sections thématiques.',
+      "Nouveau : dans les listes de sélection (Saisie, choix d'un collègue), les salariés sont regroupés par catégorie.",
+      'Nouveau : "Moi" est toujours présent dans la liste des salariés et mis en évidence partout où il apparaît.',
+      'Nouveau : sélection du mois par liste déroulante dans la Saisie, à la place des puces.',
+      'Nouveau : bouton pour effacer la recherche en un geste dans la liste des salariés.',
+      'Nouveau : la sauvegarde (export et import) peut être filtrée par catégorie de données.',
+      'Correction : meilleur contraste des libellés des onglets inactifs, notamment en mode sombre.',
+      "Correction : le bouton pour modifier les groupes de postes disparaissait dès qu'on faisait défiler la liste.",
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-08-07',
     changes: [
