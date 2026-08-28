@@ -1,5 +1,13 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#5aa9e6';
+// Couleurs de marque Sodexo : le bleu porte l'identité (en-têtes, accents,
+// éléments actifs) et le rouge sert de touche ponctuelle (filet sous l'en-tête,
+// actions destructrices marquées).
+const sodexoBlue = '#03318C';
+const sodexoBlueDark = '#0A2E7A';
+const sodexoRed = '#E30613';
+const sodexoRedDark = '#F2554E';
+
+const tintColorLight = sodexoBlue;
+const tintColorDark = '#6E9BF0';
 
 const Colors = {
   light: {
@@ -14,12 +22,15 @@ const Colors = {
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorLight,
     danger: '#a33',
-    dangerStrong: '#d33',
+    dangerStrong: sodexoRed,
     holiday: '#e08a00',
     overlay: 'rgba(0,0,0,0.4)',
-    tintSoft: 'rgba(47,149,220,0.1)',
+    tintSoft: 'rgba(3,49,140,0.1)',
     dangerSoft: 'rgba(200,50,50,0.08)',
     onTint: '#fff', // texte/icône sur un fond de couleur d'accent (bouton plein, badge...)
+    headerBackground: sodexoBlue,
+    headerText: '#fff', // titre, flèche de retour et icônes de l'en-tête
+    headerAccent: sodexoRed, // filet de rappel sous l'en-tête
   },
   dark: {
     text: '#f2f2f2',
@@ -33,12 +44,15 @@ const Colors = {
     tabIconDefault: '#888',
     tabIconSelected: tintColorDark,
     danger: '#e57373',
-    dangerStrong: '#ef5350',
+    dangerStrong: sodexoRedDark,
     holiday: '#f2b459',
     overlay: 'rgba(0,0,0,0.6)',
-    tintSoft: 'rgba(90,169,230,0.16)',
+    tintSoft: 'rgba(110,155,240,0.16)',
     dangerSoft: 'rgba(229,115,115,0.14)',
     onTint: '#fff',
+    headerBackground: sodexoBlueDark,
+    headerText: '#fff',
+    headerAccent: sodexoRedDark,
   },
 };
 
