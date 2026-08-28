@@ -7,7 +7,7 @@ const sodexoRed = '#E30613';
 const sodexoRedDark = '#F2554E';
 
 const tintColorLight = sodexoBlue;
-const tintColorDark = '#6E9BF0';
+const tintColorDark = '#3B6FE0';
 
 const Colors = {
   light: {
@@ -47,7 +47,7 @@ const Colors = {
     dangerStrong: sodexoRedDark,
     holiday: '#f2b459',
     overlay: 'rgba(0,0,0,0.6)',
-    tintSoft: 'rgba(110,155,240,0.16)',
+    tintSoft: 'rgba(59,111,224,0.16)',
     dangerSoft: 'rgba(229,115,115,0.14)',
     onTint: '#fff',
     headerBackground: sodexoBlueDark,
