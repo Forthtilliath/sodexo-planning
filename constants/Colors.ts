@@ -7,7 +7,7 @@ const sodexoRed = '#E30613';
 const sodexoRedDark = '#F2554E';
 
 const tintColorLight = sodexoBlue;
-const tintColorDark = '#6E9BF0';
+const tintColorDark = '#3B6FE0';
 
 const Colors = {
   light: {
@@ -19,7 +19,7 @@ const Colors = {
     borderSubtle: 'rgba(128,128,128,0.3)',
     divider: '#ccc',
     tint: tintColorLight,
-    tabIconDefault: '#ccc',
+    tabIconDefault: '#5f6368',
     tabIconSelected: tintColorLight,
     danger: '#a33',
     dangerStrong: sodexoRed,
@@ -41,13 +41,13 @@ const Colors = {
     borderSubtle: 'rgba(255,255,255,0.16)',
     divider: '#444',
     tint: tintColorDark,
-    tabIconDefault: '#888',
+    tabIconDefault: '#9aa0a6',
     tabIconSelected: tintColorDark,
     danger: '#e57373',
     dangerStrong: sodexoRedDark,
     holiday: '#f2b459',
     overlay: 'rgba(0,0,0,0.6)',
-    tintSoft: 'rgba(110,155,240,0.16)',
+    tintSoft: 'rgba(59,111,224,0.16)',
     dangerSoft: 'rgba(229,115,115,0.14)',
     onTint: '#fff',
     headerBackground: sodexoBlueDark,
