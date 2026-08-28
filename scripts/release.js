@@ -16,7 +16,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { loadChangelog } = require('./lib/loadChangelog');
-const { resolveJdkHome } = require('./lib/resolveJdk');
+const { prepareJavaEnv } = require('./lib/resolveJdk');
 
 const root = path.join(__dirname, '..');
 const bumpType = process.argv[2];
@@ -27,21 +27,9 @@ function run(cmd, cwd = root) {
 }
 
 // La JBR d'Android Studio (JDK 25) casse `assembleRelease` (voir lib/resolveJdk.js).
-// On bascule sur un JDK 17 si besoin, pour tous les sous-processus Gradle.
-let jdk;
-try {
-  jdk = resolveJdkHome();
-} catch (err) {
-  console.error(`\n❌ ${err.message}`);
-  process.exit(1);
-}
-if (jdk) {
-  process.env.JAVA_HOME = jdk.javaHome;
-  process.env.PATH = path.join(jdk.javaHome, 'bin') + path.delimiter + process.env.PATH;
-  console.log(
-    `\nℹ️  JDK ${jdk.currentMajor ?? '?'} incompatible → build avec le JDK ${jdk.major} : ${jdk.javaHome}`
-  );
-}
+// On ajoute au besoin --enable-native-access=ALL-UNNAMED pour les sous-JVM Gradle.
+const jdkNote = prepareJavaEnv();
+if (jdkNote) console.log(`\nℹ️  ${jdkNote}`);
 
 const androidDir = path.join(root, 'android');
 const gradlewPath = path.join(androidDir, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
