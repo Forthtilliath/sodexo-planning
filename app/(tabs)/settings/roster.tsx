@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
@@ -9,6 +9,7 @@ import CategoryHeader from '@/components/CategoryHeader';
 import RosterCard from '@/components/RosterCard';
 import RosterEntrySheet from '@/components/RosterEntrySheet';
 import type { ThemeColors } from '@/constants/Colors';
+import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
 import { isRegular, normalizeName } from '@/lib/teams';
@@ -32,6 +33,7 @@ type RosterListItem =
 
 export default function RosterScreen() {
   const colors = useThemeColors();
+  const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
@@ -330,10 +332,15 @@ export default function RosterScreen() {
           <RosterEntrySheet
             entry={openEntry}
             index={openIndex}
+            isMe={normalizeName(openEntry.name) === normalizeName(myName)}
             assignableGroups={assignableGroups}
             allKnownCodes={allKnownCodes}
             employeeCodes={codeOptions[openEntry.name] ?? []}
             onChangeName={(v) => updateName(openIndex, v)}
+            onEditMyName={() => {
+              setOpenIndex(null);
+              router.push('/settings/me');
+            }}
             onToggleArchived={() => toggleArchived(openIndex)}
             onToggleRegular={() => toggleRegular(openIndex)}
             onSetCategory={(groupId) => setCategory(openIndex, groupId)}

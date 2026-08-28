@@ -15,6 +15,7 @@ describe('SettingsMenu', () => {
   it('affiche toutes les entrées du menu', async () => {
     await render(<SettingsMenu />);
 
+    expect(screen.getByText('Mon nom')).toBeTruthy();
     expect(screen.getByText('Sauvegarde')).toBeTruthy();
     expect(screen.getByText('Groupes de postes')).toBeTruthy();
     expect(screen.getByText('Salariés')).toBeTruthy();
@@ -30,5 +31,9 @@ describe('SettingsMenu', () => {
     await fireEvent.press(screen.getByText('Sauvegarde'));
 
     expect(mockPush).toHaveBeenCalledWith('/settings/backup');
+
+    await fireEvent.press(screen.getByText('Mon nom'));
+
+    expect(mockPush).toHaveBeenCalledWith('/settings/me');
   });
 });

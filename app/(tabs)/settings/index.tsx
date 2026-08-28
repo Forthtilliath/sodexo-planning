@@ -15,6 +15,13 @@ export default function SettingsMenuScreen() {
             title: 'Préférences',
             items: [
               {
+                key: 'me',
+                emoji: '🙋',
+                title: 'Mon nom',
+                hint: 'Le nom de ta ligne dans les plannings\n(« Moi » par défaut)',
+                onPress: () => router.push('/settings/me'),
+              },
+              {
                 key: 'notifications',
                 emoji: '🔔',
                 title: 'Notifications',

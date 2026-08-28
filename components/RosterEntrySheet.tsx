@@ -10,10 +10,14 @@ import type { RosterEntry, TeamGroup } from '@/types';
 type Props = {
   entry: RosterEntry;
   index: number;
+  // Fiche de "ma" ligne : nom non éditable ici (ça se renomme dans Réglages ›
+  // Mon nom) et pas de suppression.
+  isMe?: boolean;
   assignableGroups: TeamGroup[];
   allKnownCodes: string[];
   employeeCodes: string[];
   onChangeName: (value: string) => void;
+  onEditMyName?: () => void;
   onToggleArchived: () => void;
   onToggleRegular: () => void;
   onSetCategory: (groupId: string | undefined) => void;
@@ -25,10 +29,12 @@ type Props = {
 export default function RosterEntrySheet({
   entry,
   index,
+  isMe = false,
   assignableGroups,
   allKnownCodes,
   employeeCodes,
   onChangeName,
+  onEditMyName,
   onToggleArchived,
   onToggleRegular,
   onSetCategory,
@@ -40,13 +46,20 @@ export default function RosterEntrySheet({
 
   return (
     <View style={styles.content}>
-      <TextInput
-        style={styles.nameInput}
-        value={entry.name}
-        onChangeText={onChangeName}
-        placeholder={`Salarié ${index + 1}`}
-        placeholderTextColor={colors.border}
-      />
+      {isMe ? (
+        <Pressable style={styles.meNameRow} onPress={onEditMyName}>
+          <Text style={styles.meName}>{entry.name || 'Moi'}</Text>
+          <Text style={styles.meNameHint}>C'est toi · touche pour te renommer dans Réglages › Mon nom</Text>
+        </Pressable>
+      ) : (
+        <TextInput
+          style={styles.nameInput}
+          value={entry.name}
+          onChangeText={onChangeName}
+          placeholder={`Salarié ${index + 1}`}
+          placeholderTextColor={colors.border}
+        />
+      )}
 
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>Archivé</Text>
@@ -106,13 +119,15 @@ export default function RosterEntrySheet({
         <Text style={styles.switchHint}>Ajoute d'abord des groupes de postes pour voir les codes ici.</Text>
       )}
 
-      <Pressable
-        style={styles.deleteButton}
-        onPress={onDelete}
-        accessibilityRole="button"
-        accessibilityLabel={`Supprimer ${entry.name || 'ce salarié'}`}>
-        <Text style={styles.deleteButtonText}>🗑️ Supprimer ce salarié</Text>
-      </Pressable>
+      {!isMe && (
+        <Pressable
+          style={styles.deleteButton}
+          onPress={onDelete}
+          accessibilityRole="button"
+          accessibilityLabel={`Supprimer ${entry.name || 'ce salarié'}`}>
+          <Text style={styles.deleteButtonText}>🗑️ Supprimer ce salarié</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -130,6 +145,24 @@ function createStyles(colors: ThemeColors) {
       marginBottom: 16,
       fontSize: 16,
       fontWeight: '600',
+      color: colors.text,
+    },
+    meNameRow: {
+      borderWidth: 1,
+      borderColor: colors.tint,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 16,
+    },
+    meName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.tint,
+    },
+    meNameHint: {
+      fontSize: 12,
+      opacity: 0.7,
+      marginTop: 4,
       color: colors.text,
     },
     switchRow: {
