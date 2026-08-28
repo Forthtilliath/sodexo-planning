@@ -4,11 +4,15 @@ import {
   deleteScan,
   exportAllData,
   getCodeSchedules,
+  getEmployeeCodeOptions,
   getEmployeeRoster,
+  getMyName,
   getScans,
   getSettings,
   getTeamGroups,
   importAllData,
+  renameMe,
+  saveEmployeeCodeOptions,
   saveEmployeeRoster,
   saveScan,
   saveSettings,
@@ -193,6 +197,53 @@ describe('getEmployeeRoster', () => {
       { name: 'Alice', active: true },
       { name: 'Moi', active: true, regular: false },
     ]);
+  });
+});
+
+describe('getMyName / renameMe', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it('renvoie "Moi" par défaut, puis le nom enregistré', async () => {
+    expect(await getMyName()).toBe('Moi');
+    await saveSettings({ myName: 'Julien' });
+    expect(await getMyName()).toBe('Julien');
+  });
+
+  it('renomme "ma" ligne dans le réglage, le roster, les plannings et les codes habituels', async () => {
+    await saveEmployeeRoster([
+      { name: 'Moi', active: true, groupId: 'chaine' },
+      { name: 'Alice', active: true },
+    ]);
+    await saveEmployeeCodeOptions({ Moi: ['C6'], Alice: ['C7'] });
+    await saveScan({ ...scan, employees: ['Alice', 'Moi'], grid: [['C7', ''], ['C6', 'C6']] });
+
+    await renameMe('Julien');
+
+    expect(await getMyName()).toBe('Julien');
+    expect(await getEmployeeRoster()).toEqual([
+      { name: 'Julien', active: true, groupId: 'chaine' },
+      { name: 'Alice', active: true },
+    ]);
+    expect(await getEmployeeCodeOptions()).toEqual({ Julien: ['C6'], Alice: ['C7'] });
+    expect((await getScans())[0].employees).toEqual(['Alice', 'Julien']);
+  });
+
+  it('refuse un nom vide', async () => {
+    await expect(renameMe('   ')).rejects.toThrow();
+  });
+
+  it('refuse un nom déjà porté par un autre salarié', async () => {
+    await saveEmployeeRoster([{ name: 'Moi', active: true }, { name: 'Alice', active: true }]);
+    await expect(renameMe('alice')).rejects.toThrow();
+    expect(await getMyName()).toBe('Moi');
+  });
+
+  it('ne fait rien si le nom est inchangé (à la casse près)', async () => {
+    await saveSettings({ myName: 'Julien' });
+    await renameMe('  julien ');
+    expect(await getMyName()).toBe('Julien');
   });
 });
 

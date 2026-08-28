@@ -8,6 +8,7 @@ export default function SettingsLayout() {
   return (
     <Stack screenOptions={headerOptions}>
       <Stack.Screen name="index" options={{ title: 'Réglages' }} />
+      <Stack.Screen name="me" options={{ title: 'Mon nom' }} />
       <Stack.Screen name="backup" options={{ title: 'Sauvegarde' }} />
       <Stack.Screen name="groups" options={{ title: 'Groupes de postes' }} />
       <Stack.Screen name="roster" options={{ title: 'Salariés' }} />
