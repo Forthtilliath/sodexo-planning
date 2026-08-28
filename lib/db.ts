@@ -261,16 +261,39 @@ export async function deleteScan(id: string): Promise<void> {
 export type BackupData = {
 	version: 1;
 	exportedAt: number;
-	settings: Settings;
-	teamGroups: TeamGroup[];
-	roster: RosterEntry[];
-	codeOptions: Record<string, string[]>;
-	codeSchedules?: CodeSchedule[]; // absent sur les sauvegardes créées avant cet ajout
-	scans: ScanRecord[];
+	// Chaque bloc est optionnel : une sauvegarde peut ne contenir qu'une partie
+	// des catégories (voir BackupSelection). Les anciennes sauvegardes les ont
+	// toutes, sauf codeSchedules ajouté plus tard.
+	settings?: Settings;
+	teamGroups?: TeamGroup[];
+	roster?: RosterEntry[];
+	codeOptions?: Record<string, string[]>;
+	codeSchedules?: CodeSchedule[];
+	scans?: ScanRecord[];
 };
 
-/** Regroupe toutes les données de l'app pour l'export/partage (survivre à une réinstallation ou un changement de version). */
-export async function exportAllData(): Promise<BackupData> {
+/**
+ * Catégories qu'on peut inclure/exclure d'une sauvegarde ou d'une restauration
+ * (écran Réglages › Sauvegarde). Les horaires des postes (codeSchedules) et les
+ * codes habituels par salarié (codeOptions) suivent respectivement `groups` et
+ * `employees`.
+ */
+export type BackupSelection = {
+	settings: boolean;
+	employees: boolean;
+	groups: boolean;
+	plannings: boolean;
+};
+
+export const FULL_BACKUP_SELECTION: BackupSelection = {
+	settings: true,
+	employees: true,
+	groups: true,
+	plannings: true,
+};
+
+/** Regroupe les données de l'app pour l'export/partage, en ne gardant que les catégories cochées. */
+export async function exportAllData(selection: BackupSelection = FULL_BACKUP_SELECTION): Promise<BackupData> {
 	const [settings, teamGroups, roster, codeOptions, codeSchedules, scans] = await Promise.all([
 		getSettings(),
 		getTeamGroups(),
@@ -279,17 +302,46 @@ export async function exportAllData(): Promise<BackupData> {
 		getCodeSchedules(),
 		getScans(),
 	]);
-	return { version: 1, exportedAt: Date.now(), settings, teamGroups, roster, codeOptions, codeSchedules, scans };
+	const data: BackupData = { version: 1, exportedAt: Date.now() };
+	if (selection.settings) data.settings = settings;
+	if (selection.employees) {
+		data.roster = roster;
+		data.codeOptions = codeOptions;
+	}
+	if (selection.groups) {
+		data.teamGroups = teamGroups;
+		data.codeSchedules = codeSchedules;
+	}
+	if (selection.plannings) data.scans = scans;
+	return data;
 }
 
-/** Écrase toutes les données locales avec celles d'une sauvegarde importée. */
-export async function importAllData(data: BackupData): Promise<void> {
-	await Promise.all([
-		saveSettings(data.settings),
-		saveTeamGroups(data.teamGroups),
-		saveEmployeeRoster(data.roster),
-		saveEmployeeCodeOptions(data.codeOptions),
-		...(data.codeSchedules ? [saveCodeSchedules(data.codeSchedules)] : []),
-		writeJson(KEYS.scans, data.scans),
-	]);
+/** Catégories réellement restaurées : cochées dans `selection` ET présentes dans le fichier. */
+export function resolveImportedCategories(data: BackupData, selection: BackupSelection): (keyof BackupSelection)[] {
+	const restored: (keyof BackupSelection)[] = [];
+	if (selection.settings && data.settings) restored.push('settings');
+	if (selection.employees && (data.roster || data.codeOptions)) restored.push('employees');
+	if (selection.groups && (data.teamGroups || data.codeSchedules)) restored.push('groups');
+	if (selection.plannings && data.scans) restored.push('plannings');
+	return restored;
+}
+
+/**
+ * Écrase les données locales avec celles d'une sauvegarde importée, catégorie
+ * par catégorie : seules celles cochées dans `selection` et présentes dans le
+ * fichier sont remplacées ; les autres ne bougent pas.
+ */
+export async function importAllData(data: BackupData, selection: BackupSelection = FULL_BACKUP_SELECTION): Promise<void> {
+	const tasks: Promise<void>[] = [];
+	if (selection.settings && data.settings) tasks.push(saveSettings(data.settings));
+	if (selection.employees) {
+		if (data.roster) tasks.push(saveEmployeeRoster(data.roster));
+		if (data.codeOptions) tasks.push(saveEmployeeCodeOptions(data.codeOptions));
+	}
+	if (selection.groups) {
+		if (data.teamGroups) tasks.push(saveTeamGroups(data.teamGroups));
+		if (data.codeSchedules) tasks.push(saveCodeSchedules(data.codeSchedules));
+	}
+	if (selection.plannings && data.scans) tasks.push(writeJson(KEYS.scans, data.scans));
+	await Promise.all(tasks);
 }

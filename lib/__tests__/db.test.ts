@@ -14,6 +14,7 @@ import {
   renameMe,
   saveEmployeeCodeOptions,
   saveEmployeeRoster,
+  resolveImportedCategories,
   saveScan,
   saveSettings,
   saveTeamGroups,
@@ -286,5 +287,54 @@ describe('exportAllData / importAllData', () => {
     // Les horaires par défaut restent disponibles, rien n'est écrasé par du vide.
     const schedules = await getCodeSchedules();
     expect(schedules.length).toBeGreaterThan(0);
+  });
+
+  it("n'exporte que les catégories cochées", async () => {
+    await saveSettings({ reminderHour: 21 });
+    await saveEmployeeRoster([{ name: 'Alice', active: true }]);
+    await saveScan(scan);
+
+    const backup = await exportAllData({
+      settings: false,
+      employees: true,
+      groups: false,
+      plannings: false,
+    });
+
+    expect(backup.roster).toBeDefined();
+    expect(backup.codeOptions).toBeDefined();
+    expect(backup.settings).toBeUndefined();
+    expect(backup.teamGroups).toBeUndefined();
+    expect(backup.codeSchedules).toBeUndefined();
+    expect(backup.scans).toBeUndefined();
+  });
+
+  it('ne restaure que les catégories cochées et présentes dans le fichier', async () => {
+    await saveSettings({ reminderHour: 21 });
+    await saveEmployeeRoster([{ name: 'Alice', active: true }]);
+    await saveScan(scan);
+    const backup = await exportAllData();
+
+    await AsyncStorage.clear();
+    await saveSettings({ reminderHour: 8 });
+
+    await importAllData(backup, { settings: false, employees: true, groups: false, plannings: false });
+
+    // Salariés restaurés, réglages laissés intacts.
+    expect(await getEmployeeRoster()).toEqual([
+      { name: 'Moi', active: true },
+      { name: 'Alice', active: true },
+    ]);
+    expect(await getSettings()).toEqual({ reminderHour: 8 });
+    expect(await getScans()).toEqual([]);
+  });
+
+  it('resolveImportedCategories croise sélection et contenu du fichier', async () => {
+    await saveEmployeeRoster([{ name: 'Alice', active: true }]);
+    const backup = await exportAllData({ settings: false, employees: true, groups: false, plannings: false });
+
+    expect(
+      resolveImportedCategories(backup, { settings: true, employees: true, groups: true, plannings: true })
+    ).toEqual(['employees']);
   });
 });
