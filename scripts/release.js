@@ -82,19 +82,22 @@ if (bumpType) {
   const entries = loadChangelog();
   const notes = entries.find((e) => e.version === version)?.changes.map((c) => `- ${c}`).join('\n') ?? '';
 
+  // Nom d'asset lisible sur la Release (l'updater prend le 1er *.apk).
+  const releaseApkPath = path.join(path.dirname(apkPath), `sodexo-planning-${tag}.apk`);
+  const notesPath = path.join(root, '.release-notes.tmp.md');
+  fs.copyFileSync(apkPath, releaseApkPath);
+  fs.writeFileSync(notesPath, notes);
+
   try {
     run('git push origin main');
-    const notesPath = path.join(root, '.release-notes.tmp.md');
-    fs.writeFileSync(notesPath, notes);
-    try {
-      run(`gh release create ${tag} "${apkPath}" --title "${tag}" --notes-file "${notesPath}"`);
-      console.log(`\n✅ Release ${tag} publiée sur GitHub.`);
-    } finally {
-      fs.unlinkSync(notesPath);
-    }
+    run(`gh release create ${tag} "${releaseApkPath}" --title "${tag}" --notes-file "${notesPath}"`);
+    console.log(`\n✅ Release ${tag} publiée sur GitHub.`);
   } catch {
     console.warn(
       `\n⚠️  Publication GitHub impossible (push ou "gh release create" a échoué). L'app reste installée en local, mais le bandeau de mise à jour ne verra pas ${tag}.`
     );
+  } finally {
+    fs.rmSync(notesPath, { force: true });
+    fs.rmSync(releaseApkPath, { force: true });
   }
 }
