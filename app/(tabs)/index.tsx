@@ -153,7 +153,6 @@ export default function PlanningEditorScreen() {
     }
     navigation.setOptions({
       title,
-      headerTitleAlign: 'center',
       headerLeft:
         step === 'review'
           ? () => (
