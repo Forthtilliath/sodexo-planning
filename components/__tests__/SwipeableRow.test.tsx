@@ -37,4 +37,21 @@ describe('SwipeableRow', () => {
 
     expect(screen.getByLabelText('Retirer')).toBeTruthy();
   });
+
+  it("ne supprime pas quand le geste est interrompu (la ligne se referme)", async () => {
+    const onDelete = jest.fn();
+    await render(
+      <SwipeableRow onDelete={onDelete}>
+        <Text>Juillet 2026</Text>
+      </SwipeableRow>
+    );
+
+    const row = screen.getByText('Juillet 2026').parent!;
+    // onLayout fixe la largeur de la carte, lue pendant le geste.
+    fireEvent(row, 'layout', { nativeEvent: { layout: { width: 320, height: 60 } } });
+    // Geste avorté (scroll parent, doigt sorti de l'écran...) -> retour à zéro, pas de suppression.
+    fireEvent(row, 'responderTerminate', { nativeEvent: { touches: [] } });
+
+    await waitFor(() => expect(onDelete).not.toHaveBeenCalled());
+  });
 });

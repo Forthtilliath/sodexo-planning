@@ -70,7 +70,7 @@ describe('BackupScreen', () => {
   });
 
   it("demande confirmation avant d'importer, puis restaure si confirmé", async () => {
-    pickAndImportBackupMock.mockResolvedValue(true);
+    pickAndImportBackupMock.mockResolvedValue({ restored: ['les salariés'] });
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
       const confirmButton = buttons?.find((b) => b.text === 'Choisir un fichier');
       confirmButton?.onPress?.();
@@ -81,6 +81,17 @@ describe('BackupScreen', () => {
 
     expect(pickAndImportBackupMock).toHaveBeenCalledTimes(1);
     alertSpy.mockRestore();
+  });
+
+  it('exporte seulement les catégories encore cochées', async () => {
+    await render(<BackupScreen />);
+
+    await fireEvent(await screen.findByLabelText('Les plannings'), 'valueChange', false);
+    await fireEvent.press(screen.getByText('⬆️ Exporter'));
+
+    expect(shareBackupMock).toHaveBeenCalledWith(
+      expect.objectContaining({ settings: true, employees: true, groups: true, plannings: false })
+    );
   });
 
   it('active le rappel de sauvegarde quand la permission est accordée', async () => {
