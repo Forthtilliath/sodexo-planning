@@ -12,6 +12,7 @@ import type { ThemeColors } from '@/constants/Colors';
 import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
+import { randomId } from '@/lib/id';
 import { isRegular, normalizeName } from '@/lib/teams';
 import type { RosterEntry, TeamGroup } from '@/types';
 
@@ -30,6 +31,17 @@ type CategoryDef = { groupId: string | undefined; label: string; color?: string 
 type RosterListItem =
   | { type: 'header'; key: string; def: CategoryDef; count: number }
   | { type: 'entry'; key: string; index: number };
+
+// Chaque salarié doit porter un `id` stable avant d'entrer dans la liste
+// glissable : c'est la clé de DraggableFlatList. Une clé dérivée de l'index (ou
+// du nom, souvent vide/dupliqué) change de cible à chaque réordonnancement, et
+// la lib réapplique alors ses décalages animés sur les mauvaises lignes —
+// d'où les emplacements vides et les superpositions. On renseigne l'id à la
+// volée pour les listes enregistrées avant son ajout ; le prochain save le
+// persiste.
+function ensureIds(entries: RosterEntry[]): RosterEntry[] {
+  return entries.map((e) => (e.id ? e : { ...e, id: randomId() }));
+}
 
 export default function RosterScreen() {
   const colors = useThemeColors();
@@ -51,7 +63,7 @@ export default function RosterScreen() {
       getEmployeeCodeOptions(),
     ]);
     setGroups(teamGroups);
-    setRoster(employeeRoster);
+    setRoster(ensureIds(employeeRoster));
     setCodeOptions(options);
     setLoaded(true);
   }, []);
@@ -73,7 +85,7 @@ export default function RosterScreen() {
   }, [codeOptions, loaded]);
 
   function addName() {
-    setRoster((prev) => [...prev, { name: '', active: true }]);
+    setRoster((prev) => [...prev, { id: randomId(), name: '', active: true }]);
   }
 
   function removeName(index: number, name: string) {
@@ -107,24 +119,6 @@ export default function RosterScreen() {
     setRoster((prev) => prev.map((e, i) => (i === index ? { ...e, groupId } : e)));
   }
 
-  // En tri Manuel, les catégories (groupes de postes) sont les en-têtes de la
-  // liste glissable : on reconstitue l'ordre + la catégorie de chaque salarié
-  // actif depuis la position finale de son en-tête, puis on recolle les
-  // salariés archivés (jamais dans cette liste) tels quels.
-  function applyManualDragEnd(data: RosterListItem[]) {
-    let currentGroupId: string | undefined;
-    const newActive: RosterEntry[] = [];
-    for (const item of data) {
-      if (item.type === 'header') {
-        currentGroupId = item.def.groupId;
-      } else {
-        newActive.push({ ...roster[item.index], groupId: currentGroupId });
-      }
-    }
-    const archived = roster.filter((e) => !e.active);
-    setRoster([...newActive, ...archived]);
-  }
-
   // Les codes proposés à cocher viennent des groupes de postes déjà définis :
   // pas besoin de les retaper, et ça reste cohérent avec le reste. On garde
   // aussi les codes des variantes week-end (F1-F5...) : seule la catégorie
@@ -133,7 +127,7 @@ export default function RosterScreen() {
   // Catégories affectables à un salarié : une variante week-end (même poste,
   // code différent) n'est pas une "catégorie" à part entière — un salarié
   // reste rattaché à sa catégorie habituelle.
-  const assignableGroups = groups.filter((g) => !g.weekendVariant);
+  const assignableGroups = useMemo(() => groups.filter((g) => !g.weekendVariant), [groups]);
 
   function toggleCodeForEmployee(name: string, code: string) {
     setCodeOptions((prev) => {
@@ -146,12 +140,108 @@ export default function RosterScreen() {
     });
   }
 
-  function sortEntries(entries: IndexedEntry[]): IndexedEntry[] {
-    if (sortMode === 'alpha') {
-      return [...entries].sort((a, b) => a[0].name.localeCompare(b[0].name, 'fr', { sensitivity: 'base' }));
+  const searching = search.trim().length > 0;
+  const matchesSearch = (name: string) => !searching || normalizeName(name).includes(normalizeName(search));
+
+  // Le glissé ne recatégorise/réordonne qu'en tri Manuel hors recherche ; dans
+  // les autres modes, aucune poignée n'est rendue donc aucun glissé ne peut
+  // être initié — cette garde n'est qu'un filet de sécurité sur onDragEnd.
+  const draggingEnabled = sortMode === 'manual' && !searching;
+
+  // Liste à plat pour le DraggableFlatList (en-têtes de catégorie + salariés
+  // actifs). Mémoïsée pour que la lib ne reçoive pas une nouvelle référence de
+  // `data` — et ne rejoue pas ses animations de position — sur un rendu qui ne
+  // touche pas à la liste (thème, sauvegarde, retour d'écran...).
+  const listItems = useMemo<RosterListItem[]>(() => {
+    const active = roster
+      .map((e, i) => [e, i] as IndexedEntry)
+      .filter(([e]) => e.active && matchesSearch(e.name));
+    const sorted = (entries: IndexedEntry[]) =>
+      sortMode === 'alpha'
+        ? [...entries].sort((a, b) => a[0].name.localeCompare(b[0].name, 'fr', { sensitivity: 'base' }))
+        : entries;
+
+    // Recherche : un seul groupe plat, sans en-tête, toutes catégories confondues.
+    if (searching) {
+      return sorted(active).map(([entry, index]) => ({ type: 'entry', key: `e-${entry.id ?? index}`, index }) as const);
     }
-    return entries;
-  }
+
+    // Toutes les catégories, "Sans catégorie" en dernier. En tri Manuel elles
+    // restent listées même vides (cibles de dépôt valides).
+    const defs: CategoryDef[] = [
+      ...assignableGroups.map((g) => ({ groupId: g.id, label: g.label || 'Groupe sans nom', color: g.color })),
+      { groupId: undefined, label: 'Sans catégorie' },
+    ];
+    const items: RosterListItem[] = [];
+    for (const def of defs) {
+      const entries = sorted(
+        active.filter(([e]) =>
+          def.groupId ? e.groupId === def.groupId : !assignableGroups.some((g) => g.id === e.groupId)
+        )
+      );
+      if (sortMode !== 'manual' && entries.length === 0) continue;
+      items.push({ type: 'header', key: `h-${def.groupId ?? 'none'}`, def, count: entries.length });
+      for (const [entry, index] of entries) {
+        items.push({ type: 'entry', key: `e-${entry.id ?? index}`, index });
+      }
+    }
+    return items;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `matchesSearch` dépend de `search`/`searching`, déjà listés
+  }, [roster, assignableGroups, sortMode, search, searching]);
+
+  const archivedIndexed = useMemo(
+    () => roster.map((e, i) => [e, i] as IndexedEntry).filter(([e]) => !e.active && matchesSearch(e.name)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roster, search, searching]
+  );
+  const archivedVisible = showArchived || searching;
+
+  const keyExtractor = useCallback((item: RosterListItem) => item.key, []);
+
+  // Reconstitue l'ordre + la catégorie de chaque salarié actif depuis la
+  // position finale de son en-tête, puis recolle les archivés (jamais dans la
+  // liste glissable) tels quels.
+  const handleDragEnd = useCallback(
+    ({ data }: { data: RosterListItem[] }) => {
+      if (sortMode !== 'manual' || searching) return;
+      let currentGroupId: string | undefined;
+      const newActive: RosterEntry[] = [];
+      for (const item of data) {
+        if (item.type === 'header') currentGroupId = item.def.groupId;
+        else newActive.push({ ...roster[item.index], groupId: currentGroupId });
+      }
+      setRoster([...newActive, ...roster.filter((e) => !e.active)]);
+    },
+    [roster, sortMode, searching]
+  );
+
+  const renderListItem = useCallback(
+    ({ item, drag, isActive }: RenderItemParams<RosterListItem>) => {
+      if (item.type === 'header') {
+        return (
+          <CategoryHeader
+            label={item.def.label}
+            color={item.def.color}
+            hint={item.count === 0 ? 'glisse un salarié ici' : undefined}
+          />
+        );
+      }
+      const entry = roster[item.index];
+      const category = groups.find((g) => g.id === entry.groupId);
+      return (
+        <RosterCard
+          entry={entry}
+          index={item.index}
+          categoryColor={category?.color}
+          codesCount={(codeOptions[entry.name] ?? []).length}
+          dragHandle={draggingEnabled ? drag : undefined}
+          isDragging={isActive}
+          onPress={() => setOpenIndex(item.index)}
+        />
+      );
+    },
+    [roster, groups, codeOptions, draggingEnabled]
+  );
 
   if (!loaded) {
     return (
@@ -164,77 +254,20 @@ export default function RosterScreen() {
 
   const openEntry = openIndex !== null ? roster[openIndex] : null;
 
-  function renderRow(entry: RosterEntry, index: number, dragHandle?: () => void, isDragging?: boolean) {
+  // Lignes de la section "archivés" (footer) : jamais glissables, pas besoin de
+  // les mémoïser — le footer se re-rend rarement et hors du geste.
+  function renderArchivedRow(entry: RosterEntry, index: number) {
     const category = groups.find((g) => g.id === entry.groupId);
     return (
       <RosterCard
-        key={index}
+        key={entry.id ?? index}
         entry={entry}
         index={index}
         categoryColor={category?.color}
         codesCount={(codeOptions[entry.name] ?? []).length}
-        dragHandle={dragHandle}
-        isDragging={isDragging}
         onPress={() => setOpenIndex(index)}
       />
     );
-  }
-
-  // Toutes les catégories, "Sans catégorie" en dernier. En tri Manuel elles
-  // restent listées même vides (cibles de dépôt valides) ; dans les autres
-  // tris, seules celles qui contiennent au moins un salarié sont affichées.
-  function categoryDefs(): CategoryDef[] {
-    return [
-      ...assignableGroups.map((g) => ({ groupId: g.id, label: g.label || 'Groupe sans nom', color: g.color })),
-      { groupId: undefined, label: 'Sans catégorie' },
-    ];
-  }
-
-  const searching = search.trim().length > 0;
-  const matchesSearch = ([entry]: IndexedEntry) => !searching || normalizeName(entry.name).includes(normalizeName(search));
-
-  const activeIndexed = roster.map((e, i) => [e, i] as const).filter(([e]) => e.active).filter(matchesSearch);
-  const archivedIndexed = roster.map((e, i) => [e, i] as const).filter(([e]) => !e.active).filter(matchesSearch);
-  const archivedVisible = showArchived || searching;
-
-  function buildListItems(): RosterListItem[] {
-    // La recherche traverse toutes les catégories : un seul groupe plat, sans en-tête.
-    if (searching) {
-      return sortEntries(activeIndexed).map(([, index]) => ({ type: 'entry', key: `e-${index}`, index }) as const);
-    }
-    const items: RosterListItem[] = [];
-    for (const def of categoryDefs()) {
-      const entries = sortEntries(
-        activeIndexed.filter(([e]) =>
-          def.groupId ? e.groupId === def.groupId : !assignableGroups.some((g) => g.id === e.groupId)
-        )
-      );
-      if (sortMode !== 'manual' && entries.length === 0) continue;
-      items.push({ type: 'header', key: `h-${def.groupId ?? 'none'}`, def, count: entries.length });
-      for (const [, index] of entries) {
-        items.push({ type: 'entry', key: `e-${index}`, index });
-      }
-    }
-    return items;
-  }
-
-  const listItems = buildListItems();
-  // Le glissé ne recatégorise/réordonne qu'en tri Manuel hors recherche ; dans
-  // les autres modes, aucune poignée n'est rendue donc aucun glissé ne peut
-  // être initié — cette garde n'est qu'un filet de sécurité sur onDragEnd.
-  const draggingEnabled = sortMode === 'manual' && !searching;
-
-  function renderListItem({ item, drag, isActive }: RenderItemParams<RosterListItem>) {
-    if (item.type === 'header') {
-      return (
-        <CategoryHeader
-          label={item.def.label}
-          color={item.def.color}
-          hint={item.count === 0 ? 'glisse un salarié ici' : undefined}
-        />
-      );
-    }
-    return renderRow(roster[item.index], item.index, draggingEnabled ? drag : undefined, isActive);
   }
 
   return (
@@ -248,9 +281,9 @@ export default function RosterScreen() {
         containerStyle={styles.flatList}
         contentContainerStyle={styles.content}
         data={listItems}
-        keyExtractor={(item) => item.key}
+        keyExtractor={keyExtractor}
         renderItem={renderListItem}
-        onDragEnd={({ data }) => draggingEnabled && applyManualDragEnd(data)}
+        onDragEnd={handleDragEnd}
         activationDistance={0}
         initialNumToRender={listItems.length}
         ListHeaderComponent={
@@ -318,7 +351,7 @@ export default function RosterScreen() {
                     </Text>
                   </Pressable>
                 )}
-                {archivedVisible && archivedIndexed.map(([entry, index]) => renderRow(entry, index))}
+                {archivedVisible && archivedIndexed.map(([entry, index]) => renderArchivedRow(entry, index))}
               </>
             )}
 
