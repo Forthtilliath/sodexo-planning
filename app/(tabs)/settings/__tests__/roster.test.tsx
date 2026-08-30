@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 jest.mock('expo-router', () => {
@@ -17,21 +17,37 @@ jest.mock('expo-router', () => {
 // pas sous Jest, et le geste de drag lui-même n'est de toute façon pas
 // simulable via fireEvent — on remplace par un simple map, en exposant
 // "drag" pour pouvoir déclencher un réordonnancement depuis un test.
+// `lastDragEnd` capture le `onDragEnd` du dernier rendu : un test peut ainsi
+// rejouer un réordonnancement en lui passant la liste réordonnée à la main.
+const dnd: { lastDragEnd?: (params: { data: unknown[] }) => void; lastData?: any[] } = {};
+
 jest.mock('react-native-draggable-flatlist', () => {
   const { View } = require('react-native');
-  const FakeList = ({ data, renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ListFooterComponent }: any) => (
-    <View>
-      {ListHeaderComponent}
-      {data.length === 0
-        ? ListEmptyComponent
-        : data.map((item: any, index: number) => (
-            <View key={keyExtractor(item)}>
-              {renderItem({ item, index, drag: () => {}, isActive: false, getIndex: () => index })}
-            </View>
-          ))}
-      {ListFooterComponent}
-    </View>
-  );
+  const FakeList = ({
+    data,
+    renderItem,
+    keyExtractor,
+    onDragEnd,
+    ListHeaderComponent,
+    ListEmptyComponent,
+    ListFooterComponent,
+  }: any) => {
+    dnd.lastDragEnd = onDragEnd;
+    dnd.lastData = data;
+    return (
+      <View>
+        {ListHeaderComponent}
+        {data.length === 0
+          ? ListEmptyComponent
+          : data.map((item: any, index: number) => (
+              <View key={keyExtractor(item)}>
+                {renderItem({ item, index, drag: () => {}, isActive: false, getIndex: () => index })}
+              </View>
+            ))}
+        {ListFooterComponent}
+      </View>
+    );
+  };
   return {
     __esModule: true,
     default: FakeList,
@@ -89,6 +105,38 @@ describe('RosterScreen — recherche et tri', () => {
     const [alice, bob, zoe] = orderOf('Alice', 'Bob', 'Zoé');
     expect(alice).toBeLessThan(bob);
     expect(bob).toBeLessThan(zoe);
+  });
+
+  it('réordonne en gardant une clé stable par salarié (pas d\'index) après un glissé', async () => {
+    await render(<RosterScreen />);
+    await screen.findByText('Zoé');
+
+    const data = dnd.lastData ?? [];
+    const header = data.find((i: any) => i.type === 'header');
+    const entries = data.filter((i: any) => i.type === 'entry');
+    const keysBefore = entries.map((i: any) => i.key);
+
+    // On dépose la dernière entrée (Bob) juste sous l'en-tête.
+    const last = entries[entries.length - 1];
+    await act(async () => {
+      dnd.lastDragEnd?.({ data: [header, last, ...entries.slice(0, -1)] });
+    });
+
+    await waitFor(() => {
+      const [bob, zoe, alice] = orderOf('Bob', 'Zoé', 'Alice');
+      expect(bob).toBeLessThan(zoe);
+      expect(zoe).toBeLessThan(alice);
+    });
+
+    const savedNames = (await getEmployeeRoster()).map((e) => e.name);
+    expect(savedNames[0]).toBe('Bob');
+    expect(savedNames.indexOf('Zoé')).toBeLessThan(savedNames.indexOf('Alice'));
+
+    // Les clés ont suivi les salariés (même jeu de clés, ordre différent) :
+    // sans id stable, elles resteraient positionnelles (e-0, e-1…) et identiques.
+    const keysAfter = (dnd.lastData ?? []).filter((i: any) => i.type === 'entry').map((i: any) => i.key);
+    expect([...keysAfter].sort()).toEqual([...keysBefore].sort());
+    expect(keysAfter).not.toEqual(keysBefore);
   });
 
   it('affiche une poignée de glissé en tri Manuel par défaut, la cache avec un tri automatique', async () => {
