@@ -26,6 +26,12 @@ export type TeamGroup = {
 };
 
 export type RosterEntry = {
+  // Identité stable d'une entrée, indépendante de sa position dans la liste et
+  // de son nom (qui peut être vide ou dupliqué). Sert de clé React/DnD dans
+  // Réglages > Salariés : sans elle, réordonner via glissé décale les lignes
+  // (emplacements vides, superpositions). Renseignée à la volée au chargement
+  // pour les listes enregistrées avant son ajout — voir roster.tsx (ensureIds).
+  id?: string;
   name: string;
   // "Archivé" dans l'UI (le champ garde son nom historique) : un salarié
   // inactif n'apparaît plus dans la liste ni comme proposition par défaut
