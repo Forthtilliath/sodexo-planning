@@ -86,18 +86,18 @@ describe('PlanningScreen', () => {
     await render(<PlanningScreen />);
 
     expect((await screen.findAllByText('Juillet 2026')).length).toBeGreaterThan(0);
-    expect(screen.getByText('📋 Liste')).toBeTruthy();
+    await fireEvent.press(await screen.findByText('📋 Liste'));
     // Les postes de "Moi" (ligne 0) : D1 les 1er et 3.
     expect(screen.getAllByText('D1').length).toBeGreaterThan(0);
     // Jour férié marqué.
     expect(screen.getByText('Férié')).toBeTruthy();
   });
 
-  it('bascule en vue calendrier', async () => {
+  it('affiche la vue calendrier par défaut', async () => {
     await saveScan(makeScan());
     await render(<PlanningScreen />);
 
-    await fireEvent.press(await screen.findByText('📅 Calendrier'));
+    expect(await screen.findByText('📅 Calendrier')).toBeTruthy();
 
     // La grille calendrier affiche les quantièmes.
     expect(screen.getByText('1')).toBeTruthy();

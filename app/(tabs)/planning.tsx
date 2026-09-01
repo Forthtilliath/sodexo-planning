@@ -31,9 +31,7 @@ export default function PlanningScreen() {
   const colors = useThemeColors();
   const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  // Données lues en direct : toute modif faite ailleurs (saisie d'un planning,
-  // ajout d'un salarié, édition d'un groupe...) se répercute ici sans avoir à
-  // quitter puis revenir sur l'onglet.
+  // Données lues en direct : toute modif faite ailleurs se répercute ici.
   const scans = useDbData(getScans, EMPTY_SCANS);
   const groups = useDbData(getTeamGroups, EMPTY_GROUPS);
   const schedules = useDbData(getCodeSchedules, EMPTY_SCHEDULES);
@@ -44,7 +42,7 @@ export default function PlanningScreen() {
   const [colleaguePickerOpen, setColleaguePickerOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showHours, setShowHours] = useState(false);
   const captureAreaRef = useRef<View>(null);
 
@@ -61,8 +59,7 @@ export default function PlanningScreen() {
     });
   }, [scans]);
 
-  // Au retour sur l'onglet, on repart sur "ma" ligne plutôt que sur le choix
-  // manuel fait la fois précédente.
+  // Au retour sur l'onglet, on repart sur "ma" ligne, pas sur le choix manuel précédent.
   useFocusEffect(
     useCallback(() => {
       setManualRowIndex(null);
@@ -71,9 +68,8 @@ export default function PlanningScreen() {
 
   const selectedScan = useMemo(() => scans.find((s) => s.id === selectedScanId) ?? null, [scans, selectedScanId]);
 
-  // Tri chronologique (du plus ancien au plus récent) pour le sélecteur de
-  // plannings — l'ordre de stockage (par date de scan) ne correspond pas
-  // forcément à l'ordre des mois.
+  // Tri chronologique pour le sélecteur : l'ordre de stockage (par date de
+  // scan) ne suit pas forcément l'ordre des mois.
   const sortedScans = useMemo(() => {
     return [...scans].sort((a, b) => a.year - b.year || a.month - b.month);
   }, [scans]);
@@ -84,9 +80,8 @@ export default function PlanningScreen() {
     return findMyRowIndex(selectedScan, myName);
   }, [selectedScan, manualRowIndex, myName]);
 
-  // Le nom du collègue consulté est conservé (pas son index de ligne), pour
-  // rester sur la même personne quand on change de planning plutôt que de
-  // revenir sur "moi" à chaque fois.
+  // On conserve le nom du collègue consulté (pas son index) pour rester sur la
+  // même personne quand on change de planning.
   const viewingIndex = useMemo(() => {
     if (!selectedScan || viewingName === null) return -1;
     return findMyRowIndex(selectedScan, viewingName);
@@ -95,18 +90,16 @@ export default function PlanningScreen() {
   const viewingSomeoneElse = viewingIndex >= 0 && viewingIndex !== myRowIndex;
   const displayRowIndex = viewingSomeoneElse ? viewingIndex : myRowIndex;
 
-  // Le titre natif de l'écran affiche "Planning de X" quand on consulte un
-  // collègue, plutôt qu'un second titre en double dans la page.
+  // Titre natif "Planning de X" quand on consulte un collègue.
   useEffect(() => {
     navigation.setOptions({
       title: viewingSomeoneElse ? `Planning de ${selectedScan?.employees[viewingIndex] || '—'}` : 'Mon planning',
     });
   }, [navigation, viewingSomeoneElse, selectedScan, viewingIndex]);
 
-  // Même regroupement que Réglages > Salariés / l'éditeur de saisie : les
-  // groupes de postes assignables dans l'ordre, "Sans catégorie" en dernier,
-  // catégories vides masquées. L'ordre des salariés au sein d'une catégorie
-  // suit celui de la liste `employees` (pas de tri alphabétique ici).
+  // Même regroupement qu'ailleurs : groupes assignables dans l'ordre, "Sans
+  // catégorie" en dernier, catégories vides masquées. Salariés dans l'ordre de
+  // `employees` (pas de tri alphabétique).
   const colleagueSections = useMemo(() => {
     const employees = selectedScan?.employees ?? [];
     const groupIdByName = new Map(roster.map((r) => [normalizeName(r.name), r.groupId]));
@@ -243,16 +236,16 @@ export default function PlanningScreen() {
         <>
           <View style={styles.viewModeRow}>
             <Pressable
-              style={[styles.viewModeButton, viewMode === 'list' && styles.viewModeButtonActive]}
-              onPress={() => setViewMode('list')}>
-              <Text style={[styles.viewModeText, viewMode === 'list' && styles.viewModeTextActive]}>📋 Liste</Text>
-            </Pressable>
-            <Pressable
               style={[styles.viewModeButton, viewMode === 'calendar' && styles.viewModeButtonActive]}
               onPress={() => setViewMode('calendar')}>
               <Text style={[styles.viewModeText, viewMode === 'calendar' && styles.viewModeTextActive]}>
                 📅 Calendrier
               </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.viewModeButton, viewMode === 'list' && styles.viewModeButtonActive]}
+              onPress={() => setViewMode('list')}>
+              <Text style={[styles.viewModeText, viewMode === 'list' && styles.viewModeTextActive]}>📋 Liste</Text>
             </Pressable>
           </View>
 
