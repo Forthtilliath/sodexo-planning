@@ -31,26 +31,19 @@ const EMPTY_CODE_OPTIONS: Record<string, string[]> = {};
 type SortMode = 'manual' | 'alpha';
 type IndexedEntry = readonly [RosterEntry, number];
 
-// Une "catégorie" de la liste = un groupe de postes, plus une catégorie
-// "Sans catégorie" en dernier pour ceux qui n'en ont pas.
+// Une catégorie = un groupe de postes, plus "Sans catégorie" en dernier.
 type CategoryDef = { groupId: string | undefined; label: string; color?: string };
 
-// Toute la liste (en-têtes de catégorie + salariés) tient dans un seul
-// DraggableFlatList — un seul composant scrollable pour tout l'écran, header
-// et footer inclus (recherche, tri, bouton d'ajout, archivés...) : nester un
-// second scrollable dedans (même un DraggableFlatList "Nestable") entre en
-// conflit avec le geste de scroll et bloque tout défilement.
+// Toute la liste (en-têtes + salariés) tient dans un seul DraggableFlatList :
+// nester un second scrollable bloque le défilement.
 type RosterListItem =
   | { type: 'header'; key: string; def: CategoryDef; count: number }
   | { type: 'entry'; key: string; index: number };
 
-// Chaque salarié doit porter un `id` stable avant d'entrer dans la liste
-// glissable : c'est la clé de DraggableFlatList. Une clé dérivée de l'index (ou
-// du nom, souvent vide/dupliqué) change de cible à chaque réordonnancement, et
-// la lib réapplique alors ses décalages animés sur les mauvaises lignes —
-// d'où les emplacements vides et les superpositions. On renseigne l'id à la
-// volée pour les listes enregistrées avant son ajout ; le prochain save le
-// persiste.
+// Chaque salarié doit porter un `id` stable (clé du DraggableFlatList) : une
+// clé positionnelle ou dérivée du nom fait réappliquer les décalages animés sur
+// les mauvaises lignes. Renseigné à la volée pour les listes enregistrées avant
+// son ajout ; le prochain save le persiste.
 function ensureIds(entries: RosterEntry[]): RosterEntry[] {
   return entries.map((e) => (e.id ? e : { ...e, id: randomId() }));
 }
@@ -60,10 +53,8 @@ export default function RosterScreen() {
   const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const groups = useDbData(getTeamGroups, EMPTY_GROUPS);
-  // Chaque salarié doit porter un `id` stable (clé du DraggableFlatList) : on
-  // le renseigne à la lecture pour les listes enregistrées avant son ajout, et
-  // on persiste tout de suite (opération idempotente : au 2ᵉ passage, rien à
-  // faire).
+  // Renseigne les `id` manquants à la lecture et persiste tout de suite
+  // (idempotent : au 2ᵉ passage, rien à faire).
   const loadRoster = useCallback(async () => {
     const raw = await getEmployeeRoster();
     const ensured = ensureIds(raw);
@@ -81,10 +72,9 @@ export default function RosterScreen() {
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('manual');
 
-  // Renommer un salarié doit se répercuter partout où son nom est stocké en dur
-  // (plannings enregistrés, codes habituels). On le fait à la fermeture de la
-  // fiche (pas à chaque frappe), en comparant au nom qu'elle portait à
-  // l'ouverture.
+  // Renommer un salarié se répercute partout où son nom est stocké en dur
+  // (plannings, codes habituels), à la fermeture de la fiche, en comparant au
+  // nom porté à l'ouverture.
   const renameBaselineRef = useRef<string | null>(null);
   const rosterRef = useRef(roster);
   rosterRef.current = roster;
@@ -112,8 +102,8 @@ export default function RosterScreen() {
     setOpenIndex(null);
   }, [commitPendingRename]);
 
-  // Fiche laissée ouverte en quittant l'écran : on répercute quand même le
-  // renommage en cours, et on reprend une référence au retour.
+  // Fiche laissée ouverte en quittant l'écran : on répercute le renommage en
+  // cours et on reprend une référence au retour.
   useFocusEffect(
     useCallback(() => {
       if (openIndexRef.current !== null && renameBaselineRef.current === null) {
@@ -161,14 +151,10 @@ export default function RosterScreen() {
     setRoster((prev) => prev.map((e, i) => (i === index ? { ...e, groupId } : e)));
   }
 
-  // Les codes proposés à cocher viennent des groupes de postes déjà définis :
-  // pas besoin de les retaper, et ça reste cohérent avec le reste. On garde
-  // aussi les codes des variantes week-end (F1-F5...) : seule la catégorie
-  // (pas le code) est masquée de la liste des affectations.
+  // Codes à cocher = ceux des groupes de postes, variantes week-end (F1-F5)
+  // comprises : seule la catégorie week-end est masquée, pas ses codes.
   const allKnownCodes = useMemo(() => Array.from(new Set(groups.flatMap((g) => g.codes))).sort(), [groups]);
-  // Catégories affectables à un salarié : une variante week-end (même poste,
-  // code différent) n'est pas une "catégorie" à part entière — un salarié
-  // reste rattaché à sa catégorie habituelle.
+  // Catégories affectables : les variantes week-end n'en sont pas.
   const assignableGroups = useMemo(() => groups.filter((g) => !g.weekendVariant), [groups]);
 
   function toggleCodeForEmployee(name: string, code: string) {
@@ -185,15 +171,13 @@ export default function RosterScreen() {
   const searching = search.trim().length > 0;
   const matchesSearch = (name: string) => !searching || normalizeName(name).includes(normalizeName(search));
 
-  // Le glissé ne recatégorise/réordonne qu'en tri Manuel hors recherche ; dans
-  // les autres modes, aucune poignée n'est rendue donc aucun glissé ne peut
-  // être initié — cette garde n'est qu'un filet de sécurité sur onDragEnd.
+  // Glissé actif uniquement en tri Manuel hors recherche (ailleurs, aucune
+  // poignée n'est rendue ; la garde sur onDragEnd est un filet de sécurité).
   const draggingEnabled = sortMode === 'manual' && !searching;
 
-  // Liste à plat pour le DraggableFlatList (en-têtes de catégorie + salariés
-  // actifs). Mémoïsée pour que la lib ne reçoive pas une nouvelle référence de
-  // `data` — et ne rejoue pas ses animations de position — sur un rendu qui ne
-  // touche pas à la liste (thème, sauvegarde, retour d'écran...).
+  // Liste à plat pour le DraggableFlatList (en-têtes + salariés actifs).
+  // Mémoïsée pour que la lib ne rejoue pas ses animations sur un rendu qui ne
+  // touche pas à la liste.
   const listItems = useMemo<RosterListItem[]>(() => {
     const active = roster
       .map((e, i) => [e, i] as IndexedEntry)
@@ -208,8 +192,8 @@ export default function RosterScreen() {
       return sorted(active).map(([entry, index]) => ({ type: 'entry', key: `e-${entry.id ?? index}`, index }) as const);
     }
 
-    // Toutes les catégories, "Sans catégorie" en dernier. En tri Manuel elles
-    // restent listées même vides (cibles de dépôt valides).
+    // Toutes les catégories, "Sans catégorie" en dernier ; en tri Manuel elles
+    // restent listées même vides (cibles de dépôt).
     const defs: CategoryDef[] = [
       ...assignableGroups.map((g) => ({ groupId: g.id, label: g.label || 'Groupe sans nom', color: g.color })),
       { groupId: undefined, label: 'Sans catégorie' },
@@ -240,9 +224,8 @@ export default function RosterScreen() {
 
   const keyExtractor = useCallback((item: RosterListItem) => item.key, []);
 
-  // Reconstitue l'ordre + la catégorie de chaque salarié actif depuis la
-  // position finale de son en-tête, puis recolle les archivés (jamais dans la
-  // liste glissable) tels quels.
+  // Reconstitue ordre + catégorie de chaque salarié actif depuis la position
+  // finale des en-têtes, puis recolle les archivés tels quels.
   const handleDragEnd = useCallback(
     ({ data }: { data: RosterListItem[] }) => {
       if (sortMode !== 'manual' || searching) return;
@@ -296,8 +279,7 @@ export default function RosterScreen() {
 
   const openEntry = openIndex !== null ? roster[openIndex] : null;
 
-  // Lignes de la section "archivés" (footer) : jamais glissables, pas besoin de
-  // les mémoïser — le footer se re-rend rarement et hors du geste.
+  // Lignes archivées (footer) : jamais glissables, pas besoin de mémoïser.
   function renderArchivedRow(entry: RosterEntry, index: number) {
     const category = groups.find((g) => g.id === entry.groupId);
     return (
@@ -315,10 +297,9 @@ export default function RosterScreen() {
   return (
     <View style={styles.container}>
       <DraggableFlatList
-        // `style` ne dimensionne que la FlatList interne ; le vrai wrapper
-        // englobant (celui qui gère le geste et la mesure du conteneur) est
-        // dimensionné séparément via `containerStyle` — sans lui, ce wrapper
-        // reste haut de zéro et tout l'écran (y compris header/footer) reste invisible.
+        // `style` ne dimensionne que la FlatList interne ; `containerStyle`
+        // dimensionne le wrapper englobant, sinon il reste haut de zéro et tout
+        // l'écran est invisible.
         style={styles.flatList}
         containerStyle={styles.flatList}
         contentContainerStyle={styles.content}

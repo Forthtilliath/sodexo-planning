@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 
+import AddEmployeeButtons from '@/components/AddEmployeeButtons';
 import AddEmployeeSheet from '@/components/AddEmployeeSheet';
 import GridEditor from '@/components/GridEditor';
 import HolidayPicker from '@/components/HolidayPicker';
@@ -110,11 +111,10 @@ export default function PlanningEditorScreen() {
   stepRef.current = step;
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
-  // Renseignée plus bas (après la définition de persistScan) pour permettre au
-  // flush "on blur" d'appeler toujours la dernière version de la fonction.
+  // Renseignée après la définition de persistScan, pour que le flush "on blur"
+  // appelle toujours la dernière version de la fonction.
   const persistScanRef = useRef<(() => Promise<ScanRecord>) | null>(null);
-  // Bandeau "Annuler" après une suppression par swipe, auto-masqué après
-  // quelques secondes (voir showUndoToast/handleUndoDelete).
+  // Bandeau "Annuler" après une suppression par swipe (voir showUndoToast).
   const [undoToast, setUndoToast] = useState<ScanRecord | null>(null);
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -123,14 +123,13 @@ export default function PlanningEditorScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Rattrape le décalage des rappels si l'app n'a pas été ouverte depuis un
-      // moment (les données, elles, sont déjà à jour via useDbData).
+      // Rattrape le décalage des rappels si l'app est restée fermée un moment.
       if (settingsRef.current.remindersEnabled) {
         rescheduleWorkReminders().catch((err) => console.error('reschedule reminders failed', err));
       }
       return () => {
-        // Flush de l'auto-save debouncé : quitter l'onglet en cours de saisie
-        // ne doit pas perdre les dernières secondes de modifications.
+        // Flush de l'auto-save debouncé : quitter l'onglet ne doit pas perdre
+        // les dernières secondes de saisie.
         if (stepRef.current === 'review' && !skipNextAutosaveRef.current) {
           persistScanRef.current?.().catch((err) => console.error('auto-save on blur failed', err));
         }
@@ -138,25 +137,36 @@ export default function PlanningEditorScreen() {
     }, [])
   );
 
-  // Un salarié régulier ajouté (ou réactivé) dans Réglages pendant qu'un
-  // planning est déjà ouvert doit y apparaître directement, sans passer par
-  // "+ Ajouter une ligne" à la main. Un intérimaire (non régulier), lui, doit
-  // être ajouté à la main — sinon il finirait sur tous les mois.
-  useEffect(() => {
-    if (step !== 'review') return;
-    const activeNames = roster.filter((r) => r.active && isRegular(r)).map((r) => r.name.trim()).filter(Boolean);
-    const missing = activeNames.filter(
-      (name) => !employees.some((e) => e.trim().toLowerCase() === name.toLowerCase())
-    );
-    if (missing.length === 0) return;
-    setEmployees((prev) => [...prev, ...missing]);
-    setGrid((prev) => [...prev, ...missing.map(() => Array(days.length).fill(''))]);
-  }, [roster, step, employees, days.length]);
+  // Un salarié régulier ajouté/réactivé dans Réglages pendant qu'un planning
+  // est ouvert doit y apparaître directement ; un intérimaire, lui, reste
+  // ajouté à la main (sinon il finirait sur tous les mois).
+  //
+  // `useFocusEffect` et pas `useEffect` : `roster` est lu en direct, donc
+  // modifié à chaque frappe dans Réglages › Salariés. Un `useEffect` rejouait
+  // la synchro à chaque lettre tapée ailleurs, et la course entre ces
+  // déclenchements pouvait dupliquer des lignes.
+  useFocusEffect(
+    useCallback(() => {
+      if (step !== 'review') return;
+      const existingNorm = new Set(employees.map((e) => e.trim().toLowerCase()));
+      const missing: string[] = [];
+      for (const entry of roster) {
+        if (!entry.active || !isRegular(entry)) continue;
+        const name = entry.name.trim();
+        if (!name) continue;
+        const norm = name.toLowerCase();
+        if (existingNorm.has(norm)) continue;
+        existingNorm.add(norm); // évite aussi les doublons entre eux (noms roster en double)
+        missing.push(name);
+      }
+      if (missing.length === 0) return;
+      setEmployees((prev) => [...prev, ...missing]);
+      setGrid((prev) => [...prev, ...missing.map(() => Array(days.length).fill(''))]);
+    }, [roster, step, employees, days.length])
+  );
 
-  // Le titre natif de l'écran affiche directement "Planning de X" (personne
-  // éditée, ou mois/année en liste), plutôt qu'un second titre en double. En
-  // revue, une flèche de retour apparaît à gauche (liste des salariés → liste
-  // des plannings) : elle remplace l'ancien lien texte "← Liste des plannings".
+  // Titre natif "Planning de X" (personne éditée, ou mois/année). En revue, une
+  // flèche de retour à gauche : liste des salariés → liste des plannings.
   useEffect(() => {
     let title = 'Saisie';
     if (step === 'review') {
@@ -192,10 +202,8 @@ export default function PlanningEditorScreen() {
     });
   }
 
-  // La liste des salariés actifs et réguliers gérée dans Réglages prime ; à
-  // défaut, celle du dernier planning. Les intérimaires (non réguliers) ne
-  // sont jamais ajoutés automatiquement, seulement à la main.
-  // Dans tous les cas, "Moi" remonte en tête pour se retrouver plus vite.
+  // Priorité à la liste des salariés actifs et réguliers (Réglages) ; à défaut,
+  // celle du dernier planning. "Moi" remonte toujours en tête.
   function defaultEmployees(): string[] {
     const activeNames = roster.filter((r) => r.active && isRegular(r)).map((r) => r.name);
     if (activeNames.length > 0) return putMyNameFirst(activeNames, myName);
@@ -203,8 +211,8 @@ export default function PlanningEditorScreen() {
     return Array(5).fill('');
   }
 
-  // Créer un planning pour un mois déjà terminé n'a normalement aucun intérêt :
-  // on demande confirmation plutôt que de bloquer, au cas où ce serait volontaire.
+  // Créer un planning pour un mois passé : on demande confirmation plutôt que
+  // de bloquer, au cas où ce serait volontaire.
   function handleCreateOrEditPress() {
     if (existingScan) {
       openScanForEditing(existingScan);
@@ -224,10 +232,8 @@ export default function PlanningEditorScreen() {
     createManualPlanning();
   }
 
-  // Suppression déclenchée par le swipe (≥60% de la largeur de la carte) :
-  // pas de confirmation avant coup (ça casserait l'intérêt du swipe direct),
-  // mais un petit bandeau après coup avec "Annuler" pour rattraper un geste
-  // involontaire — auto-masqué après quelques secondes, pas besoin de le fermer.
+  // Suppression par swipe : pas de confirmation avant coup, mais un bandeau
+  // "Annuler" après coup pour rattraper un geste involontaire.
   function handleDeleteScan(scan: ScanRecord) {
     deleteScan(scan.id)
       .then(() => {
@@ -287,10 +293,9 @@ export default function PlanningEditorScreen() {
     setStep('review');
   }, []);
 
-  // Arrivée depuis "Mon planning" (bouton "✏️ Modifier") : ouvre directement
-  // le bon planning sur la bonne personne, sans repasser par la sélection
-  // mois/salarié à la main. Les params sont retirés une fois consommés, sinon
-  // revenir sur cet onglet plus tard nous ramènerait toujours au même endroit.
+  // Arrivée depuis "Mon planning" (bouton "✏️ Modifier") : ouvre le bon
+  // planning sur la bonne personne. Params retirés une fois consommés, sinon
+  // revenir sur l'onglet ramènerait toujours ici.
   useEffect(() => {
     if (!editParams.scanId || !editParams.editRow) return;
     const scan = scans.find((s) => s.id === editParams.scanId);
@@ -307,26 +312,22 @@ export default function PlanningEditorScreen() {
     );
   }
 
-  // Les noms viennent du roster (Réglages) et se synchronisent automatiquement
-  // dans le planning ouvert : "+ Nouveau salarié" y redirige plutôt que de
-  // créer une ligne sans nom.
+  // "Créer un salarié" redirige vers le roster (Réglages) plutôt que d'ajouter
+  // une ligne sans nom : les noms s'y synchronisent ensuite automatiquement.
   function goToRoster() {
     router.push('/settings/roster');
   }
 
-  /** Ajoute un salarié déjà connu (typiquement un intérimaire) à ce mois précis, via le sheet "+ Ajouter salarié". */
+  /** Ajoute un salarié déjà connu (typiquement un intérimaire) à ce mois précis, via le sheet "Ajouter à ce mois". */
   function addExistingEmployee(name: string) {
     if (employees.some((e) => normalizeName(e) === normalizeName(name))) return;
     setEmployees((prev) => [...prev, name]);
     setGrid((prev) => [...prev, Array(days.length).fill('')]);
   }
 
-  // Un salarié régulier actif est resynchronisé automatiquement (voir
-  // l'effet ci-dessus) : le retirer n'aurait aucun effet, il réapparaîtrait
-  // aussitôt. Un régulier archivé, lui, reste délibérément non retirable ici
-  // (l'archivage garde son historique dans les plannings existants — voir
-  // Réglages > Salariés) ; il ne réapparaîtrait pas non plus dans le sheet
-  // "+ Ajouter salarié", qui ne propose que des salariés actifs.
+  // Un régulier actif est resynchronisé automatiquement : le retirer n'aurait
+  // aucun effet. Un régulier archivé reste volontairement non retirable ici
+  // (il garde son historique dans les plannings existants).
   const removableEmployees = useMemo(
     () =>
       employees.map((name) => {
@@ -336,7 +337,7 @@ export default function PlanningEditorScreen() {
     [employees, roster]
   );
 
-  /** Retrait par erreur d'un salarié ajouté par erreur (voir removableEmployees) — pas de confirmation, ré-ajoutable en un tap via le sheet. */
+  /** Retire une ligne ajoutée par erreur (voir removableEmployees) — sans confirmation, ré-ajoutable en un tap via le sheet. */
   function removeEmployee(rowIndex: number) {
     setEmployees((prev) => prev.filter((_, i) => i !== rowIndex));
     setGrid((prev) => prev.filter((_, i) => i !== rowIndex));
@@ -362,7 +363,7 @@ export default function PlanningEditorScreen() {
     };
     await saveScan(scan);
     setCurrentScanId(scan.id);
-    // La liste `scans` se met à jour d'elle-même via useDbData (saveScan notifie).
+    // `scans` se rafraîchit seul via useDbData (saveScan notifie).
     if (remindersEnabled) {
       rescheduleWorkReminders().catch((err) => console.error('reschedule reminders failed', err));
     }
@@ -371,11 +372,9 @@ export default function PlanningEditorScreen() {
 
   persistScanRef.current = persistScan;
 
-  // Auto-save : toute modif du planning en revue s'enregistre seule, avec un
-  // léger débounce pour ne pas écrire à chaque frappe. `skipNextAutosaveRef`
-  // évite un enregistrement parasite juste après avoir chargé un planning
-  // (createManualPlanning / openScanForEditing changent aussi days/employees/
-  // grid, sans que ce soit une vraie modif de l'utilisateur).
+  // Auto-save debouncé de toute modif en revue. `skipNextAutosaveRef` évite un
+  // enregistrement parasite juste après le chargement d'un planning
+  // (createManualPlanning / openScanForEditing changent aussi l'état).
   const skipNextAutosaveRef = useRef(false);
   useEffect(() => {
     if (step !== 'review') return;
@@ -460,6 +459,11 @@ export default function PlanningEditorScreen() {
           ) : (
             <>
               <HolidayPicker days={days} holidays={holidays} onToggle={toggleHoliday} />
+              <AddEmployeeButtons
+                style={styles.topAddRow}
+                onPickExisting={() => setShowAddEmployeeSheet(true)}
+                onNewEmployee={goToRoster}
+              />
               <GridEditor
                 days={days}
                 employees={employees}
@@ -480,9 +484,6 @@ export default function PlanningEditorScreen() {
                 excludeNames={employees}
                 onPick={addExistingEmployee}
               />
-              <Pressable style={styles.resetButton} onPress={reset}>
-                <Text style={styles.resetButtonText}>Recommencer</Text>
-              </Pressable>
             </>
           )}
         </>
@@ -544,12 +545,8 @@ function createStyles(colors: ThemeColors) {
       color: colors.onTint,
       fontWeight: '700',
     },
-    resetButton: {
-      marginTop: 24,
-      alignItems: 'center',
-    },
-    resetButtonText: {
-      color: colors.danger,
+    topAddRow: {
+      marginBottom: 16,
     },
   });
 }

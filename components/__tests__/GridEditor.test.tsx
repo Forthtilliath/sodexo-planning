@@ -71,7 +71,7 @@ describe('GridEditor', () => {
     expect(onOpenRow).toHaveBeenCalledWith(0);
   });
 
-  it('appelle onPickExisting sur "+ Ajouter salarié" et onNewEmployee sur "+ Nouveau salarié"', async () => {
+  it('appelle onPickExisting sur "Ajouter à ce mois" et onNewEmployee sur "Créer un salarié"', async () => {
     const onPickExisting = jest.fn();
     const onNewEmployee = jest.fn();
     await render(
@@ -89,10 +89,10 @@ describe('GridEditor', () => {
       />
     );
 
-    await fireEvent.press(screen.getByText('+ Ajouter salarié'));
+    await fireEvent.press(screen.getByText('+ Ajouter à ce mois'));
     expect(onPickExisting).toHaveBeenCalledTimes(1);
 
-    await fireEvent.press(screen.getByText('+ Nouveau salarié'));
+    await fireEvent.press(screen.getByText('👤 Créer un salarié'));
     expect(onNewEmployee).toHaveBeenCalledTimes(1);
   });
 

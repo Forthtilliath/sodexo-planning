@@ -15,8 +15,8 @@ export function useDbData<T>(load: () => Promise<T>, initial: T): T {
 	const [data, setData] = useState<T>(initial);
 	const loadRef = useRef(load);
 	loadRef.current = load;
-	// Dernier contenu appliqué, sérialisé : évite un re-render quand un
-	// rechargement ramène exactement la même donnée (cas le plus fréquent).
+	// Dernier contenu appliqué (sérialisé) : évite un re-render quand un
+	// rechargement ramène la même donnée.
 	const appliedJsonRef = useRef<string | null>(null);
 
 	useEffect(() => {
@@ -55,9 +55,8 @@ export function useDbData<T>(load: () => Promise<T>, initial: T): T {
  * - `save` : écriture ; déclenchée dès que `setValue` produit un contenu
  *   différent du dernier connu.
  *
- * Anti-boucle / anti-course : chaque enregistrement incrémente un compteur ; un
- * rechargement dont le compteur a bougé entre-temps est ignoré (une écriture
- * plus récente prime, et un nouveau rechargement suit de toute façon).
+ * Anti-course : chaque enregistrement incrémente un compteur ; un rechargement
+ * dont le compteur a bougé entre-temps est ignoré.
  */
 export function usePersistedDbState<T>(
 	load: () => Promise<T>,
@@ -82,7 +81,7 @@ export function usePersistedDbState<T>(
 			console.error('usePersistedDbState load failed', err);
 			return;
 		}
-		// Une écriture locale a eu lieu pendant la lecture : résultat périmé.
+		// Écriture locale pendant la lecture : résultat périmé.
 		if (seq !== writeSeqRef.current) return;
 		const json = JSON.stringify(next);
 		if (json !== syncedJsonRef.current) {

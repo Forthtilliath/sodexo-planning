@@ -20,8 +20,8 @@ export default function UpdateBanner() {
     getSettings().then(setSettings);
   }, []);
 
-  // Ne monte le hook de vérification qu'une fois les réglages chargés :
-  // getLastCheck n'est lu qu'au montage, il lui faut donc déjà la bonne valeur.
+  // Hook de vérification monté seulement après chargement des réglages :
+  // getLastCheck n'est lu qu'au montage.
   if (!settings) return null;
   return <UpdateNotifier settings={settings} />;
 }
@@ -61,11 +61,9 @@ function UpdateNotifier({ settings }: { settings: Settings }) {
           }}
           onPress={() => {
             router.push('/settings/update');
-            // Ferme le bandeau sans mémoriser de version "fermée" en base :
-            // l'écran Mise à jour refait sa propre vérification à l'ouverture,
-            // et si l'utilisateur revient sans installer, le bandeau peut
-            // réapparaître au prochain lancement (comportement voulu, distinct
-            // d'un vrai "Fermer").
+            // Ferme le bandeau sans mémoriser la version en base : s'il revient
+            // sans installer, le bandeau peut réapparaître au prochain lancement
+            // (voulu, distinct d'un vrai "Fermer" via onDismiss).
             update.dismiss();
           }}
           onDismiss={() => {

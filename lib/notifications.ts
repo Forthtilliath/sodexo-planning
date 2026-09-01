@@ -4,13 +4,11 @@ import { getMyName, getScans, getSettings, getTeamGroups } from './db';
 import { computeDayPlanning, findMyRowIndex } from './teams';
 
 export const DEFAULT_REMINDER_HOUR = 19;
-// Au-delà, plus la peine de programmer : les plannings sont saisis un mois à
-// l'avance tout au plus, pas besoin d'aller chercher plus loin.
+// Les plannings sont saisis un mois à l'avance au plus ; inutile d'aller plus loin.
 const MAX_DAYS_AHEAD = 60;
 
-// Les rappels de travail et le rappel de sauvegarde sont deux catégories
-// indépendantes de notifications programmées : on les identifie par préfixe
-// pour pouvoir annuler/reprogrammer l'une sans toucher à l'autre.
+// Rappels de travail et rappel de sauvegarde : deux catégories identifiées par
+// préfixe pour annuler/reprogrammer l'une sans toucher à l'autre.
 const WORK_REMINDER_PREFIX = 'work-reminder-';
 const BACKUP_REMINDER_ID = 'backup-reminder';
 export const BACKUP_REMINDER_INTERVAL_DAYS = 14;
@@ -31,11 +29,9 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return requested.granted;
 }
 
-// Annule tout ce qui est programmé à part le rappel de sauvegarde. Plus
-// robuste qu'un filtre par préfixe : ça nettoie aussi les rappels de travail
-// programmés par une version antérieure de l'app (identifiants générés
-// automatiquement, sans le préfixe "work-reminder-"), qui sinon restaient
-// coincés indéfiniment et doublonnaient avec les nouveaux.
+// Annule tout le programmé sauf le rappel de sauvegarde. Plus robuste qu'un
+// filtre par préfixe : nettoie aussi les rappels d'anciennes versions, dont
+// l'identifiant n'avait pas le préfixe "work-reminder-".
 async function cancelWorkReminderNotifications(): Promise<void> {
   const all = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
