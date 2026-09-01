@@ -9,8 +9,7 @@ import { MY_NAME } from '@/lib/teams';
 export default function MyNameProvider({ children }: { children: ReactNode }) {
   const [myName, setMyNameState] = useState<string>(MY_NAME);
 
-  // Rechargé au montage puis à chaque écriture (renommage, restauration d'une
-  // sauvegarde...) pour que "mon nom" reste cohérent partout.
+  // Rechargé au montage et à chaque écriture (renommage, restauration...).
   useEffect(() => {
     const pull = () => {
       getMyName()

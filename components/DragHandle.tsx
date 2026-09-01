@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
-// Pressable de gesture-handler (pas celui de react-native) : le toucher qui
-// lance le glissé est alors géré dans le même système de gestes que le
-// PanGestureHandler de DraggableFlatList. Avec le Pressable RN, les deux se
-// disputent le responder tactile et le glissé démarre parfois "à vide"
-// (léger décalage, lignes qui se chevauchent le temps que ça se resynchronise).
+// Pressable de gesture-handler (pas de react-native) : même système de gestes
+// que le PanGestureHandler de DraggableFlatList. Avec le Pressable RN, les deux
+// se disputent le responder et le glissé démarre parfois "à vide".
 import { Pressable } from 'react-native-gesture-handler';
 
 import type { ThemeColors } from '@/constants/Colors';

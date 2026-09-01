@@ -37,9 +37,8 @@ function dtstamp(): string {
   return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 }
 
-// Nombre de secondes depuis l'epoch : toujours croissant d'un export à
-// l'autre, ce qui satisfait la sémantique RFC5545 de SEQUENCE ("plus la
-// valeur est grande, plus c'est récent") sans avoir à mémoriser un compteur.
+// Secondes depuis l'epoch : toujours croissant, ce qui satisfait la sémantique
+// RFC5545 de SEQUENCE sans mémoriser de compteur.
 function sequenceNumber(): number {
   return Math.floor(Date.now() / 1000);
 }
@@ -69,10 +68,8 @@ export function buildIcs(
           ? `Équipe : ${day.teammates.map((t) => `${t.name} (${t.code})`).join(', ')}`
           : '';
 
-      // UID basé uniquement sur la date (pas de position dans la liste) :
-      // stable d'un export à l'autre même si des jours changent de contenu,
-      // pour que le calendrier remplace l'événement existant au lieu d'en
-      // créer un doublon.
+      // UID basé sur la seule date : stable d'un export à l'autre, pour que le
+      // calendrier remplace l'événement au lieu d'en créer un doublon.
       const lines = [
         'BEGIN:VEVENT',
         `UID:${scan.id}-${day.date}@rn-planning`,

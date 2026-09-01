@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import AddEmployeeButtons from '@/components/AddEmployeeButtons';
 import CategoryHeader from '@/components/CategoryHeader';
 import type { ThemeColors } from '@/constants/Colors';
 import { useMyName } from '@/hooks/useMyName';
@@ -12,13 +13,10 @@ type Props = {
   days: string[]; // dates ISO, une par colonne
   employees: string[];
   grid: string[][];
-  // Un salarié régulier actif est ajouté/retiré automatiquement (voir
-  // l'écran Saisie) : le retirer à la main n'aurait aucun effet, il
-  // réapparaîtrait aussitôt. Seuls les autres (intérimaires, noms
-  // personnalisés...) proposent un bouton de retrait.
+  // true = ligne retirable à la main (intérimaire, nom personnalisé). Un
+  // régulier actif est resynchronisé automatiquement, donc non retirable.
   removable: boolean[];
-  // Pour regrouper les lignes par catégorie, comme dans Réglages > Salariés.
-  roster: RosterEntry[];
+  roster: RosterEntry[]; // pour regrouper les lignes par catégorie
   groups: TeamGroup[];
   onNewEmployee: () => void;
   onPickExisting: () => void;
@@ -50,10 +48,9 @@ export default function GridEditor({
   const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Même regroupement que Réglages > Salariés / le sheet "+ Ajouter salarié" :
-  // les groupes de postes assignables dans l'ordre, "Sans catégorie" en
-  // dernier, catégories vides masquées. L'ordre des salariés au sein d'une
-  // catégorie suit celui de la liste `employees` (pas de tri alphabétique ici).
+  // Même regroupement qu'ailleurs : groupes assignables dans l'ordre, "Sans
+  // catégorie" en dernier, catégories vides masquées. Salariés dans l'ordre de
+  // `employees` (pas de tri alphabétique).
   const buckets = useMemo<Bucket[]>(() => {
     const groupIdByName = new Map(roster.map((r) => [normalizeName(r.name), r.groupId]));
     const assignableGroups = groups.filter((g) => !g.weekendVariant);
@@ -116,14 +113,11 @@ export default function GridEditor({
         </View>
       ))}
 
-      <View style={styles.addRow}>
-        <Pressable style={styles.addButton} onPress={onPickExisting}>
-          <Text style={styles.addButtonText}>+ Ajouter salarié</Text>
-        </Pressable>
-        <Pressable style={styles.addButton} onPress={onNewEmployee}>
-          <Text style={styles.addButtonText}>+ Nouveau salarié</Text>
-        </Pressable>
-      </View>
+      <AddEmployeeButtons
+        style={styles.addRow}
+        onPickExisting={onPickExisting}
+        onNewEmployee={onNewEmployee}
+      />
     </View>
   );
 }
@@ -183,22 +177,7 @@ function createStyles(colors: ThemeColors) {
       fontSize: 13,
     },
     addRow: {
-      flexDirection: 'row',
-      gap: 8,
       marginTop: 8,
-    },
-    addButton: {
-      flex: 1,
-      paddingVertical: 8,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.border,
-      alignItems: 'center',
-    },
-    addButtonText: {
-      fontWeight: '600',
-      color: colors.text,
     },
   });
 }

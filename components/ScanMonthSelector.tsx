@@ -8,8 +8,7 @@ import type { ScanRecord } from '@/types';
 
 type Anchor = { x: number; y: number; width: number; height: number };
 
-// Hauteur fixe de chaque ligne du menu, pour que "3 mois suivants visibles"
-// corresponde à une hauteur de menu calculable (MENU_ROWS * ROW_HEIGHT).
+// Hauteur de ligne fixe pour que la hauteur du menu soit calculable (MENU_ROWS * ROW_HEIGHT).
 const ROW_HEIGHT = 44;
 const MENU_ROWS = 4;
 
@@ -20,11 +19,7 @@ type Props = {
   onSelect: (id: string) => void;
 };
 
-/** Sélecteur de mois façon dropdown : un bouton affichant le mois en cours, encadré par
- * "mois précédent" (‹) et "mois suivant" (›). Le bouton central ouvre un menu ancré juste
- * en dessous (pas un sheet plein écran) listant tous les plannings ; à l'ouverture il se
- * positionne sur le mois sélectionné avec les 3 suivants visibles, et défile vers le
- * haut/bas pour le reste. */
+/** Sélecteur de mois façon dropdown : flèches ‹ › et un bouton central qui ouvre un menu ancré listant tous les plannings, positionné sur le mois sélectionné. */
 export default function ScanMonthSelector({ scans, selectedScanId, onSelect }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -32,8 +27,7 @@ export default function ScanMonthSelector({ scans, selectedScanId, onSelect }: P
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const triggerRef = useRef<View>(null);
   const scrollRef = useRef<ScrollView>(null);
-  // true dès que le scroll initial a été positionné pour l'ouverture en cours,
-  // pour ne le faire qu'une fois (remis à false à chaque nouvelle ouverture).
+  // true une fois le scroll initial positionné (remis à false à chaque ouverture).
   const scrolledRef = useRef(false);
 
   const selectedScan = scans.find((s) => s.id === selectedScanId) ?? null;
@@ -54,10 +48,8 @@ export default function ScanMonthSelector({ scans, selectedScanId, onSelect }: P
     setOpen(false);
   }
 
-  // Positionne le scroll dès que le layout de la ligne sélectionnée est connu
-  // (plutôt qu'un requestAnimationFrame après l'ouverture, qui peut se
-  // déclencher avant que cette ligne n'ait été mesurée — surtout au tout
-  // premier affichage du menu, dans une Modal fraîchement montée).
+  // Positionne le scroll au layout de la ligne sélectionnée : un rAF après
+  // l'ouverture peut se déclencher avant que la ligne soit mesurée.
   function handleRowLayout(scanId: string, y: number) {
     if (scrolledRef.current || scanId !== selectedScanId) return;
     scrolledRef.current = true;
