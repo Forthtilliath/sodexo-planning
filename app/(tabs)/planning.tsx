@@ -8,6 +8,7 @@ import MonthCalendarView from '@/components/MonthCalendarView';
 import PickerListSheet from '@/components/PickerListSheet';
 import ScanMonthSelector from '@/components/ScanMonthSelector';
 import type { ThemeColors } from '@/constants/Colors';
+import { useDbData } from '@/hooks/useDbData';
 import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { isToday, monthYearLabel } from '@/lib/dates';
@@ -20,15 +21,23 @@ import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
 
+const EMPTY_SCANS: ScanRecord[] = [];
+const EMPTY_GROUPS: TeamGroup[] = [];
+const EMPTY_SCHEDULES: CodeSchedule[] = [];
+const EMPTY_ROSTER: RosterEntry[] = [];
+
 export default function PlanningScreen() {
   const navigation = useNavigation();
   const colors = useThemeColors();
   const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [scans, setScans] = useState<ScanRecord[]>([]);
-  const [groups, setGroups] = useState<TeamGroup[]>([]);
-  const [schedules, setSchedules] = useState<CodeSchedule[]>([]);
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
+  // Données lues en direct : toute modif faite ailleurs (saisie d'un planning,
+  // ajout d'un salarié, édition d'un groupe...) se répercute ici sans avoir à
+  // quitter puis revenir sur l'onglet.
+  const scans = useDbData(getScans, EMPTY_SCANS);
+  const groups = useDbData(getTeamGroups, EMPTY_GROUPS);
+  const schedules = useDbData(getCodeSchedules, EMPTY_SCHEDULES);
+  const roster = useDbData(getEmployeeRoster, EMPTY_ROSTER);
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [manualRowIndex, setManualRowIndex] = useState<number | null>(null);
   const [viewingName, setViewingName] = useState<string | null>(null);
@@ -39,29 +48,24 @@ export default function PlanningScreen() {
   const [showHours, setShowHours] = useState(false);
   const captureAreaRef = useRef<View>(null);
 
+  // Sélection par défaut : le mois courant s'il a un planning, sinon le premier.
+  // Recalculée si le planning sélectionné disparaît (suppression ailleurs).
+  useEffect(() => {
+    setSelectedScanId((prev) => {
+      if (prev && scans.some((s) => s.id === prev)) return prev;
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const currentMonthScan = scans.find((s) => s.year === currentYear && s.month === currentMonth);
+      return currentMonthScan?.id ?? scans[0]?.id ?? null;
+    });
+  }, [scans]);
+
+  // Au retour sur l'onglet, on repart sur "ma" ligne plutôt que sur le choix
+  // manuel fait la fois précédente.
   useFocusEffect(
     useCallback(() => {
-      (async () => {
-        const [loadedScans, loadedGroups, loadedSchedules, loadedRoster] = await Promise.all([
-          getScans(),
-          getTeamGroups(),
-          getCodeSchedules(),
-          getEmployeeRoster(),
-        ]);
-        setScans(loadedScans);
-        setGroups(loadedGroups);
-        setSchedules(loadedSchedules);
-        setRoster(loadedRoster);
-        setSelectedScanId((prev) => {
-          if (prev) return prev;
-          const now = new Date();
-          const currentYear = now.getFullYear();
-          const currentMonth = now.getMonth() + 1;
-          const currentMonthScan = loadedScans.find((s) => s.year === currentYear && s.month === currentMonth);
-          return currentMonthScan?.id ?? loadedScans[0]?.id ?? null;
-        });
-        setManualRowIndex(null);
-      })();
+      setManualRowIndex(null);
     }, [])
   );
 
@@ -194,19 +198,19 @@ export default function PlanningScreen() {
       {selectedScan && selectedScan.employees.length > 0 && (
         <View style={styles.viewerRow}>
           <Pressable
+            style={[styles.viewerButton, !viewingSomeoneElse && styles.viewerButtonActive]}
+            onPress={() => setViewingName(null)}>
+            <Text style={[styles.viewerButtonText, !viewingSomeoneElse && styles.viewerButtonTextActive]}>
+              🙋 Mon planning
+            </Text>
+          </Pressable>
+          <Pressable
             style={[styles.viewerButton, viewingSomeoneElse && styles.viewerButtonActive]}
             onPress={() => setColleaguePickerOpen(true)}>
             <Text
               style={[styles.viewerButtonText, viewingSomeoneElse && styles.viewerButtonTextActive]}
               numberOfLines={1}>
               {viewingSomeoneElse ? `👥 ${selectedScan.employees[viewingIndex] || 'Collègue'}` : '👥 Un collègue'}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.viewerButton, !viewingSomeoneElse && styles.viewerButtonActive]}
-            onPress={() => setViewingName(null)}>
-            <Text style={[styles.viewerButtonText, !viewingSomeoneElse && styles.viewerButtonTextActive]}>
-              🙋 Mon planning
             </Text>
           </Pressable>
         </View>
