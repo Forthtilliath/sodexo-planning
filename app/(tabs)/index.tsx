@@ -10,6 +10,7 @@ import SavedScansList from '@/components/SavedScansList';
 import SelectField from '@/components/SelectField';
 import UndoToast from '@/components/UndoToast';
 import type { ThemeColors } from '@/constants/Colors';
+import { useDbData } from '@/hooks/useDbData';
 import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { MONTH_NAMES } from '@/lib/dates';
@@ -25,7 +26,13 @@ import {
 import { randomId } from '@/lib/id';
 import { rescheduleWorkReminders } from '@/lib/notifications';
 import { isRegular, normalizeName } from '@/lib/teams';
-import type { RosterEntry, ScanRecord, TeamGroup } from '@/types';
+import type { RosterEntry, ScanRecord, Settings, TeamGroup } from '@/types';
+
+const EMPTY_SCANS: ScanRecord[] = [];
+const EMPTY_ROSTER: RosterEntry[] = [];
+const EMPTY_GROUPS: TeamGroup[] = [];
+const EMPTY_CODE_OPTIONS: Record<string, string[]> = {};
+const EMPTY_SETTINGS: Settings = {};
 
 /** Fait remonter "ma" ligne en tête de liste, sans changer l'ordre des autres. */
 function putMyNameFirst(names: string[], myName: string): string[] {
@@ -81,20 +88,31 @@ export default function PlanningEditorScreen() {
   const [employees, setEmployees] = useState<string[]>([]);
   const [days, setDays] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
-  const [scans, setScans] = useState<ScanRecord[]>([]);
+  // Données lues en direct : un salarié ajouté, un groupe modifié ou un
+  // planning enregistré ailleurs se répercute ici sans quitter l'onglet.
+  const scans = useDbData(getScans, EMPTY_SCANS);
+  const roster = useDbData(getEmployeeRoster, EMPTY_ROSTER);
+  const groups = useDbData(getTeamGroups, EMPTY_GROUPS);
+  const codeOptions = useDbData(getEmployeeCodeOptions, EMPTY_CODE_OPTIONS);
+  const settings = useDbData(getSettings, EMPTY_SETTINGS);
+  const remindersEnabled = settings.remindersEnabled === true;
   const [currentScanId, setCurrentScanId] = useState<string | null>(null);
   const existingScan = useMemo(
     () => scans.find((s) => s.year === year && s.month === month) ?? null,
     [scans, year, month]
   );
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
-  const [groups, setGroups] = useState<TeamGroup[]>([]);
   const allCodes = useMemo(() => Array.from(new Set(groups.flatMap((g) => g.codes))).sort(), [groups]);
-  const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
   const [holidays, setHolidays] = useState<Set<string>>(new Set());
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [showAddEmployeeSheet, setShowAddEmployeeSheet] = useState(false);
-  const [remindersEnabled, setRemindersEnabled] = useState(false);
+
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  // Renseignée plus bas (après la définition de persistScan) pour permettre au
+  // flush "on blur" d'appeler toujours la dernière version de la fonction.
+  const persistScanRef = useRef<(() => Promise<ScanRecord>) | null>(null);
   // Bandeau "Annuler" après une suppression par swipe, auto-masqué après
   // quelques secondes (voir showUndoToast/handleUndoDelete).
   const [undoToast, setUndoToast] = useState<ScanRecord | null>(null);
@@ -105,24 +123,18 @@ export default function PlanningEditorScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      (async () => {
-        const [loadedScans, employeeRoster, options, settings, teamGroups] = await Promise.all([
-          getScans(),
-          getEmployeeRoster(),
-          getEmployeeCodeOptions(),
-          getSettings(),
-          getTeamGroups(),
-        ]);
-        setScans(loadedScans);
-        setRoster(employeeRoster);
-        setCodeOptions(options);
-        setGroups(teamGroups);
-        setRemindersEnabled(settings.remindersEnabled === true);
-        // Rattrape le décalage si l'app n'a pas été ouverte depuis un moment.
-        if (settings.remindersEnabled) {
-          rescheduleWorkReminders().catch((err) => console.error('reschedule reminders failed', err));
+      // Rattrape le décalage des rappels si l'app n'a pas été ouverte depuis un
+      // moment (les données, elles, sont déjà à jour via useDbData).
+      if (settingsRef.current.remindersEnabled) {
+        rescheduleWorkReminders().catch((err) => console.error('reschedule reminders failed', err));
+      }
+      return () => {
+        // Flush de l'auto-save debouncé : quitter l'onglet en cours de saisie
+        // ne doit pas perdre les dernières secondes de modifications.
+        if (stepRef.current === 'review' && !skipNextAutosaveRef.current) {
+          persistScanRef.current?.().catch((err) => console.error('auto-save on blur failed', err));
         }
-      })();
+      };
     }, [])
   );
 
@@ -219,7 +231,6 @@ export default function PlanningEditorScreen() {
   function handleDeleteScan(scan: ScanRecord) {
     deleteScan(scan.id)
       .then(() => {
-        setScans((prev) => prev.filter((s) => s.id !== scan.id));
         showUndoToast(scan);
       })
       .catch((err) => {
@@ -244,7 +255,6 @@ export default function PlanningEditorScreen() {
     setUndoToast(null);
     try {
       await saveScan(scan);
-      setScans((prev) => (prev.some((s) => s.id === scan.id) ? prev : [scan, ...prev]));
     } catch (err) {
       console.error('undo deleteScan failed', err);
       Alert.alert("Échec de l'annulation", err instanceof Error ? err.message : "Une erreur inconnue s'est produite.");
@@ -352,20 +362,14 @@ export default function PlanningEditorScreen() {
     };
     await saveScan(scan);
     setCurrentScanId(scan.id);
-    setScans((prev) => {
-      const index = prev.findIndex((s) => s.id === scan.id);
-      if (index >= 0) {
-        const next = [...prev];
-        next[index] = scan;
-        return next;
-      }
-      return [scan, ...prev];
-    });
+    // La liste `scans` se met à jour d'elle-même via useDbData (saveScan notifie).
     if (remindersEnabled) {
       rescheduleWorkReminders().catch((err) => console.error('reschedule reminders failed', err));
     }
     return scan;
   }
+
+  persistScanRef.current = persistScan;
 
   // Auto-save : toute modif du planning en revue s'enregistre seule, avec un
   // léger débounce pour ne pas écrire à chaque frappe. `skipNextAutosaveRef`
