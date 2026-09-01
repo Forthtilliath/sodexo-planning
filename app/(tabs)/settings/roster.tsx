@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 
@@ -9,12 +9,24 @@ import CategoryHeader from '@/components/CategoryHeader';
 import RosterCard from '@/components/RosterCard';
 import RosterEntrySheet from '@/components/RosterEntrySheet';
 import type { ThemeColors } from '@/constants/Colors';
+import { useDbData, usePersistedDbState } from '@/hooks/useDbData';
 import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { getEmployeeCodeOptions, getEmployeeRoster, getTeamGroups, saveEmployeeCodeOptions, saveEmployeeRoster } from '@/lib/db';
+import {
+  getEmployeeCodeOptions,
+  getEmployeeRoster,
+  getTeamGroups,
+  propagateEmployeeRename,
+  saveEmployeeCodeOptions,
+  saveEmployeeRoster,
+} from '@/lib/db';
 import { randomId } from '@/lib/id';
 import { isRegular, normalizeName } from '@/lib/teams';
 import type { RosterEntry, TeamGroup } from '@/types';
+
+const EMPTY_GROUPS: TeamGroup[] = [];
+const EMPTY_ROSTER: RosterEntry[] = [];
+const EMPTY_CODE_OPTIONS: Record<string, string[]> = {};
 
 type SortMode = 'manual' | 'alpha';
 type IndexedEntry = readonly [RosterEntry, number];
@@ -47,42 +59,71 @@ export default function RosterScreen() {
   const colors = useThemeColors();
   const { myName } = useMyName();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [groups, setGroups] = useState<TeamGroup[]>([]);
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
-  const [codeOptions, setCodeOptions] = useState<Record<string, string[]>>({});
-  const [loaded, setLoaded] = useState(false);
+  const groups = useDbData(getTeamGroups, EMPTY_GROUPS);
+  // Chaque salarié doit porter un `id` stable (clé du DraggableFlatList) : on
+  // le renseigne à la lecture pour les listes enregistrées avant son ajout, et
+  // on persiste tout de suite (opération idempotente : au 2ᵉ passage, rien à
+  // faire).
+  const loadRoster = useCallback(async () => {
+    const raw = await getEmployeeRoster();
+    const ensured = ensureIds(raw);
+    if (ensured.some((e, i) => e !== raw[i])) await saveEmployeeRoster(ensured);
+    return ensured;
+  }, []);
+  const [roster, setRoster, loaded] = usePersistedDbState(loadRoster, saveEmployeeRoster, EMPTY_ROSTER);
+  const [codeOptions, setCodeOptions] = usePersistedDbState(
+    getEmployeeCodeOptions,
+    saveEmployeeCodeOptions,
+    EMPTY_CODE_OPTIONS,
+  );
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('manual');
 
-  const load = useCallback(async () => {
-    const [teamGroups, employeeRoster, options] = await Promise.all([
-      getTeamGroups(),
-      getEmployeeRoster(),
-      getEmployeeCodeOptions(),
-    ]);
-    setGroups(teamGroups);
-    setRoster(ensureIds(employeeRoster));
-    setCodeOptions(options);
-    setLoaded(true);
+  // Renommer un salarié doit se répercuter partout où son nom est stocké en dur
+  // (plannings enregistrés, codes habituels). On le fait à la fermeture de la
+  // fiche (pas à chaque frappe), en comparant au nom qu'elle portait à
+  // l'ouverture.
+  const renameBaselineRef = useRef<string | null>(null);
+  const rosterRef = useRef(roster);
+  rosterRef.current = roster;
+  const openIndexRef = useRef(openIndex);
+  openIndexRef.current = openIndex;
+
+  const commitPendingRename = useCallback(() => {
+    const baseline = renameBaselineRef.current;
+    renameBaselineRef.current = null;
+    if (baseline === null) return;
+    const idx = openIndexRef.current;
+    const current = idx !== null ? rosterRef.current[idx]?.name ?? '' : '';
+    if (baseline.trim() && current.trim() && baseline.trim() !== current.trim()) {
+      propagateEmployeeRename(baseline, current).catch((err) => console.error('propagate rename failed', err));
+    }
   }, []);
 
+  const openEntrySheet = useCallback((index: number) => {
+    renameBaselineRef.current = rosterRef.current[index]?.name ?? '';
+    setOpenIndex(index);
+  }, []);
+
+  const closeEntrySheet = useCallback(() => {
+    commitPendingRename();
+    setOpenIndex(null);
+  }, [commitPendingRename]);
+
+  // Fiche laissée ouverte en quittant l'écran : on répercute quand même le
+  // renommage en cours, et on reprend une référence au retour.
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load])
+      if (openIndexRef.current !== null && renameBaselineRef.current === null) {
+        renameBaselineRef.current = rosterRef.current[openIndexRef.current]?.name ?? '';
+      }
+      return () => {
+        commitPendingRename();
+      };
+    }, [commitPendingRename]),
   );
-
-  useEffect(() => {
-    if (!loaded) return;
-    saveEmployeeRoster(roster);
-  }, [roster, loaded]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    saveEmployeeCodeOptions(codeOptions);
-  }, [codeOptions, loaded]);
 
   function addName() {
     setRoster((prev) => [...prev, { id: randomId(), name: '', active: true }]);
@@ -95,6 +136,7 @@ export default function RosterScreen() {
         text: 'Supprimer',
         style: 'destructive',
         onPress: () => {
+          renameBaselineRef.current = null;
           setRoster((prev) => prev.filter((_, i) => i !== index));
           setOpenIndex(null);
         },
@@ -236,11 +278,11 @@ export default function RosterScreen() {
           codesCount={(codeOptions[entry.name] ?? []).length}
           dragHandle={draggingEnabled ? drag : undefined}
           isDragging={isActive}
-          onPress={() => setOpenIndex(item.index)}
+          onPress={() => openEntrySheet(item.index)}
         />
       );
     },
-    [roster, groups, codeOptions, draggingEnabled]
+    [roster, groups, codeOptions, draggingEnabled, openEntrySheet]
   );
 
   if (!loaded) {
@@ -265,7 +307,7 @@ export default function RosterScreen() {
         index={index}
         categoryColor={category?.color}
         codesCount={(codeOptions[entry.name] ?? []).length}
-        onPress={() => setOpenIndex(index)}
+        onPress={() => openEntrySheet(index)}
       />
     );
   }
@@ -360,7 +402,7 @@ export default function RosterScreen() {
         }
       />
 
-      <BottomSheet visible={openEntry !== null} onClose={() => setOpenIndex(null)}>
+      <BottomSheet visible={openEntry !== null} onClose={closeEntrySheet}>
         {openEntry && openIndex !== null && (
           <RosterEntrySheet
             entry={openEntry}
@@ -371,7 +413,7 @@ export default function RosterScreen() {
             employeeCodes={codeOptions[openEntry.name] ?? []}
             onChangeName={(v) => updateName(openIndex, v)}
             onEditMyName={() => {
-              setOpenIndex(null);
+              closeEntrySheet();
               router.push('/settings/me');
             }}
             onToggleArchived={() => toggleArchived(openIndex)}

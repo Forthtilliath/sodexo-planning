@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { MyNameContext } from '@/hooks/useMyName';
-import { getMyName, getSettings, renameMe } from '@/lib/db';
+import { getMyName, getSettings, renameMe, subscribeToData } from '@/lib/db';
 import { rescheduleWorkReminders } from '@/lib/notifications';
 import { MY_NAME } from '@/lib/teams';
 
@@ -9,8 +9,16 @@ import { MY_NAME } from '@/lib/teams';
 export default function MyNameProvider({ children }: { children: ReactNode }) {
   const [myName, setMyNameState] = useState<string>(MY_NAME);
 
+  // Rechargé au montage puis à chaque écriture (renommage, restauration d'une
+  // sauvegarde...) pour que "mon nom" reste cohérent partout.
   useEffect(() => {
-    getMyName().then(setMyNameState);
+    const pull = () => {
+      getMyName()
+        .then((name) => setMyNameState((prev) => (prev === name ? prev : name)))
+        .catch((err) => console.error('getMyName failed', err));
+    };
+    pull();
+    return subscribeToData(pull);
   }, []);
 
   const setMyName = useCallback(async (next: string) => {
