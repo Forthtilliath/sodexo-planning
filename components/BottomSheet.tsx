@@ -19,10 +19,8 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        {/* Fond cliquable pour fermer : un FRÈRE de la sheet, pas un parent — un
-            Pressable qui englobe le ScrollView entre en conflit avec son geste
-            de défilement (le tap-and-drag est intercepté par le Pressable au
-            lieu de faire défiler le contenu, surtout sur Android). */}
+        {/* Frère de la sheet, pas parent : un Pressable englobant le ScrollView
+            volerait son geste de défilement (surtout sur Android). */}
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.sheet}>
           <ScrollView style={styles.scroll}>{children}</ScrollView>
@@ -47,9 +45,8 @@ function createStyles(colors: ThemeColors) {
       paddingBottom: 24,
       maxHeight: '70%',
     },
-    // Sans flexShrink, le ScrollView prend la hauteur de son contenu au lieu
-    // de se contraindre au maxHeight du sheet : le contenu déborde sans que
-    // ça défile (le surplus est juste invisible/coupé, pas scrollable).
+    // Sans flexShrink, le ScrollView prend la hauteur de son contenu, ignore
+    // le maxHeight du sheet, et le surplus est coupé sans être scrollable.
     scroll: {
       flexShrink: 1,
     },

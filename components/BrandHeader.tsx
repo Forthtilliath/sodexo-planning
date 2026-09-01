@@ -5,14 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useThemeColors';
 
 /**
- * En-tête de marque unique, partagé par tous les navigateurs (onglets + piles) :
- * fond bleu Sodexo, titre centré en blanc, flèche de retour blanche et un fin
- * filet rouge en rappel de marque sous l'en-tête.
- *
- * On le pose via l'option `header` plutôt que via `headerStyle` : l'en-tête
- * natif des piles `expo-router` n'accepte que `backgroundColor` (ni bordure ni
- * titre centré fiable), donc un rendu 100 % maison est le seul moyen d'avoir
- * exactement le même en-tête partout.
+ * En-tête de marque unique (onglets + piles) : fond bleu Sodexo, titre centré
+ * blanc, flèche de retour, filet rouge dessous. Rendu 100 % maison via l'option
+ * `header` : l'en-tête natif d'expo-router n'accepte que `backgroundColor`.
  */
 
 type HeaderButtonProps = { tintColor?: string };

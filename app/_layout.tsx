@@ -13,11 +13,10 @@ import UpdateBanner from '@/components/UpdateBanner';
 import { useHeaderOptions } from '@/hooks/useHeaderOptions';
 import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
 
-// Catch any errors thrown by the Layout component, avec un écran de secours
-// lisible (voir components/ErrorFallback.tsx) plutôt que l'écran noir de debug par défaut.
+// Écran de secours lisible en cas d'erreur, plutôt que l'écran noir de debug.
 export { default as ErrorBoundary } from '@/components/ErrorFallback';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Le splash reste affiché tant que les polices ne sont pas chargées.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -40,7 +39,6 @@ function RootLayoutNav() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);

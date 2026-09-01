@@ -1,9 +1,8 @@
 import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
-// Nom par défaut de "ma" ligne dans un planning : c'est ce nom, saisi comme
-// nom de ligne dans la grille, que l'app cherche pour retrouver la ligne.
-// Personnalisable dans Réglages › Mon nom (voir Settings.myName / getMyName) ;
-// cette constante reste le fallback quand aucun nom n'a été choisi.
+// Nom par défaut de "ma" ligne : l'app cherche ce nom dans la grille pour
+// retrouver la ligne. Personnalisable dans Réglages › Mon nom (Settings.myName) ;
+// cette constante est le fallback.
 export const MY_NAME = 'Moi';
 
 /** Un salarié régulier (par défaut, champ absent) est ajouté automatiquement à chaque nouveau planning ; un intérimaire (`regular: false`) ne l'est pas. */
@@ -19,13 +18,9 @@ export function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-// Ordre "hiérarchique" des postes, du plus prioritaire au moins prioritaire,
-// utilisé pour attribuer un poste majoritaire à chaque salarié (tri dans
-// Réglages > Salariés) et pour grouper le roster d'un jour (voir
-// computeDayRoster) : E1-E3 d'abord, puis D1-D4, C6-C8, C2-C5, B1, puis les
-// codes de weekend/férié F1-F3 (= C6-C8) et F4-F5 (= D1-D2), dans cet ordre
-// entre eux — sans quoi ils étaient à égalité et s'affichaient dans un ordre
-// dépendant juste de qui apparaît en premier dans la grille ce jour-là.
+// Ordre hiérarchique des postes (poste majoritaire d'un salarié, tri du roster
+// d'un jour). Les F1-F5 sont ordonnés explicitement entre eux, sinon leur
+// affichage dépendait de l'ordre d'apparition dans la grille.
 export const CODE_DISPLAY_ORDER = [
   'E1', 'E2', 'E3',
   'D1', 'D2', 'D3', 'D4',
@@ -133,7 +128,7 @@ export function computeMonthPlanning(
 }
 
 export type DayRosterGroup = {
-  group: TeamGroup | undefined; // undefined = codes sans groupe configuré ("Autres")
+  group: TeamGroup | undefined; // undefined = "Autres" (codes sans groupe)
   members: Teammate[];
 };
 
@@ -163,8 +158,7 @@ export function computeDayRoster(scan: ScanRecord, dayIndex: number, groups: Tea
   for (const g of result) {
     g.members.sort((a, b) => a.code.localeCompare(b.code) || a.name.localeCompare(b.name));
   }
-  // Groupes triés selon CODE_DISPLAY_ORDER (E1-E3, puis D1-D4, C6-C8, C2-C5,
-  // B1), via le code le plus prioritaire de chaque groupe.
+  // Groupes triés selon CODE_DISPLAY_ORDER, via leur code le plus prioritaire.
   result.sort((a, b) => groupRank(a.group) - groupRank(b.group));
   if (others.members.length > 0) {
     others.members.sort((a, b) => a.code.localeCompare(b.code) || a.name.localeCompare(b.name));
