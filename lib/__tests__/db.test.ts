@@ -4,6 +4,7 @@ import {
   deleteScan,
   exportAllData,
   getCodeSchedules,
+  getDataVersion,
   getEmployeeCodeOptions,
   getEmployeeRoster,
   getMyName,
@@ -11,6 +12,7 @@ import {
   getSettings,
   getTeamGroups,
   importAllData,
+  propagateEmployeeRename,
   renameMe,
   saveEmployeeCodeOptions,
   saveEmployeeRoster,
@@ -18,6 +20,7 @@ import {
   saveScan,
   saveSettings,
   saveTeamGroups,
+  subscribeToData,
 } from '@/lib/db';
 import type { ScanRecord } from '@/types';
 
@@ -245,6 +248,64 @@ describe('getMyName / renameMe', () => {
     await saveSettings({ myName: 'Julien' });
     await renameMe('  julien ');
     expect(await getMyName()).toBe('Julien');
+  });
+});
+
+describe('propagateEmployeeRename', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it('renomme le salarié dans les plannings enregistrés et dans ses codes habituels', async () => {
+    await saveScan({ ...scan, employees: ['Moi', 'Alice'], grid: [['D1', ''], ['C2', 'C2']] });
+    await saveEmployeeCodeOptions({ Alice: ['C2'], Moi: ['D1'] });
+
+    await propagateEmployeeRename('Alice', 'Alice DUPONT');
+
+    expect((await getScans())[0].employees).toEqual(['Moi', 'Alice DUPONT']);
+    expect(await getEmployeeCodeOptions()).toEqual({ 'Alice DUPONT': ['C2'], Moi: ['D1'] });
+  });
+
+  it('ne touche pas aux plannings qui ne référencent pas le salarié', async () => {
+    await saveScan({ ...scan, id: 's1', employees: ['Alice'], grid: [['D1', '']] });
+    await saveScan({ ...scan, id: 's2', employees: ['Bob'], grid: [['D1', '']] });
+
+    await propagateEmployeeRename('Alice', 'Alicia');
+
+    const scans = await getScans();
+    expect(scans.find((s) => s.id === 's1')?.employees).toEqual(['Alicia']);
+    expect(scans.find((s) => s.id === 's2')?.employees).toEqual(['Bob']);
+  });
+
+  it('ne fait rien si le nom est inchangé', async () => {
+    await saveScan({ ...scan, employees: ['Alice'], grid: [['D1', '']] });
+    const versionBefore = getDataVersion();
+
+    await propagateEmployeeRename('Alice', '  Alice  ');
+
+    expect(getDataVersion()).toBe(versionBefore);
+    expect((await getScans())[0].employees).toEqual(['Alice']);
+  });
+});
+
+describe('subscribeToData', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it('prévient les abonnés à chaque écriture et incrémente la version', async () => {
+    const listener = jest.fn();
+    const unsubscribe = subscribeToData(listener);
+    const versionBefore = getDataVersion();
+
+    await saveEmployeeRoster([{ name: 'Alice', active: true }]);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(getDataVersion()).toBe(versionBefore + 1);
+
+    unsubscribe();
+    await saveEmployeeRoster([{ name: 'Bob', active: true }]);
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 });
 
