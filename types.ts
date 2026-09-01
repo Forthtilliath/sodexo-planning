@@ -1,13 +1,11 @@
 export type Settings = {
   // Rappel local la veille de chaque jour travaillé ; absent = désactivé.
   remindersEnabled?: boolean;
-  reminderHour?: number; // heure du rappel (0-23) ; absent = 19h par défaut
+  reminderHour?: number; // heure du rappel (0-23) ; absent = 19h
   // Rappel récurrent incitant à exporter une sauvegarde ; absent = désactivé.
   backupReminderEnabled?: boolean;
-  // Thème de l'app ; absent = "system" (suit le thème du téléphone).
-  theme?: 'light' | 'dark' | 'system';
-  // Nom de "ma" ligne dans un planning (repère "moi") ; absent = "Moi".
-  myName?: string;
+  theme?: 'light' | 'dark' | 'system'; // absent = "system"
+  myName?: string; // nom de "ma" ligne dans un planning ; absent = "Moi"
   // Suivi de la vérification de mise à jour (voir components/UpdateBanner.tsx).
   lastUpdateCheckAt?: number | null;
   dismissedUpdateVersion?: string | null;
@@ -17,33 +15,26 @@ export type TeamGroup = {
   id: string;
   label?: string;
   codes: string[];
-  color?: string; // couleur hex, pour repérer le type de poste en un coup d'œil
+  color?: string; // couleur hex du type de poste
   // Variante week-end/férié d'un autre groupe (même poste, code différent) :
-  // ses codes restent proposés normalement, mais elle est masquée de la
-  // liste des catégories affectables à un salarié (Réglages > Salariés) —
-  // un salarié n'a pas de "catégorie week-end" à part entière.
+  // ses codes restent proposés, mais la catégorie est masquée de la liste des
+  // catégories affectables à un salarié (Réglages > Salariés).
   weekendVariant?: boolean;
 };
 
 export type RosterEntry = {
-  // Identité stable d'une entrée, indépendante de sa position dans la liste et
-  // de son nom (qui peut être vide ou dupliqué). Sert de clé React/DnD dans
-  // Réglages > Salariés : sans elle, réordonner via glissé décale les lignes
-  // (emplacements vides, superpositions). Renseignée à la volée au chargement
+  // Identité stable, indépendante de la position et du nom (souvent vide ou
+  // dupliqué) : clé React/DnD dans Réglages > Salariés. Renseignée à la volée
   // pour les listes enregistrées avant son ajout — voir roster.tsx (ensureIds).
   id?: string;
   name: string;
-  // "Archivé" dans l'UI (le champ garde son nom historique) : un salarié
-  // inactif n'apparaît plus dans la liste ni comme proposition par défaut
-  // dans un nouveau planning, sans perdre ses codes habituels ni son
-  // historique dans les plannings déjà enregistrés.
+  // "Archivé" dans l'UI : n'apparaît plus dans la liste ni dans les nouveaux
+  // plannings, sans perdre ses codes ni son historique.
   active: boolean;
-  // Ajouté automatiquement à chaque nouveau planning ; absent = régulier
-  // (comportement historique). `false` = intérimaire, ajouté seulement à la main.
+  // `false` = intérimaire (ajouté à la main) ; absent/true = régulier (ajouté
+  // à chaque nouveau planning).
   regular?: boolean;
-  // Id d'un groupe de postes (Réglages > Groupes de postes), pour regrouper
-  // visuellement les salariés ; absent = "Sans catégorie".
-  groupId?: string;
+  groupId?: string; // groupe de postes pour le regroupement ; absent = "Sans catégorie"
 };
 
 export type CodeSchedule = {

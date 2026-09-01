@@ -1,7 +1,6 @@
-// Historique des versions, écrit à la main en français : source des notes de
-// version affichées dans Réglages > Mise à jour (historique des releases) et
-// du CHANGELOG.md du dépôt (voir scripts/render-changelog.js). À compléter à
-// chaque nouvelle version.
+// Historique des versions écrit à la main : source des notes affichées dans
+// Réglages > Mise à jour et du CHANGELOG.md (voir scripts/render-changelog.js).
+// À compléter à chaque nouvelle version.
 
 export type ChangelogEntry = {
   version: string;

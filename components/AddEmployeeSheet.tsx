@@ -13,7 +13,7 @@ type Props = {
   onClose: () => void;
   roster: RosterEntry[];
   groups: TeamGroup[];
-  excludeNames: string[]; // déjà dans ce planning : proposer de les ajouter en double n'aurait pas de sens
+  excludeNames: string[]; // déjà dans ce planning, à ne pas re-proposer
   onPick: (name: string) => void;
 };
 
@@ -31,8 +31,7 @@ export default function AddEmployeeSheet({ visible, onClose, roster, groups, exc
 
   const buckets = useMemo(() => {
     const excluded = new Set(excludeNames.map(normalizeName));
-    // Archivés jamais proposés ; les variantes week-end ne sont pas des
-    // catégories affectables (voir Réglages > Groupes de postes).
+    // Archivés jamais proposés ; variantes week-end exclues des catégories.
     const pickable = roster.filter((r) => r.active && r.name.trim() && !excluded.has(normalizeName(r.name)));
     const assignableGroups = groups.filter((g) => !g.weekendVariant);
     const sortByName = (a: RosterEntry, b: RosterEntry) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });

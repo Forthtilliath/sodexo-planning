@@ -13,10 +13,8 @@ export function fetchLatestRelease() {
   return fetchLatestReleaseBase(REPO);
 }
 
-// Historique des releases (notes de version), affiché dans Réglages > Mise à
-// jour en plus de la vérification — mêmes notes que le CHANGELOG.md du
-// dépôt, puisqu'elles sont recopiées dedans à chaque release (voir
-// scripts/release.js).
+// Historique des releases affiché dans Réglages > Mise à jour ; mêmes notes que
+// le CHANGELOG.md (recopiées à chaque release, voir scripts/release.js).
 export function fetchReleaseHistory(limit = 10) {
   return fetchReleaseHistoryBase({ ...REPO, limit });
 }

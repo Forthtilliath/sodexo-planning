@@ -24,9 +24,8 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Saisie',
-          // Le titre de l'en-tête est mis à jour dynamiquement (index.tsx)
-          // pour afficher "Planning de X" ; le libellé de l'onglet, lui,
-          // doit rester fixe.
+          // Le libellé de l'onglet reste fixe même quand l'en-tête devient
+          // "Planning de X" (titre mis à jour dans index.tsx).
           tabBarLabel: 'Saisie',
           tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
         }}
@@ -35,9 +34,8 @@ export default function TabLayout() {
         name="planning"
         options={{
           title: 'Mon planning',
-          // Le titre de l'en-tête est mis à jour dynamiquement (planning.tsx)
-          // pour afficher "Planning de X" en consultant un collègue ; le
-          // libellé de l'onglet, lui, doit rester fixe.
+          // Libellé d'onglet fixe même quand l'en-tête devient "Planning de X"
+          // (titre mis à jour dans planning.tsx).
           tabBarLabel: 'Mon planning',
           tabBarIcon: ({ color }) => <TabIcon emoji="📅" color={color} />,
         }}

@@ -13,9 +13,9 @@ import type { TeamGroup } from '@/types';
 type Props = {
   days: string[]; // dates ISO, une par colonne
   codes: string[]; // un code par jour, pour cette seule personne
-  codeOptions: string[]; // codes habituels de cette personne (Réglages), proposés en boutons rapides
-  allCodes: string[]; // tous les codes connus (groupes de postes), pour affecter autre chose que les codes habituels
-  groups: TeamGroup[]; // pour colorer chaque jour selon le poste affecté, comme dans "Mon planning"
+  codeOptions: string[]; // codes habituels de la personne, en boutons rapides
+  allCodes: string[]; // tous les codes connus, pour affecter un poste non habituel
+  groups: TeamGroup[]; // pour colorer chaque jour selon le poste affecté
   holidays: Set<string>; // dates ISO fériées du mois
   onChangeCode: (colIndex: number, value: string) => void;
 };
@@ -31,11 +31,7 @@ function isSpecialDay(iso: string, holidays: Set<string>): boolean {
   return weekday === 0 || weekday === 6 || holidays.has(iso);
 }
 
-/**
- * Regroupe samedi+dimanche en une seule case "WE" quand les deux se suivent
- * (cas normal) : ce sont presque toujours le même poste les deux jours, pas
- * besoin de deux cases à remplir séparément.
- */
+/** Fusionne samedi+dimanche consécutifs en une seule case "WE" (presque toujours le même poste les deux jours). */
 function buildCells(days: string[]): Cell[] {
   const cells: Cell[] = [];
   let i = 0;
@@ -55,12 +51,7 @@ function buildCells(days: string[]): Cell[] {
   return cells;
 }
 
-/**
- * Édite le planning d'une seule personne, en grille calendrier à 7 colonnes
- * (lundi à dimanche, week-end fusionné en une case "WE") : les jours sont
- * alignés sous leur vrai jour de la semaine, plus simple à repérer qu'une
- * liste qui défile.
- */
+/** Édite le planning d'une personne en grille calendrier 7 colonnes (lundi-dimanche, week-end fusionné en case "WE"). */
 export default function PersonDayEditor({
   days,
   codes,
@@ -79,10 +70,8 @@ export default function PersonDayEditor({
   const cells = useMemo(() => buildCells(days), [days]);
   const leadingBlanks = days.length > 0 ? mondayFirstWeekday(days[0]) : 0;
 
-  // Jours normaux : jamais de F1-F5, seulement les autres codes habituels.
-  // Week-ends et jours fériés : seulement les F1-F5 qui font partie des codes
-  // habituels de la personne (pas la liste complète). Sélection mixte : les
-  // deux jeux de codes habituels, sans restriction.
+  // Jours normaux : codes habituels sauf F1-F5. Week-ends/fériés : seulement
+  // les F1-F5 habituels. Sélection mixte : tous les codes habituels.
   const quickCodes = useMemo(() => {
     if (selected.size === 0) return codeOptions;
     const indices = Array.from(selected);
@@ -94,8 +83,7 @@ export default function PersonDayEditor({
     return codeOptions;
   }, [selected, days, holidays, codeOptions]);
 
-  // Le reste des codes connus, pour affecter un poste qui n'est pas habituel
-  // à cette personne (couvre-poste, remplacement...).
+  // Le reste des codes connus (couvre-poste, remplacement...).
   const otherCodes = useMemo(
     () => allCodes.filter((c) => !quickCodes.includes(c)),
     [allCodes, quickCodes]
@@ -132,9 +120,8 @@ export default function PersonDayEditor({
 
   return (
     <View style={styles.container}>
-      {/* Toujours montée (jamais démontée) pour ne pas décaler le calendrier
-          à chaque sélection/désélection : juste grisée quand rien n'est
-          sélectionné, plutôt que de disparaître. */}
+      {/* Toujours montée (juste grisée si rien de sélectionné) pour ne pas
+          décaler le calendrier à chaque sélection. */}
       <View style={[styles.bulkBar, selected.size === 0 && styles.bulkBarDisabled]}>
         {quickCodes.length > 0 && (
           <View style={styles.chipsRow}>
@@ -199,9 +186,8 @@ export default function PersonDayEditor({
                 ]}
                 onPress={() => toggleCell(cell)}>
                 {cell.kind === 'weekend' ? (
-                  // L'en-tête dit déjà "WE" : ici on montre les deux jours
-                  // comme s'ils étaient dans deux cases séparées par une
-                  // ligne, même si le poste reste commun aux deux.
+                  // Les deux quantièmes séparés par un trait, même si le poste
+                  // reste commun aux deux jours.
                   <View style={styles.weekendLabelRow}>
                     <Text style={[styles.weekendDayText, isSelected && styles.dayLabelSelected]}>
                       {dayNumber(days[cell.satIndex])}

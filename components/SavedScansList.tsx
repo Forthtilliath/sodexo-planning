@@ -111,13 +111,11 @@ function createStyles(colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'space-between',
       borderWidth: 1,
-      // Opaque (pas borderSubtle, translucide) : sinon le rouge de
-      // SwipeableRow transparaît à travers le trait de bordure lui-même.
+      // Opaque : une bordure translucide laisserait voir le rouge de SwipeableRow.
       borderColor: colors.divider,
       borderRadius: 8,
       padding: 12,
-      // Fond opaque : cette ligne glisse par-dessus le bouton "Supprimer"
-      // (SwipeableRow) et doit le masquer complètement tant qu'on ne swipe pas.
+      // Opaque : masque le bouton "Supprimer" de SwipeableRow tant qu'on ne swipe pas.
       backgroundColor: colors.card,
     },
     rowTitle: {

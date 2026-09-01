@@ -14,22 +14,15 @@ const KEYS = {
 const DEFAULT_SETTINGS: Settings = {};
 
 const DEFAULT_TEAM_GROUPS: TeamGroup[] = [
-	// Couleur "chef" pour l'encadrement.
 	{ id: "e1-e3", label: "Direction", codes: ["E1", "E2", "E3"], color: "#c9a227" },
-	// Plonge du matin (violet clair, distinct du vert de la chaîne et du rouge) / plonge du soir.
 	{ id: "d1-d2", label: "Plonge Matin", codes: ["D1", "D2"], color: "#ab47bc" },
 	{ id: "d3-d4", label: "Plonge Soir", codes: ["D3", "D4"], color: "#5e35b1" },
-	// Chaud / froid.
 	{ id: "c2-C3", label: "Chaud", codes: ["C2", "C3"], color: "#e53935" },
 	{ id: "c4-c5", label: "Froid", codes: ["C4", "C5"], color: "#1e88e5" },
-	// Self, chaîne, allotissement.
 	{ id: "c6-c8", label: "Chaîne", codes: ["C6", "C7", "C8"], color: "#43a047" },
-	// Bleu foncé, distinct du bleu plus clair de C4-C5.
-	{ id: "b1", label: "Boutique", codes: ["B1"], color: "#0d47a1" },
-	// F1-F3 comme C6-C8, F4-F5 comme D1-D2 : même rôle/couleur, mais un code
-	// de weekend/férié distinct — préfixé "WE" pour les distinguer de leur
-	// équivalent semaine dans l'affichage, et exclus des catégories
-	// affectables à un salarié (voir `weekendVariant` sur TeamGroup).
+	{ id: "b1", label: "Boutique", codes: ["B1"], color: "#0d47a1" }, // bleu foncé, distinct du bleu C4-C5
+	// F1-F3 = C6-C8, F4-F5 = D1-D2 : même rôle/couleur, mais code week-end/férié
+	// distinct, exclu des catégories affectables (voir `weekendVariant`).
 	{ id: "f1-f3", label: "WE Chaîne", codes: ["F1", "F2", "F3"], color: "#43a047", weekendVariant: true },
 	{ id: "f4-f5", label: "WE Plonge", codes: ["F4", "F5"], color: "#ab47bc", weekendVariant: true },
 ];
@@ -51,9 +44,8 @@ const DEFAULT_CODE_SCHEDULES: CodeSchedule[] = [
 	{ codes: ["F4", "F5"], start: "09:19", end: "20:00" },
 ];
 
-// Filet de sécurité : si le stockage est vide (réinstallation, mise à jour
-// incompatible...), on retrouve au moins la liste des noms sans tout retaper.
-// Ne s'applique jamais si une liste a déjà été sauvegardée, même vide.
+// Filet de sécurité si le stockage est vide (réinstallation...) : au moins les
+// noms sans tout retaper. Jamais appliqué si une liste a déjà été sauvegardée.
 const DEFAULT_ROSTER: RosterEntry[] = [
 	MY_NAME,
 	"BICE Cécilia",
@@ -76,13 +68,10 @@ const DEFAULT_ROSTER: RosterEntry[] = [
 ].map((name) => ({ name, active: true }));
 
 // --- Réactivité : toute écriture notifie les écrans abonnés ---------------
-//
-// Chaque écran garde sa propre copie des données en mémoire (useState). Sans
-// notification, une modif faite d'un côté (ex: ajouter un salarié dans
-// Réglages) n'est vue de l'autre (ex: la grille de saisie) qu'au prochain
-// passage complet sur l'écran — d'où le décalage ressenti. On expose donc un
-// petit pub/sub : `writeJson` (donc tous les `saveXxx`) incrémente une version
-// et prévient les abonnés, qui rechargent (voir hooks/useDbData.ts).
+// Chaque écran garde sa copie des données (useState) ; sans notification, une
+// modif faite ailleurs n'est vue qu'au prochain passage sur l'écran. `writeJson`
+// (donc tous les `saveXxx`) incrémente une version et prévient les abonnés, qui
+// rechargent (voir hooks/useDbData.ts).
 
 type DataListener = () => void;
 
@@ -239,11 +228,9 @@ export async function dismissUpdateVersion(version: string): Promise<void> {
 	await saveSettings({ ...settings, dismissedUpdateVersion: version });
 }
 
-// Ids des groupes par défaut marqués variante week-end, pour rattraper une
-// sauvegarde faite avant l'ajout de `weekendVariant` (ex: WE Chaîne/WE
-// Plonge enregistrés tels quels par une simple ouverture de l'écran avant
-// cet ajout). Ne complète que les groupes qui n'ont encore aucune valeur —
-// un choix explicite (y compris `false`) de l'utilisateur n'est jamais écrasé.
+// Rattrape une sauvegarde faite avant l'ajout de `weekendVariant` : complète
+// les groupes par défaut concernés qui n'ont encore aucune valeur (un choix
+// explicite de l'utilisateur, `false` compris, n'est jamais écrasé).
 const WEEKEND_VARIANT_DEFAULT_IDS = new Set(DEFAULT_TEAM_GROUPS.filter((g) => g.weekendVariant).map((g) => g.id));
 
 export async function getTeamGroups(): Promise<TeamGroup[]> {
@@ -257,9 +244,8 @@ export function saveTeamGroups(groups: TeamGroup[]): Promise<void> {
 	return writeJson(KEYS.teamGroups, groups);
 }
 
-// "Ma" ligne (nom configurable, "Moi" par défaut — voir getMyName) doit
-// toujours pouvoir être choisie comme ligne dans un planning : on la garantit
-// en tête du roster, y compris pour une liste enregistrée sans cette entrée.
+// "Ma" ligne doit toujours pouvoir être choisie dans un planning : garantie en
+// tête du roster, même pour une liste enregistrée sans cette entrée.
 function ensureMyEntry(entries: RosterEntry[], myName: string): RosterEntry[] {
 	if (entries.some((e) => normalizeName(e.name) === normalizeName(myName))) return entries;
 	return [{ name: myName, active: true }, ...entries];
@@ -272,9 +258,8 @@ export async function getEmployeeRoster(): Promise<RosterEntry[]> {
 	try {
 		const parsed: unknown = JSON.parse(raw);
 		if (!Array.isArray(parsed)) return DEFAULT_ROSTER;
-		// Ancien format = string[] (avant l'ajout du statut actif/inactif) : on
-		// migre à la volée pour ne rien perdre des listes déjà enregistrées.
-		// Le spread préserve les champs ajoutés depuis (regular, groupId...).
+		// Ancien format string[] (avant le statut actif/inactif) : migration à la
+		// volée. Le spread préserve les champs ajoutés depuis (regular...).
 		const migrated = parsed.map((item): RosterEntry =>
 			typeof item === "string"
 				? { name: item, active: true }
@@ -337,9 +322,8 @@ export async function deleteScan(id: string): Promise<void> {
 export type BackupData = {
 	version: 1;
 	exportedAt: number;
-	// Chaque bloc est optionnel : une sauvegarde peut ne contenir qu'une partie
-	// des catégories (voir BackupSelection). Les anciennes sauvegardes les ont
-	// toutes, sauf codeSchedules ajouté plus tard.
+	// Chaque bloc est optionnel : une sauvegarde peut ne couvrir qu'une partie
+	// des catégories (voir BackupSelection).
 	settings?: Settings;
 	teamGroups?: TeamGroup[];
 	roster?: RosterEntry[];

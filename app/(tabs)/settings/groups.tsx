@@ -24,16 +24,14 @@ function nextColor(groups: TeamGroup[]): string {
 export default function GroupsScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  // Lecture réactive + enregistrement automatique : une modif d'un groupe se
-  // répercute partout (saisie, planning, réglages) sans quitter l'écran.
+  // Lecture réactive + enregistrement automatique.
   const [groups, setGroups] = usePersistedDbState(getTeamGroups, saveTeamGroups, EMPTY_GROUPS);
   const [colorPickerId, setColorPickerId] = useState<string | null>(null);
-  // Verrouillé par défaut : une modif ici a un impact sur toute l'app
-  // (couleurs/regroupement partout où un code de poste est affiché), pas
-  // question de la déclencher par un tap accidentel.
+  // Verrouillé par défaut : une modif ici impacte toute l'app (couleurs et
+  // regroupement partout), à ne pas déclencher par un tap accidentel.
   const [editMode, setEditMode] = useState(false);
 
-  // Reverrouille à chaque retour sur l'écran, même si l'édition était en cours.
+  // Reverrouille à chaque retour sur l'écran.
   useFocusEffect(
     useCallback(() => {
       setEditMode(false);
@@ -95,9 +93,8 @@ export default function GroupsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* En dehors du DraggableFlatList (donc du scroll) exprès : ce bouton
-          reste toujours visible en haut de l'écran, même après avoir scrollé
-          jusqu'en bas d'une longue liste de groupes en édition. */}
+      {/* Hors du DraggableFlatList exprès : reste visible même après avoir
+          scrollé une longue liste. */}
       <Pressable
         style={[styles.editToggle, editMode && styles.editToggleActive]}
         onPress={() => setEditMode((v) => !v)}>
@@ -106,11 +103,9 @@ export default function GroupsScreen() {
         </Text>
       </Pressable>
 
-      {/* Toute la liste tient dans un seul DraggableFlatList — un seul
-          composant scrollable pour tout l'écran, header/footer inclus : nester
-          un second scrollable dedans entre en conflit avec le geste de scroll
-          et bloque tout défilement. `containerStyle` (pas `style`) dimensionne
-          le vrai wrapper englobant du composant. */}
+      {/* Un seul DraggableFlatList scrollable pour tout l'écran (header/footer
+          inclus) : nester un second scrollable bloque le défilement.
+          `containerStyle` (pas `style`) dimensionne le wrapper englobant. */}
       <DraggableFlatList
         style={styles.flatList}
         containerStyle={styles.flatList}
