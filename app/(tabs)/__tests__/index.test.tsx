@@ -90,8 +90,8 @@ describe('PlanningEditorScreen — création', () => {
 
     await fireEvent.press(await screen.findByText('✏️ Créer le planning'));
 
-    // Étape "revue" : la grille et le bouton "Recommencer" apparaissent.
-    expect(await screen.findByText('Recommencer')).toBeTruthy();
+    // Étape "revue" : la grille pré-remplie apparaît.
+    expect(await screen.findAllByText('Planning →')).not.toHaveLength(0);
     expect(screen.getByText('Moi')).toBeTruthy();
     expect(screen.getByText('BICE Cécilia')).toBeTruthy();
   });
@@ -99,23 +99,14 @@ describe('PlanningEditorScreen — création', () => {
   it('ouvre l\'éditeur par personne au clic sur "Planning →" puis en ressort', async () => {
     await render(<PlanningEditorScreen />);
     await fireEvent.press(await screen.findByText('✏️ Créer le planning'));
-    await screen.findByText('Recommencer');
+    await screen.findAllByText('Planning →');
 
     await fireEvent.press(screen.getAllByText('Planning →')[0]);
 
-    // L'éditeur par personne remplace la grille (plus de "Recommencer").
-    await waitFor(() => expect(screen.queryByText('Recommencer')).toBeNull());
+    // L'éditeur par personne remplace la grille (plus de "Planning →").
+    await waitFor(() => expect(screen.queryByText('Planning →')).toBeNull());
     // La grille du mois affiche les quantièmes (15 = milieu de juillet).
     expect(screen.getByText('15')).toBeTruthy();
-  });
-
-  it('revient à la liste des plannings au clic sur "Recommencer"', async () => {
-    await render(<PlanningEditorScreen />);
-    await fireEvent.press(await screen.findByText('✏️ Créer le planning'));
-
-    await fireEvent.press(await screen.findByText('Recommencer'));
-
-    expect(await screen.findByText('✏️ Créer le planning')).toBeTruthy();
   });
 
   it('ouvre directement le bon planning sur la bonne ligne via les paramètres de navigation', async () => {
