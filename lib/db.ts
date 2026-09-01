@@ -190,6 +190,43 @@ export async function renameMe(newName: string): Promise<void> {
 	]);
 }
 
+/**
+ * Répercute le renommage d'un salarié (autre que "ma" ligne) partout où son nom
+ * est stocké en dur : lignes des plannings enregistrés et clés des codes
+ * habituels. La liste des salariés elle-même est déjà gérée par l'écran
+ * Réglages › Salariés ; ici on rattrape les données qui référencent un salarié
+ * par son nom. Pour "ma" ligne, voir `renameMe` (qui gère en plus le réglage).
+ */
+export async function propagateEmployeeRename(oldName: string, newName: string): Promise<void> {
+	const from = oldName.trim();
+	const to = newName.trim();
+	if (!from || !to || from === to) return;
+
+	const [scans, codeOptions] = await Promise.all([getScans(), getEmployeeCodeOptions()]);
+
+	const nextScans = scans.map((scan) =>
+		scan.employees.some((n) => normalizeName(n) === normalizeName(from))
+			? { ...scan, employees: scan.employees.map((n) => (normalizeName(n) === normalizeName(from) ? to : n)) }
+			: scan,
+	);
+	const scansChanged = nextScans.some((scan, i) => scan !== scans[i]);
+
+	const nextCodeOptions = { ...codeOptions };
+	let codeOptionsChanged = false;
+	for (const key of Object.keys(nextCodeOptions)) {
+		if (normalizeName(key) === normalizeName(from) && key !== to) {
+			nextCodeOptions[to] = nextCodeOptions[key];
+			delete nextCodeOptions[key];
+			codeOptionsChanged = true;
+		}
+	}
+
+	const tasks: Promise<void>[] = [];
+	if (scansChanged) tasks.push(writeJson(KEYS.scans, nextScans));
+	if (codeOptionsChanged) tasks.push(saveEmployeeCodeOptions(nextCodeOptions));
+	await Promise.all(tasks);
+}
+
 /** Horodatage de la dernière vérification de mise à jour (voir components/UpdateBanner.tsx). */
 export async function recordUpdateCheck(lastCheckedAt: number): Promise<void> {
 	const settings = await getSettings();
