@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 const mockRouterPush = jest.fn();
@@ -68,6 +68,17 @@ describe('PlanningScreen', () => {
   it('affiche un état vide tant qu\'aucun planning n\'existe', async () => {
     await render(<PlanningScreen />);
     expect(await screen.findByText("Aucun planning pour l'instant.")).toBeTruthy();
+  });
+
+  it('se met à jour en direct quand un planning est enregistré ailleurs', async () => {
+    await render(<PlanningScreen />);
+    expect(await screen.findByText("Aucun planning pour l'instant.")).toBeTruthy();
+
+    await act(async () => {
+      await saveScan(makeScan());
+    });
+
+    expect((await screen.findAllByText('Juillet 2026')).length).toBeGreaterThan(0);
   });
 
   it('affiche mon planning du mois en vue liste', async () => {

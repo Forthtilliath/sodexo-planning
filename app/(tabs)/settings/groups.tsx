@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 
@@ -7,10 +7,13 @@ import AddButton from '@/components/AddButton';
 import ColorPalettePicker, { COLOR_PALETTE } from '@/components/ColorPalettePicker';
 import GroupCard from '@/components/GroupCard';
 import type { ThemeColors } from '@/constants/Colors';
+import { usePersistedDbState } from '@/hooks/useDbData';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getTeamGroups, saveTeamGroups } from '@/lib/db';
 import { randomId } from '@/lib/id';
 import type { TeamGroup } from '@/types';
+
+const EMPTY_GROUPS: TeamGroup[] = [];
 
 /** Couleur de la palette pas encore utilisée par un groupe existant, pour qu'un nouveau groupe ne récupère pas toujours la même. */
 function nextColor(groups: TeamGroup[]): string {
@@ -21,31 +24,21 @@ function nextColor(groups: TeamGroup[]): string {
 export default function GroupsScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [groups, setGroups] = useState<TeamGroup[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  // Lecture réactive + enregistrement automatique : une modif d'un groupe se
+  // répercute partout (saisie, planning, réglages) sans quitter l'écran.
+  const [groups, setGroups] = usePersistedDbState(getTeamGroups, saveTeamGroups, EMPTY_GROUPS);
   const [colorPickerId, setColorPickerId] = useState<string | null>(null);
   // Verrouillé par défaut : une modif ici a un impact sur toute l'app
   // (couleurs/regroupement partout où un code de poste est affiché), pas
   // question de la déclencher par un tap accidentel.
   const [editMode, setEditMode] = useState(false);
 
-  const load = useCallback(async () => {
-    setGroups(await getTeamGroups());
-    setLoaded(true);
-    // Reverrouille à chaque retour sur l'écran, même si l'édition était en cours.
-    setEditMode(false);
-  }, []);
-
+  // Reverrouille à chaque retour sur l'écran, même si l'édition était en cours.
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load])
+      setEditMode(false);
+    }, [])
   );
-
-  useEffect(() => {
-    if (!loaded) return;
-    saveTeamGroups(groups);
-  }, [groups, loaded]);
 
   function addGroup() {
     setGroups((prev) => [...prev, { id: randomId(), label: '', codes: [], color: nextColor(prev) }]);
