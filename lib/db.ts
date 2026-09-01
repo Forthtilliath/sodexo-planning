@@ -75,6 +75,44 @@ const DEFAULT_ROSTER: RosterEntry[] = [
 	"Lorina",
 ].map((name) => ({ name, active: true }));
 
+// --- Réactivité : toute écriture notifie les écrans abonnés ---------------
+//
+// Chaque écran garde sa propre copie des données en mémoire (useState). Sans
+// notification, une modif faite d'un côté (ex: ajouter un salarié dans
+// Réglages) n'est vue de l'autre (ex: la grille de saisie) qu'au prochain
+// passage complet sur l'écran — d'où le décalage ressenti. On expose donc un
+// petit pub/sub : `writeJson` (donc tous les `saveXxx`) incrémente une version
+// et prévient les abonnés, qui rechargent (voir hooks/useDbData.ts).
+
+type DataListener = () => void;
+
+const dataListeners = new Set<DataListener>();
+let dataVersion = 0;
+
+/** Version courante des données ; change à chaque écriture. */
+export function getDataVersion(): number {
+	return dataVersion;
+}
+
+/** S'abonne aux écritures de données ; renvoie la fonction de désabonnement. */
+export function subscribeToData(listener: DataListener): () => void {
+	dataListeners.add(listener);
+	return () => {
+		dataListeners.delete(listener);
+	};
+}
+
+function notifyDataChanged(): void {
+	dataVersion++;
+	for (const listener of dataListeners) {
+		try {
+			listener();
+		} catch (err) {
+			console.error('data listener failed', err);
+		}
+	}
+}
+
 async function readJson<T>(key: string, fallback: T): Promise<T> {
 	const raw = await AsyncStorage.getItem(key);
 	if (!raw) return fallback;
@@ -87,6 +125,7 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
 
 async function writeJson<T>(key: string, value: T): Promise<void> {
 	await AsyncStorage.setItem(key, JSON.stringify(value));
+	notifyDataChanged();
 }
 
 export function getSettings(): Promise<Settings> {
