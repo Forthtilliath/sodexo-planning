@@ -1,6 +1,6 @@
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 const mockRouterPush = jest.fn();
 const mockSetOptions = jest.fn();
@@ -32,9 +32,9 @@ jest.mock('@/lib/exportImage', () => ({
 }));
 
 import PlanningScreen from '@/app/(tabs)/planning';
+import { saveScan } from '@/lib/db';
 import { shareIcs } from '@/lib/exportIcs';
 import { savePlanningImage, sharePlanningImage } from '@/lib/exportImage';
-import { saveScan } from '@/lib/db';
 import type { ScanRecord } from '@/types';
 
 const shareIcsMock = shareIcs as jest.Mock;

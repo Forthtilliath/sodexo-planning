@@ -1,15 +1,15 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
+import { timestampCompact } from './dates';
 import {
+  type BackupData,
+  type BackupSelection,
   exportAllData,
   FULL_BACKUP_SELECTION,
   importAllData,
   resolveImportedCategories,
-  type BackupData,
-  type BackupSelection,
 } from './db';
-import { timestampCompact } from './dates';
 
 /** Libellés affichés pour chaque catégorie triable d'une sauvegarde. */
 export const BACKUP_CATEGORY_LABELS: Record<keyof BackupSelection, string> = {

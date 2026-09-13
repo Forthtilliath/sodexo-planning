@@ -5,7 +5,7 @@ import BottomSheet from '@/components/BottomSheet';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { formatFullDate } from '@/lib/dates';
-import { computeDayRoster, formatScheduleHours, type DayPlanning } from '@/lib/teams';
+import { computeDayRoster, type DayPlanning,formatScheduleHours } from '@/lib/teams';
 import type { ScanRecord, TeamGroup } from '@/types';
 
 type Props = {

@@ -1,5 +1,6 @@
+import type { ColorValue} from 'react-native';
+import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
-import { ColorValue, Text } from 'react-native';
 
 import { useHeaderOptions } from '@/hooks/useHeaderOptions';
 import { useThemeColors } from '@/hooks/useThemeColors';

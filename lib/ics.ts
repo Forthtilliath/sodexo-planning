@@ -1,5 +1,5 @@
-import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 import { computeMonthPlanning } from '@/lib/teams';
+import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
 function toIcsDate(isoDate: string): string {
   return isoDate.replace(/-/g, '');

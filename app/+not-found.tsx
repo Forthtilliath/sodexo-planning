@@ -1,6 +1,6 @@
-import { Link, Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Link, Stack } from 'expo-router';
 
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';

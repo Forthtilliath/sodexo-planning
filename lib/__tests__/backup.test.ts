@@ -71,8 +71,8 @@ import {
   pickAndImportBackup,
   shareBackup,
 } from '@/lib/backup';
-import { FULL_BACKUP_SELECTION, getEmployeeRoster, getScans, getSettings, saveScan, saveSettings } from '@/lib/db';
 import type { BackupData } from '@/lib/db';
+import { FULL_BACKUP_SELECTION, getEmployeeRoster, getScans, getSettings, saveScan, saveSettings } from '@/lib/db';
 
 function fileTextResult(text: string) {
   return { canceled: false, result: { text: () => Promise.resolve(text) } };

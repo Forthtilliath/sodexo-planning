@@ -1,6 +1,7 @@
-import { AboutSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/AboutSettingsScreen';
-import Constants from 'expo-constants';
 import { ScrollView } from 'react-native';
+import Constants from 'expo-constants';
+
+import { AboutSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/AboutSettingsScreen';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
 

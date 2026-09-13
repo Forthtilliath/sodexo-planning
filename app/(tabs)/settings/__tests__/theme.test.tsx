@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { ThemePreferenceContext } from '@/hooks/useThemeColors';
 import ThemeScreen from '@/app/(tabs)/settings/theme';
+import { ThemePreferenceContext } from '@/hooks/useThemeColors';
 
 describe('ThemeScreen', () => {
   it('affiche les trois options avec la préférence système cochée par défaut', async () => {

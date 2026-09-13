@@ -1,12 +1,13 @@
-import { BackupSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/BackupSettingsScreen';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
+import { BackupSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/BackupSettingsScreen';
+
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { pickAndImportBackup, shareBackup } from '@/lib/backup';
-import { FULL_BACKUP_SELECTION, getSettings, saveSettings, type BackupSelection } from '@/lib/db';
+import { type BackupSelection,FULL_BACKUP_SELECTION, getSettings, saveSettings } from '@/lib/db';
 import {
   BACKUP_REMINDER_INTERVAL_DAYS,
   cancelBackupReminder,
