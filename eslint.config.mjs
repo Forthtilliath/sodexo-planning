@@ -1,8 +1,16 @@
 import { defineConfig, globalIgnores } from 'eslint/config';
-import { createReactConfig } from '@forthtilliath/eslint-config/react';
+import { createReactNativeConfig } from '@forthtilliath/eslint-config/react-native';
 
 const eslintConfig = defineConfig([
-  ...createReactConfig({ strict: false, turbo: false, a11y: false }),
+  ...createReactNativeConfig({ strict: false, turbo: false }),
+  {
+    // react-native/no-unused-styles ne sait analyser que `const styles =
+    // StyleSheet.create(...)` au niveau module. Ici les styles sont générés
+    // par des fonctions `createStyles(colors)` (thème dynamique) : la règle
+    // perd le nom de la variable ("undefined.xxx") et marque tout comme
+    // inutilisé, faux positif sur ~tout le projet.
+    rules: { 'react-native/no-unused-styles': 'off' },
+  },
   {
     // Scripts Node CJS (package.json n'a pas "type": "module") : require() y est légitime.
     files: ['scripts/**/*.js', 'plugins/**/*.js'],
