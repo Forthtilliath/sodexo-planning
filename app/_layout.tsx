@@ -1,17 +1,18 @@
+import { useEffect } from 'react';
+import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
 
 import MyNameProvider from '@/components/MyNameProvider';
 import ThemePreferenceProvider from '@/components/ThemePreferenceProvider';
 import UpdateBanner from '@/components/UpdateBanner';
 import { useHeaderOptions } from '@/hooks/useHeaderOptions';
 import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
+
+import 'react-native-reanimated';
 
 // Écran de secours lisible en cas d'erreur, plutôt que l'écran noir de debug.
 export { default as ErrorBoundary } from '@/components/ErrorFallback';
@@ -36,6 +37,8 @@ function RootLayoutNav() {
   const colors = useThemeColors();
   const headerOptions = useHeaderOptions();
   const [loaded, error] = useFonts({
+    // Asset statique : Metro exige require() ici, pas d'équivalent import.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 

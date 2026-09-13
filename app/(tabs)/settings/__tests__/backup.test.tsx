@@ -1,6 +1,6 @@
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 jest.mock('expo-router', () => {
   const React = require('react');
@@ -32,7 +32,6 @@ import * as notificationsLib from '@/lib/notifications';
 
 const requestPermissionMock = notificationsLib.requestNotificationPermission as jest.Mock;
 const scheduleBackupReminderMock = notificationsLib.scheduleBackupReminder as jest.Mock;
-const cancelBackupReminderMock = notificationsLib.cancelBackupReminder as jest.Mock;
 const shareBackupMock = backupLib.shareBackup as jest.Mock;
 const pickAndImportBackupMock = backupLib.pickAndImportBackup as jest.Mock;
 

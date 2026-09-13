@@ -5,6 +5,7 @@ import BrandHeader from '@/components/BrandHeader';
  * marque ([BrandHeader]). `any` : la signature de `header` diffère entre pile
  * et onglets, et BrandHeader ne lit que les champs communs aux deux.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const brandHeaderOptions = { header: (props: any) => <BrandHeader {...props} /> } as const;
 
 export function useHeaderOptions() {
