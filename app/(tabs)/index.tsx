@@ -108,12 +108,18 @@ export default function PlanningEditorScreen() {
   const [showAddEmployeeSheet, setShowAddEmployeeSheet] = useState(false);
 
   const stepRef = useRef(step);
-  stepRef.current = step;
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useEffect(() => {
+    stepRef.current = step;
+    settingsRef.current = settings;
+  }, [step, settings]);
   // Renseignée après la définition de persistScan, pour que le flush "on blur"
   // appelle toujours la dernière version de la fonction.
   const persistScanRef = useRef<(() => Promise<ScanRecord>) | null>(null);
+  // Évite un enregistrement parasite juste après le chargement d'un planning
+  // (createManualPlanning / openScanForEditing changent aussi l'état) — déclarée
+  // ici, avant ces deux fonctions, pour qu'elles la ferment déjà initialisée.
+  const skipNextAutosaveRef = useRef(false);
   // Bandeau "Annuler" après une suppression par swipe (voir showUndoToast).
   const [undoToast, setUndoToast] = useState<ScanRecord | null>(null);
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -291,7 +297,7 @@ export default function PlanningEditorScreen() {
     setCurrentScanId(scan.id);
     setEditingRow(null);
     setStep('review');
-  }, []);
+  }, [setYear, setMonth]);
 
   // Arrivée depuis "Mon planning" (bouton "✏️ Modifier") : ouvre le bon
   // planning sur la bonne personne. Params retirés une fois consommés, sinon
@@ -302,6 +308,9 @@ export default function PlanningEditorScreen() {
     if (!scan) return;
     const rowIndex = Number(editParams.editRow);
     openScanForEditing(scan);
+    // Dérive `editingRow` du paramètre de navigation `editRow` — état interne
+    // synchronisé depuis un signal externe (deep link), pas un anti-pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
     setEditingRow(Number.isNaN(rowIndex) ? null : rowIndex);
     router.setParams({ scanId: undefined, editRow: undefined });
   }, [editParams, scans, openScanForEditing]);
@@ -370,12 +379,13 @@ export default function PlanningEditorScreen() {
     return scan;
   }
 
-  persistScanRef.current = persistScan;
+  useEffect(() => {
+    persistScanRef.current = persistScan;
+  });
 
-  // Auto-save debouncé de toute modif en revue. `skipNextAutosaveRef` évite un
-  // enregistrement parasite juste après le chargement d'un planning
-  // (createManualPlanning / openScanForEditing changent aussi l'état).
-  const skipNextAutosaveRef = useRef(false);
+  // Auto-save debouncé de toute modif en revue. `skipNextAutosaveRef` (déclarée
+  // plus haut) évite un enregistrement parasite juste après le chargement d'un
+  // planning (createManualPlanning / openScanForEditing changent aussi l'état).
   useEffect(() => {
     if (step !== 'review') return;
     if (skipNextAutosaveRef.current) {
