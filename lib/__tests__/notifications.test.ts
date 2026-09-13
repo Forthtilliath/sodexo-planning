@@ -14,11 +14,12 @@ jest.mock('expo-notifications', () => ({
 }));
 
 import * as Notifications from 'expo-notifications';
+
 import {
   BACKUP_REMINDER_INTERVAL_DAYS,
-  DEFAULT_REMINDER_HOUR,
   cancelBackupReminder,
   cancelWorkReminders,
+  DEFAULT_REMINDER_HOUR,
   requestNotificationPermission,
   rescheduleWorkReminders,
   scheduleBackupReminder,

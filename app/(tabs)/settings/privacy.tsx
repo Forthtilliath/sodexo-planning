@@ -1,5 +1,6 @@
-import { PrivacySettingsScreen } from '@forthtilliath/react-native-kit/components/settings/PrivacySettingsScreen';
 import { ScrollView } from 'react-native';
+
+import { PrivacySettingsScreen } from '@forthtilliath/react-native-kit/components/settings/PrivacySettingsScreen';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
 

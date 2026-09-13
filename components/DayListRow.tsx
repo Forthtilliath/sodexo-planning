@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import ColorDot from '@/components/ColorDot';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { formatScheduleHours, type DayPlanning } from '@/lib/teams';
+import { type DayPlanning,formatScheduleHours } from '@/lib/teams';
 
 type Props = {
   day: DayPlanning;

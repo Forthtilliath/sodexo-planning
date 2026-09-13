@@ -1,5 +1,5 @@
-import { ScrollViewStyleReset } from 'expo-router/html';
 import type { ReactNode } from 'react';
+import { ScrollViewStyleReset } from 'expo-router/html';
 
 // Web uniquement : HTML racine de chaque page, rendu statiquement côté Node
 // (pas d'accès au DOM ni aux API navigateur).

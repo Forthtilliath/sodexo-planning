@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { type ReactNode,useCallback, useEffect, useState } from 'react';
 
-import { ThemePreferenceContext, type ThemePreference } from '@/hooks/useThemeColors';
+import { type ThemePreference,ThemePreferenceContext } from '@/hooks/useThemeColors';
 import { getSettings, saveSettings } from '@/lib/db';
 
 /** Charge la préférence de thème enregistrée et la rend disponible (+ modifiable) à toute l'app. */
