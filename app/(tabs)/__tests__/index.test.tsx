@@ -1,6 +1,6 @@
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 const mockRouterPush = jest.fn();
 const mockSetParams = jest.fn();
@@ -24,7 +24,7 @@ jest.mock('@/lib/notifications', () => ({
 }));
 
 import PlanningEditorScreen from '@/app/(tabs)/index';
-import { saveScan, saveSettings } from '@/lib/db';
+import { saveScan } from '@/lib/db';
 import type { ScanRecord } from '@/types';
 
 const NOW = new Date(2026, 6, 15, 12, 0, 0); // 15 juillet 2026

@@ -47,7 +47,9 @@ if (bumpType) {
 if (fs.existsSync(gradlewPath)) {
   try {
     run(`"${gradlewPath}" --stop`, androidDir);
-  } catch {}
+  } catch {
+    // Best-effort : le démon n'est peut-être déjà pas lancé, on continue.
+  }
 }
 
 run('npx expo prebuild --clean --platform android');
