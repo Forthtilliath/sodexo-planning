@@ -1,7 +1,7 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
+import { router, useFocusEffect } from 'expo-router';
 
 import AddButton from '@/components/AddButton';
 import BottomSheet from '@/components/BottomSheet';
@@ -77,9 +77,11 @@ export default function RosterScreen() {
   // nom porté à l'ouverture.
   const renameBaselineRef = useRef<string | null>(null);
   const rosterRef = useRef(roster);
-  rosterRef.current = roster;
   const openIndexRef = useRef(openIndex);
-  openIndexRef.current = openIndex;
+  useEffect(() => {
+    rosterRef.current = roster;
+    openIndexRef.current = openIndex;
+  }, [roster, openIndex]);
 
   const commitPendingRename = useCallback(() => {
     const baseline = renameBaselineRef.current;
@@ -237,7 +239,7 @@ export default function RosterScreen() {
       }
       setRoster([...newActive, ...roster.filter((e) => !e.active)]);
     },
-    [roster, sortMode, searching]
+    [roster, sortMode, searching, setRoster]
   );
 
   const renderListItem = useCallback(

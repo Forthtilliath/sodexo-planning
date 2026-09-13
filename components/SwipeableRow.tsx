@@ -23,7 +23,7 @@ type Props = {
 export default function SwipeableRow({ children, onDelete, deleteLabel = 'Supprimer' }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const translateX = useRef(new Animated.Value(0)).current;
+  const translateX = useMemo(() => new Animated.Value(0), []);
   // Largeur de la carte (via onLayout), lue en synchrone pendant le geste :
   // un state ne serait pas assez frais au début d'un drag après re-render.
   const cardWidthRef = useRef(0);
@@ -40,24 +40,32 @@ export default function SwipeableRow({ children, onDelete, deleteLabel = 'Suppri
     }).start(() => onDelete());
   }
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-      onPanResponderMove: (_, gesture) => {
-        translateX.setValue(Math.min(0, Math.max(-cardWidthRef.current, gesture.dx)));
-      },
-      onPanResponderRelease: (_, gesture) => {
-        const width = cardWidthRef.current;
-        if (width > 0 && -gesture.dx >= width * DELETE_THRESHOLD_RATIO) {
-          animateDeleted();
-        } else {
-          animateClosed();
-        }
-      },
-      onPanResponderTerminate: animateClosed,
-    })
-  ).current;
+  const panResponder = useMemo(
+    () =>
+      // PanResponder est une API opaque pour le compilateur : ses handlers lisent
+      // cardWidthRef.current de façon asynchrone (pendant un geste, jamais au
+      // render), mais le compilateur ne peut pas le garantir pour une fonction
+      // qu'il ne connaît pas — faux positif inhérent à ce pattern RN standard.
+      // eslint-disable-next-line react-hooks/refs
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderMove: (_, gesture) => {
+          translateX.setValue(Math.min(0, Math.max(-cardWidthRef.current, gesture.dx)));
+        },
+        onPanResponderRelease: (_, gesture) => {
+          const width = cardWidthRef.current;
+          if (width > 0 && -gesture.dx >= width * DELETE_THRESHOLD_RATIO) {
+            animateDeleted();
+          } else {
+            animateClosed();
+          }
+        },
+        onPanResponderTerminate: animateClosed,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps, @eslint-react/exhaustive-deps -- créé une seule fois, comme l'ancien useRef(...).current ; animateDeleted/animateClosed/translateX sont capturées à ce moment-là, exactement comme avant.
+    []
+  );
 
   return (
     <View
