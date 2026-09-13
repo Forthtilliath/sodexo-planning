@@ -1,10 +1,11 @@
-import { UpdateAvailableBanner } from '@forthtilliath/react-native-kit/components/update/UpdateAvailableBanner';
-import { useUpdateCheck } from '@forthtilliath/react-native-kit/hooks/useUpdateCheck';
-import Constants from 'expo-constants';
-import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
+import { router } from 'expo-router';
+
+import { UpdateAvailableBanner } from '@forthtilliath/react-native-kit/components/update/UpdateAvailableBanner';
+import { useUpdateCheck } from '@forthtilliath/react-native-kit/hooks/useUpdateCheck';
 
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';

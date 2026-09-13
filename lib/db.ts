@@ -1,6 +1,7 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { MY_NAME, normalizeName } from "@/lib/teams";
 import type { CodeSchedule, RosterEntry, ScanRecord, Settings, TeamGroup } from "@/types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const KEYS = {
 	settings: "@rn-planning/settings",

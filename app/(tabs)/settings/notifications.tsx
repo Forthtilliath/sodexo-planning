@@ -1,13 +1,13 @@
-import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getSettings, saveSettings } from '@/lib/db';
 import {
-  DEFAULT_REMINDER_HOUR,
   cancelWorkReminders,
+  DEFAULT_REMINDER_HOUR,
   requestNotificationPermission,
   rescheduleWorkReminders,
 } from '@/lib/notifications';

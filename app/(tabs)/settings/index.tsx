@@ -1,6 +1,7 @@
-import { SettingsMenu } from '@forthtilliath/react-native-kit/components/settings/SettingsMenu';
-import { router } from 'expo-router';
 import { ScrollView } from 'react-native';
+import { router } from 'expo-router';
+
+import { SettingsMenu } from '@forthtilliath/react-native-kit/components/settings/SettingsMenu';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
 

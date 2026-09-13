@@ -1,6 +1,6 @@
-import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 import OptionsModal from '@/components/OptionsModal';
 import type { ThemeColors } from '@/constants/Colors';

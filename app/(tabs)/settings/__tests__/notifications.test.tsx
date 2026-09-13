@@ -1,6 +1,6 @@
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 jest.mock('expo-router', () => {
   const React = require('react');

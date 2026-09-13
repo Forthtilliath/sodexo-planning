@@ -1,7 +1,7 @@
-import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
+import { useFocusEffect } from 'expo-router';
 
 import AddButton from '@/components/AddButton';
 import ColorPalettePicker, { COLOR_PALETTE } from '@/components/ColorPalettePicker';

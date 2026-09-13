@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 jest.mock('expo-constants', () => ({ expoConfig: { version: '1.0.0' } }));
 

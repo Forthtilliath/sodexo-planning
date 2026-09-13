@@ -1,9 +1,10 @@
-import { UpdateSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/UpdateSettingsScreen';
-import Constants from 'expo-constants';
 import { ScrollView } from 'react-native';
+import Constants from 'expo-constants';
 
-import { compareVersions, downloadAndInstallApk, fetchLatestRelease, fetchReleaseHistory } from '@/lib/appUpdate';
+import { UpdateSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/UpdateSettingsScreen';
+
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { compareVersions, downloadAndInstallApk, fetchLatestRelease, fetchReleaseHistory } from '@/lib/appUpdate';
 
 export default function UpdateScreen() {
   const colors = useThemeColors();

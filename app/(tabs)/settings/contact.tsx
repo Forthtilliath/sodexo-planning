@@ -1,5 +1,6 @@
-import { ContactSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/ContactSettingsScreen';
 import { ScrollView } from 'react-native';
+
+import { ContactSettingsScreen } from '@forthtilliath/react-native-kit/components/settings/ContactSettingsScreen';
 
 import { useThemeColors } from '@/hooks/useThemeColors';
 
