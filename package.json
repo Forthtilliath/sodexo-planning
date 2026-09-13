@@ -36,12 +36,15 @@
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
+    "@forthtilliath/eslint-config": "^0.3.0",
     "@react-native/jest-preset": "^0.86.3",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.4",
     "jest": "^29.7.0",
     "jest-expo": "^57.0.5",
+    "prettier": "^3.8.3",
     "test-renderer": "^1.2.0",
     "typescript": "~6.0.3"
   },
@@ -50,6 +53,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "lint": "eslint .",
     "test": "jest",
     "version:patch": "node scripts/bump-version.js patch",
     "version:minor": "node scripts/bump-version.js minor",
