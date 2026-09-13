@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { router, useFocusEffect, useNavigation } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
 
 import DayListRow from '@/components/DayListRow';
 import MonthCalendarView from '@/components/MonthCalendarView';
@@ -16,7 +16,7 @@ import { getCodeSchedules, getEmployeeRoster, getScans, getTeamGroups } from '@/
 import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
 import { savePlanningImage, sharePlanningImage } from '@/lib/exportImage';
 import { buildIcs } from '@/lib/ics';
-import { computeMonthPlanning, findMyRowIndex, normalizeName, type DayPlanning } from '@/lib/teams';
+import { computeMonthPlanning, type DayPlanning,findMyRowIndex, normalizeName } from '@/lib/teams';
 import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
@@ -47,8 +47,10 @@ export default function PlanningScreen() {
   const captureAreaRef = useRef<View>(null);
 
   // Sélection par défaut : le mois courant s'il a un planning, sinon le premier.
-  // Recalculée si le planning sélectionné disparaît (suppression ailleurs).
+  // Recalculée si le planning sélectionné disparaît (suppression ailleurs) —
+  // `scans` vient de useDbData (synchronisation externe), pas d'un state local.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
     setSelectedScanId((prev) => {
       if (prev && scans.some((s) => s.id === prev)) return prev;
       const now = new Date();

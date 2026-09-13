@@ -14,7 +14,9 @@ import { subscribeToData } from '@/lib/db';
 export function useDbData<T>(load: () => Promise<T>, initial: T): T {
 	const [data, setData] = useState<T>(initial);
 	const loadRef = useRef(load);
-	loadRef.current = load;
+	useEffect(() => {
+		loadRef.current = load;
+	}, [load]);
 	// Dernier contenu appliqué (sérialisé) : évite un re-render quand un
 	// rechargement ramène la même donnée.
 	const appliedJsonRef = useRef<string | null>(null);
@@ -66,9 +68,11 @@ export function usePersistedDbState<T>(
 	const [value, setValueRaw] = useState<T>(initial);
 	const [loaded, setLoaded] = useState(false);
 	const loadRef = useRef(load);
-	loadRef.current = load;
 	const saveRef = useRef(save);
-	saveRef.current = save;
+	useEffect(() => {
+		loadRef.current = load;
+		saveRef.current = save;
+	}, [load, save]);
 	const syncedJsonRef = useRef<string | null>(null);
 	const writeSeqRef = useRef(0);
 
