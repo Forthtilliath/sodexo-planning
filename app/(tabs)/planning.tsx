@@ -1,25 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 
 import DayListRow from '@/components/DayListRow';
 import MonthCalendarView from '@/components/MonthCalendarView';
-import PickerListSheet from '@/components/PickerListSheet';
+import MyRowPicker from '@/components/MyRowPicker';
+import PlanningExportActions from '@/components/PlanningExportActions';
+import PlanningViewerSwitch from '@/components/PlanningViewerSwitch';
 import ScanMonthSelector from '@/components/ScanMonthSelector';
+import SegmentedToggle from '@/components/SegmentedToggle';
 import type { ThemeColors } from '@/constants/Colors';
 import { useDbData } from '@/hooks/useDbData';
 import { useMyName } from '@/hooks/useMyName';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { isToday, monthYearLabel } from '@/lib/dates';
 import { getCodeSchedules, getEmployeeRoster, getScans, getTeamGroups } from '@/lib/db';
-import { buildIcsFilename, shareIcs } from '@/lib/exportIcs';
-import { savePlanningImage, sharePlanningImage } from '@/lib/exportImage';
-import { buildIcs } from '@/lib/ics';
-import { computeMonthPlanning, type DayPlanning,findMyRowIndex, normalizeName } from '@/lib/teams';
+import { computeMonthPlanning, type DayPlanning, findMyRowIndex } from '@/lib/teams';
 import type { CodeSchedule, RosterEntry, ScanRecord, TeamGroup } from '@/types';
 
 type ViewMode = 'list' | 'calendar';
+
+const VIEW_MODES: { value: ViewMode; label: string }[] = [
+  { value: 'calendar', label: '📅 Calendrier' },
+  { value: 'list', label: '📋 Liste' },
+];
 
 const EMPTY_SCANS: ScanRecord[] = [];
 const EMPTY_GROUPS: TeamGroup[] = [];
@@ -39,9 +43,6 @@ export default function PlanningScreen() {
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [manualRowIndex, setManualRowIndex] = useState<number | null>(null);
   const [viewingName, setViewingName] = useState<string | null>(null);
-  const [colleaguePickerOpen, setColleaguePickerOpen] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [imageBusy, setImageBusy] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showHours, setShowHours] = useState(false);
   const captureAreaRef = useRef<View>(null);
@@ -99,37 +100,6 @@ export default function PlanningScreen() {
     });
   }, [navigation, viewingSomeoneElse, selectedScan, viewingIndex]);
 
-  // Même regroupement qu'ailleurs : groupes assignables dans l'ordre, "Sans
-  // catégorie" en dernier, catégories vides masquées. Salariés dans l'ordre de
-  // `employees` (pas de tri alphabétique).
-  const colleagueSections = useMemo(() => {
-    const employees = selectedScan?.employees ?? [];
-    const groupIdByName = new Map(roster.map((r) => [normalizeName(r.name), r.groupId]));
-    const assignableGroups = groups.filter((g) => !g.weekendVariant);
-    const defs = [
-      ...assignableGroups.map((g) => ({ key: g.id, label: g.label || 'Groupe sans nom', color: g.color, groupId: g.id as string | undefined })),
-      { key: 'none', label: 'Sans catégorie', color: undefined, groupId: undefined as string | undefined },
-    ];
-    return defs
-      .map((def) => ({
-        key: def.key,
-        label: def.label,
-        color: def.color,
-        items: employees
-          .map((name, index) => ({ name, index }))
-          .filter(({ name }) => {
-            const groupId = groupIdByName.get(normalizeName(name));
-            return def.groupId ? groupId === def.groupId : !assignableGroups.some((g) => g.id === groupId);
-          })
-          .map(({ name, index }) => ({
-            key: String(index),
-            label: `${name || `Ligne ${index + 1}`}${index === myRowIndex ? ' (moi)' : ''}`,
-            highlight: index === myRowIndex,
-          })),
-      }))
-      .filter((section) => section.items.length > 0);
-  }, [selectedScan, roster, groups, myRowIndex]);
-
   const planning: DayPlanning[] = useMemo(() => {
     if (!selectedScan || displayRowIndex < 0) return [];
     return computeMonthPlanning(selectedScan, displayRowIndex, groups, schedules);
@@ -138,43 +108,6 @@ export default function PlanningScreen() {
   function handleEdit() {
     if (!selectedScan || displayRowIndex < 0) return;
     router.push({ pathname: '/', params: { scanId: selectedScan.id, editRow: String(displayRowIndex) } });
-  }
-
-  async function handleExport() {
-    if (!selectedScan || displayRowIndex < 0) return;
-    setExporting(true);
-    try {
-      const ics = buildIcs(selectedScan, groups, displayRowIndex, schedules);
-      const filename = buildIcsFilename(
-        selectedScan.year,
-        selectedScan.month,
-        selectedScan.employees[displayRowIndex]
-      );
-      await shareIcs(filename, ics);
-    } catch (err) {
-      Alert.alert('Export impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function handleImage() {
-    if (!selectedScan || displayRowIndex < 0 || !captureAreaRef.current) return;
-    setImageBusy(true);
-    try {
-      const uri = await captureRef(captureAreaRef, { format: 'png', quality: 1, result: 'tmpfile' });
-      const showErr = (err: unknown) =>
-        Alert.alert('Action impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
-      Alert.alert('Planning en image', 'Que veux-tu faire ?', [
-        { text: 'Enregistrer', onPress: () => savePlanningImage(uri).catch(showErr) },
-        { text: 'Partager', onPress: () => sharePlanningImage(uri).catch(showErr) },
-        { text: 'Annuler', style: 'cancel' },
-      ]);
-    } catch (err) {
-      Alert.alert('Image impossible', err instanceof Error ? err.message : "Une erreur s'est produite.");
-    } finally {
-      setImageBusy(false);
-    }
   }
 
   if (scans.length === 0) {
@@ -190,66 +123,25 @@ export default function PlanningScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <ScanMonthSelector scans={sortedScans} selectedScanId={selectedScanId} onSelect={setSelectedScanId} />
 
-      {selectedScan && selectedScan.employees.length > 0 && (
-        <View style={styles.viewerRow}>
-          <Pressable
-            style={[styles.viewerButton, !viewingSomeoneElse && styles.viewerButtonActive]}
-            onPress={() => setViewingName(null)}>
-            <Text style={[styles.viewerButtonText, !viewingSomeoneElse && styles.viewerButtonTextActive]}>
-              🙋 Mon planning
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.viewerButton, viewingSomeoneElse && styles.viewerButtonActive]}
-            onPress={() => setColleaguePickerOpen(true)}>
-            <Text
-              style={[styles.viewerButtonText, viewingSomeoneElse && styles.viewerButtonTextActive]}
-              numberOfLines={1}>
-              {viewingSomeoneElse ? `👥 ${selectedScan.employees[viewingIndex] || 'Collègue'}` : '👥 Un collègue'}
-            </Text>
-          </Pressable>
-        </View>
+      {selectedScan && (
+        <PlanningViewerSwitch
+          scan={selectedScan}
+          roster={roster}
+          groups={groups}
+          myRowIndex={myRowIndex}
+          viewingIndex={viewingIndex}
+          viewingSomeoneElse={viewingSomeoneElse}
+          onViewName={setViewingName}
+        />
       )}
 
-      <PickerListSheet
-        visible={colleaguePickerOpen}
-        onClose={() => setColleaguePickerOpen(false)}
-        sections={colleagueSections}
-        onSelect={(key) => setViewingName(selectedScan?.employees[Number(key)] ?? null)}
-      />
-
       {selectedScan && !viewingSomeoneElse && myRowIndex < 0 && (
-        <View style={styles.notFoundBox}>
-          <Text style={styles.notFoundText}>
-            Aucune ligne "{myName}" dans ce planning. Choisis la tienne :
-          </Text>
-          {selectedScan.employees.map((name, index) => (
-            <Pressable
-              key={index}
-              style={[styles.employeeRow, index > 0 && styles.employeeRowDivider]}
-              onPress={() => setManualRowIndex(index)}>
-              <Text style={styles.employeeRowText}>{name || `Ligne ${index + 1}`}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <MyRowPicker myName={myName} employees={selectedScan.employees} onPick={setManualRowIndex} />
       )}
 
       {selectedScan && displayRowIndex >= 0 && (
         <>
-          <View style={styles.viewModeRow}>
-            <Pressable
-              style={[styles.viewModeButton, viewMode === 'calendar' && styles.viewModeButtonActive]}
-              onPress={() => setViewMode('calendar')}>
-              <Text style={[styles.viewModeText, viewMode === 'calendar' && styles.viewModeTextActive]}>
-                📅 Calendrier
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.viewModeButton, viewMode === 'list' && styles.viewModeButtonActive]}
-              onPress={() => setViewMode('list')}>
-              <Text style={[styles.viewModeText, viewMode === 'list' && styles.viewModeTextActive]}>📋 Liste</Text>
-            </Pressable>
-          </View>
+          <SegmentedToggle options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
 
           <Pressable style={styles.editButton} onPress={handleEdit}>
             <Text style={styles.editButtonText}>
@@ -295,25 +187,14 @@ export default function PlanningScreen() {
             )}
           </View>
 
-          <Pressable style={styles.imageButton} disabled={imageBusy} onPress={handleImage}>
-            <Text style={styles.imageButtonText}>
-              {imageBusy ? 'Génération de l’image…' : '🖼️ Planning en image'}
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.exportButton} disabled={exporting} onPress={handleExport}>
-            <Text style={styles.exportButtonText}>
-              {exporting
-                ? 'Export en cours…'
-                : viewingSomeoneElse
-                  ? `📤 Exporter le planning de ${selectedScan.employees[viewingIndex] || 'ce/cette collègue'}`
-                  : '📤 Exporter en agenda (.ics)'}
-            </Text>
-          </Pressable>
-          <Text style={styles.exportHint}>
-            Un ré-export met à jour les événements déjà importés (même jour = même événement). Si ton appli
-            calendrier crée quand même des doublons, supprime l'ancien import avant de réimporter.
-          </Text>
+          <PlanningExportActions
+            scan={selectedScan}
+            groups={groups}
+            schedules={schedules}
+            rowIndex={displayRowIndex}
+            isColleague={viewingSomeoneElse}
+            captureAreaRef={captureAreaRef}
+          />
         </>
       )}
     </ScrollView>
@@ -329,77 +210,6 @@ function createStyles(colors: ThemeColors) {
     content: {
       padding: 16,
       paddingBottom: 48,
-    },
-    viewerRow: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 12,
-    },
-    viewerButton: {
-      flex: 1,
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: 'center',
-    },
-    viewerButtonActive: {
-      backgroundColor: colors.tint,
-      borderColor: colors.tint,
-    },
-    viewerButtonText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-    viewerButtonTextActive: {
-      color: colors.onTint,
-    },
-    notFoundBox: {
-      padding: 12,
-      borderRadius: 8,
-      backgroundColor: colors.dangerSoft,
-      marginBottom: 16,
-    },
-    notFoundText: {
-      marginBottom: 8,
-      color: colors.text,
-    },
-    employeeRow: {
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-    },
-    employeeRowDivider: {
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.divider,
-    },
-    employeeRowText: {
-      color: colors.text,
-    },
-    viewModeRow: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 12,
-    },
-    viewModeButton: {
-      flex: 1,
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: 'center',
-    },
-    viewModeButtonActive: {
-      backgroundColor: colors.tint,
-      borderColor: colors.tint,
-    },
-    viewModeText: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-    viewModeTextActive: {
-      color: colors.onTint,
     },
     editButton: {
       paddingVertical: 10,
@@ -440,36 +250,6 @@ function createStyles(colors: ThemeColors) {
       fontSize: 13,
       opacity: 0.7,
       marginBottom: 12,
-      color: colors.text,
-    },
-    imageButton: {
-      marginTop: 16,
-      paddingVertical: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.tint,
-      alignItems: 'center',
-    },
-    imageButtonText: {
-      color: colors.tint,
-      fontWeight: '700',
-    },
-    exportButton: {
-      marginTop: 12,
-      paddingVertical: 14,
-      borderRadius: 8,
-      backgroundColor: colors.tint,
-      alignItems: 'center',
-    },
-    exportButtonText: {
-      color: colors.onTint,
-      fontWeight: '700',
-    },
-    exportHint: {
-      fontSize: 11,
-      opacity: 0.6,
-      marginTop: 8,
-      textAlign: 'center',
       color: colors.text,
     },
     emptyContainer: {
