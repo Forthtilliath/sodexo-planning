@@ -1,4 +1,4 @@
-import { computeMonthPlanning } from '@/lib/teams';
+import { buildPlanningEvents, endsNextDay, nextDay } from '@/lib/planningEvents';
 import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
 function toIcsDate(isoDate: string): string {
@@ -8,12 +8,6 @@ function toIcsDate(isoDate: string): string {
 function toIcsDateTime(isoDate: string, hhmm: string): string {
   const [h, m] = hhmm.split(':');
   return `${toIcsDate(isoDate)}T${h.padStart(2, '0')}${m.padStart(2, '0')}00`;
-}
-
-function nextDay(isoDate: string): string {
-  const d = new Date(`${isoDate}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
 }
 
 function escapeIcsText(text: string): string {
@@ -43,11 +37,30 @@ function sequenceNumber(): number {
   return Math.floor(Date.now() / 1000);
 }
 
+/** "Marie-Hélène  Dupont" -> "marie-helene-dupont" (sans accents ni caractères spéciaux). */
+export function slugifyName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 /**
- * Génère un fichier .ics avec un événement par jour du scan, pour la ligne de
- * l'utilisateur (myRowIndex). Évènement avec heure réelle quand l'horaire du
- * code est connu (Réglages), sinon journée entière. La description liste les
- * coéquipiers détectés (même groupe de code ce jour-là).
+ * UID basé sur la personne et la date, pas sur le scan : stable d'un export à
+ * l'autre même après un nouveau scan du mois, pour que le calendrier remplace
+ * l'événement au lieu de le dupliquer. Le nom évite que deux collègues exportés
+ * dans le même agenda s'écrasent.
+ */
+export function buildEventUid(employeeName: string, isoDate: string): string {
+  return `${slugifyName(employeeName) || 'planning'}-${isoDate}@rn-planning`;
+}
+
+/**
+ * Génère un fichier .ics avec un événement par jour du scan, pour la ligne
+ * `myRowIndex`. Évènement avec heure réelle quand l'horaire du code est connu
+ * (Réglages), sinon journée entière.
  */
 export function buildIcs(
   scan: ScanRecord,
@@ -55,41 +68,32 @@ export function buildIcs(
   myRowIndex: number,
   schedules: CodeSchedule[] = []
 ): string {
-  const planning = computeMonthPlanning(scan, myRowIndex, groups, schedules);
+  const employeeName = scan.employees[myRowIndex] ?? '';
   const stamp = dtstamp();
   const sequence = sequenceNumber();
 
-  const events = planning
-    .filter((day) => day.code)
-    .map((day) => {
-      const summary = day.code;
-      const description =
-        day.teammates.length > 0
-          ? `Équipe : ${day.teammates.map((t) => `${t.name} (${t.code})`).join(', ')}`
-          : '';
-
-      // UID basé sur la seule date : stable d'un export à l'autre, pour que le
-      // calendrier remplace l'événement au lieu d'en créer un doublon.
-      const lines = [
-        'BEGIN:VEVENT',
-        `UID:${scan.id}-${day.date}@rn-planning`,
-        `DTSTAMP:${stamp}`,
-        `SEQUENCE:${sequence}`,
-      ];
-      if (day.schedule) {
-        lines.push(`DTSTART:${toIcsDateTime(day.date, day.schedule.start)}`);
-        lines.push(`DTEND:${toIcsDateTime(day.date, day.schedule.end)}`);
-      } else {
-        lines.push(`DTSTART;VALUE=DATE:${toIcsDate(day.date)}`);
-        lines.push(`DTEND;VALUE=DATE:${toIcsDate(nextDay(day.date))}`);
-      }
-      lines.push(`SUMMARY:${escapeIcsText(summary)}`);
-      if (description) {
-        lines.push(`DESCRIPTION:${escapeIcsText(description)}`);
-      }
-      lines.push('END:VEVENT');
-      return lines.map(foldLine).join('\r\n');
-    });
+  const events = buildPlanningEvents(scan, groups, myRowIndex, schedules).map((event) => {
+    const lines = [
+      'BEGIN:VEVENT',
+      `UID:${buildEventUid(employeeName, event.date)}`,
+      `DTSTAMP:${stamp}`,
+      `SEQUENCE:${sequence}`,
+    ];
+    if (event.start && event.end) {
+      const endDate = endsNextDay(event.start, event.end) ? nextDay(event.date) : event.date;
+      lines.push(`DTSTART:${toIcsDateTime(event.date, event.start)}`);
+      lines.push(`DTEND:${toIcsDateTime(endDate, event.end)}`);
+    } else {
+      lines.push(`DTSTART;VALUE=DATE:${toIcsDate(event.date)}`);
+      lines.push(`DTEND;VALUE=DATE:${toIcsDate(nextDay(event.date))}`);
+    }
+    lines.push(`SUMMARY:${escapeIcsText(event.title)}`);
+    if (event.description) {
+      lines.push(`DESCRIPTION:${escapeIcsText(event.description)}`);
+    }
+    lines.push('END:VEVENT');
+    return lines.map(foldLine).join('\r\n');
+  });
 
   return [
     'BEGIN:VCALENDAR',
