@@ -53,7 +53,9 @@
           "isAccessMediaLocationEnabled": false
         }
       ],
-      "./plugins/withShortCxxPath.js"
+      "./plugins/withShortCxxPath.js",
+      "expo-sharing",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

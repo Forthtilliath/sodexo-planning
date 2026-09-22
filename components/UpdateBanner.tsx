@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
-import { UpdateAvailableBanner } from '@forthtilliath/react-native-kit/components/update/UpdateAvailableBanner';
-import { useUpdateCheck } from '@forthtilliath/react-native-kit/hooks/useUpdateCheck';
+import { UpdateAvailableBanner } from '@forthtilliath/expo-release-updates-ui/UpdateAvailableBanner';
+import { useUpdateCheck } from '@forthtilliath/expo-release-updates-ui/useUpdateCheck';
 
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';

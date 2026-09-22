@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 import { useFocusEffect } from 'expo-router';
+
+import { confirmDestructive } from '@forthtilliath/react-native-kit/utils/helpers/confirmDestructive';
+import { randomId } from '@forthtilliath/ts-kit/id/randomId';
 
 import AddButton from '@/components/AddButton';
 import ColorPalettePicker, { COLOR_PALETTE } from '@/components/ColorPalettePicker';
@@ -10,7 +13,6 @@ import type { ThemeColors } from '@/constants/Colors';
 import { usePersistedDbState } from '@/hooks/useDbData';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { getTeamGroups, saveTeamGroups } from '@/lib/db';
-import { randomId } from '@/lib/id';
 import type { TeamGroup } from '@/types';
 
 const EMPTY_GROUPS: TeamGroup[] = [];
@@ -43,14 +45,9 @@ export default function GroupsScreen() {
   }
 
   function removeGroup(id: string, label: string) {
-    Alert.alert('Supprimer ce groupe ?', `"${label || 'Groupe sans nom'}" sera retiré.`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: () => setGroups((prev) => prev.filter((g) => g.id !== id)),
-      },
-    ]);
+    confirmDestructive('Supprimer ce groupe ?', () => setGroups((prev) => prev.filter((g) => g.id !== id)), {
+      message: `"${label || 'Groupe sans nom'}" sera retiré.`,
+    });
   }
 
   function updateLabel(id: string, label: string) {

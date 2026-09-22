@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import ColorDot from '@/components/ColorDot';
+import { ColorDot } from '@forthtilliath/react-native-kit/components/list/ColorDot';
+
 import DragHandle from '@/components/DragHandle';
 import type { ThemeColors } from '@/constants/Colors';
 import { useMyName } from '@/hooks/useMyName';

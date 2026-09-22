@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
-import { useColorScheme } from 'react-native';
+
+import { useEffectiveColorScheme } from '@forthtilliath/react-native-kit/hooks/useEffectiveColorScheme';
 
 import Colors from '@/constants/Colors';
 
@@ -24,10 +25,7 @@ export function useThemePreference(): ThemePreferenceContextValue {
 
 /** Thème réellement appliqué : la préférence choisie, ou le thème système si "système" est sélectionné. */
 export function useResolvedScheme(): ResolvedScheme {
-  const { preference } = useThemePreference();
-  const systemScheme = useColorScheme();
-  if (preference === 'system') return systemScheme === 'dark' ? 'dark' : 'light';
-  return preference;
+  return useEffectiveColorScheme(useThemePreference().preference);
 }
 
 /** Palette de couleurs adaptée au thème actuellement appliqué. */
