@@ -108,7 +108,7 @@ describe('PlanningScreen', () => {
     await saveScan(makeScan());
     await render(<PlanningScreen />);
 
-    await fireEvent.press(await screen.findByText('📤 Exporter en agenda (.ics)'));
+    await fireEvent.press(await screen.findByText('📤 Exporter en fichier agenda (.ics)'));
 
     await waitFor(() => expect(shareIcsMock).toHaveBeenCalledTimes(1));
     expect(shareIcsMock).toHaveBeenCalledWith('planning.ics', expect.stringContaining('BEGIN:VCALENDAR'));
@@ -137,7 +137,7 @@ describe('PlanningScreen', () => {
     await fireEvent.press(screen.getByText('Bob'));
 
     // Après sélection, la vue du planning s'affiche (bouton d'export visible).
-    expect(await screen.findByText('📤 Exporter en agenda (.ics)')).toBeTruthy();
+    expect(await screen.findByText('📤 Exporter en fichier agenda (.ics)')).toBeTruthy();
   });
 
   it('permet de consulter le planning d\'un collègue', async () => {
