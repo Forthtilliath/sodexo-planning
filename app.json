@@ -53,6 +53,12 @@
           "isAccessMediaLocationEnabled": false
         }
       ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Autorise Sodexo Planning à écrire ton planning dans ton agenda."
+        }
+      ],
       "./plugins/withShortCxxPath.js",
       "expo-sharing",
       "expo-web-browser"
