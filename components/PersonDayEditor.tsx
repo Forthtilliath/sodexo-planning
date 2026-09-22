@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import OptionsModal from '@/components/OptionsModal';
+import QuickCodeBar from '@/components/QuickCodeBar';
 import type { ThemeColors } from '@/constants/Colors';
 import { useResolvedScheme, useThemeColors } from '@/hooks/useThemeColors';
 import { hexToSoftBackground } from '@/lib/colors';
@@ -120,38 +121,15 @@ export default function PersonDayEditor({
 
   return (
     <View style={styles.container}>
-      {/* Toujours montée (juste grisée si rien de sélectionné) pour ne pas
-          décaler le calendrier à chaque sélection. */}
-      <View style={[styles.bulkBar, selected.size === 0 && styles.bulkBarDisabled]}>
-        {quickCodes.length > 0 && (
-          <View style={styles.chipsRow}>
-            {quickCodes.map((code) => (
-              <Pressable key={code} style={styles.chip} disabled={selected.size === 0} onPress={() => applyQuickCode(code)}>
-                <Text style={styles.chipText}>{code}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-        <View style={styles.bulkRow}>
-          <Pressable
-            style={styles.emptyCodeButton}
-            disabled={selected.size === 0}
-            onPress={() => applyQuickCode('')}>
-            <Text style={styles.emptyCodeButtonText}>✕ Vider</Text>
-          </Pressable>
-          {otherCodes.length > 0 && (
-            <Pressable
-              style={styles.otherCodeButton}
-              disabled={selected.size === 0}
-              onPress={() => setOtherCodeModalOpen(true)}>
-              <Text style={styles.otherCodeButtonText}>Autre poste ▾</Text>
-            </Pressable>
-          )}
-          <Pressable style={styles.bulkClearButton} disabled={selected.size === 0} onPress={clearSelection}>
-            <Text style={styles.bulkClearText}>Annuler</Text>
-          </Pressable>
-        </View>
-      </View>
+      <QuickCodeBar
+        quickCodes={quickCodes}
+        groups={groups}
+        hasOtherCodes={otherCodes.length > 0}
+        disabled={selected.size === 0}
+        onApplyCode={applyQuickCode}
+        onOpenOtherCodes={() => setOtherCodeModalOpen(true)}
+        onClearSelection={clearSelection}
+      />
 
       <View style={styles.weekdayRow}>
         {WEEKDAY_HEADERS.map((w, i) => (
@@ -322,70 +300,6 @@ function createStyles(colors: ThemeColors) {
     daySelectBoxHoliday: {
       borderColor: colors.holiday,
       borderWidth: 2,
-    },
-    bulkBar: {
-      marginTop: 4,
-      padding: 10,
-      borderRadius: 8,
-      backgroundColor: colors.tintSoft,
-    },
-    bulkBarDisabled: {
-      opacity: 0.4,
-    },
-    chipsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginBottom: 8,
-    },
-    chip: {
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 16,
-      backgroundColor: colors.tint,
-    },
-    chipText: {
-      color: colors.onTint,
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    bulkRow: {
-      flexDirection: 'row',
-      gap: 8,
-      alignItems: 'center',
-    },
-    emptyCodeButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.danger,
-      backgroundColor: colors.card,
-    },
-    emptyCodeButtonText: {
-      color: colors.danger,
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    otherCodeButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.tint,
-      backgroundColor: colors.card,
-    },
-    otherCodeButtonText: {
-      color: colors.tint,
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    bulkClearButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-    },
-    bulkClearText: {
-      color: colors.danger,
     },
   });
 }
