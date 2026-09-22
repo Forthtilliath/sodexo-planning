@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 
+import { UndoToast } from '@forthtilliath/react-native-kit/components/list/UndoToast';
+import { confirmDestructive } from '@forthtilliath/react-native-kit/utils/helpers/confirmDestructive';
+import { randomId } from '@forthtilliath/ts-kit/id/randomId';
+
 import AddEmployeeButtons from '@/components/AddEmployeeButtons';
 import AddEmployeeSheet from '@/components/AddEmployeeSheet';
 import GridEditor from '@/components/GridEditor';
@@ -9,7 +13,6 @@ import HolidayPicker from '@/components/HolidayPicker';
 import PersonDayEditor from '@/components/PersonDayEditor';
 import SavedScansList from '@/components/SavedScansList';
 import SelectField from '@/components/SelectField';
-import UndoToast from '@/components/UndoToast';
 import type { ThemeColors } from '@/constants/Colors';
 import { useDbData } from '@/hooks/useDbData';
 import { useMyName } from '@/hooks/useMyName';
@@ -24,7 +27,6 @@ import {
   getTeamGroups,
   saveScan,
 } from '@/lib/db';
-import { randomId } from '@/lib/id';
 import { rescheduleWorkReminders } from '@/lib/notifications';
 import { isRegular, normalizeName } from '@/lib/teams';
 import type { RosterEntry, ScanRecord, Settings, TeamGroup } from '@/types';
@@ -225,14 +227,10 @@ export default function PlanningEditorScreen() {
       return;
     }
     if (isMonthFinished(year, month)) {
-      Alert.alert(
-        'Mois déjà terminé',
-        `${MONTH_NAMES[month - 1]} ${year} est déjà passé. Créer un planning pour ce mois n'a normalement aucun intérêt.`,
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Créer quand même', style: 'destructive', onPress: createManualPlanning },
-        ]
-      );
+      confirmDestructive('Mois déjà terminé', createManualPlanning, {
+        message: `${MONTH_NAMES[month - 1]} ${year} est déjà passé. Créer un planning pour ce mois n'a normalement aucun intérêt.`,
+        confirmLabel: 'Créer quand même',
+      });
       return;
     }
     createManualPlanning();
@@ -503,6 +501,7 @@ export default function PlanningEditorScreen() {
       {undoToast && (
         <UndoToast
           message={`${MONTH_NAMES[undoToast.month - 1]} ${undoToast.year} supprimé`}
+          actionLabel="Annuler"
           onAction={handleUndoDelete}
         />
       )}
