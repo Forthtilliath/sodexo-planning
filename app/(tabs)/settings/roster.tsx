@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist';
 import { router, useFocusEffect } from 'expo-router';
+
+import { confirmDestructive } from '@forthtilliath/react-native-kit/utils/helpers/confirmDestructive';
+import { randomId } from '@forthtilliath/ts-kit/id/randomId';
 
 import AddButton from '@/components/AddButton';
 import BottomSheet from '@/components/BottomSheet';
@@ -20,7 +23,6 @@ import {
   saveEmployeeCodeOptions,
   saveEmployeeRoster,
 } from '@/lib/db';
-import { randomId } from '@/lib/id';
 import { isRegular, normalizeName } from '@/lib/teams';
 import type { RosterEntry, TeamGroup } from '@/types';
 
@@ -122,18 +124,15 @@ export default function RosterScreen() {
   }
 
   function removeName(index: number, name: string) {
-    Alert.alert('Supprimer ce salarié ?', `"${name || `Salarié ${index + 1}`}" sera retiré de la liste.`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: () => {
-          renameBaselineRef.current = null;
-          setRoster((prev) => prev.filter((_, i) => i !== index));
-          setOpenIndex(null);
-        },
+    confirmDestructive(
+      'Supprimer ce salarié ?',
+      () => {
+        renameBaselineRef.current = null;
+        setRoster((prev) => prev.filter((_, i) => i !== index));
+        setOpenIndex(null);
       },
-    ]);
+      { message: `"${name || `Salarié ${index + 1}`}" sera retiré de la liste.` }
+    );
   }
 
   function updateName(index: number, value: string) {
