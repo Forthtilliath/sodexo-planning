@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ColorDot } from '@forthtilliath/react-native-kit/components/list/ColorDot';
+
 import BottomSheet from '@/components/BottomSheet';
-import ColorDot from '@/components/ColorDot';
 import type { ThemeColors } from '@/constants/Colors';
 import { useThemeColors } from '@/hooks/useThemeColors';
 
