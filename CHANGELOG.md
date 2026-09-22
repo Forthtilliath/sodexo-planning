@@ -1,5 +1,17 @@
 # Journal des modifications
 
+## 1.5.0 — 2026-09-23
+
+- Nouveau : synchronisation de "Mon planning" avec l'agenda du téléphone — tes jours travaillés sont ajoutés dans un calendrier "Sodexo Planning", et une nouvelle synchro remplace le mois sans créer de doublons.
+- Nouveau : l'export .ics reste disponible pour le planning d'un(e) collègue, ou si tu refuses l'accès à l'agenda.
+- Nouveau : dans la Saisie, les boutons de codes rapides sont colorés selon leur groupe de postes.
+- Nouveau : "Mon planning" s'ouvre directement sur la vue calendrier du mois.
+- Nouveau : renommer un salarié met à jour son nom dans tous les plannings déjà enregistrés et dans ses codes habituels.
+- Nouveau : les modifications faites dans un écran (Saisie, Salariés, groupes de postes...) apparaissent tout de suite dans les autres, sans avoir à changer d'onglet.
+- Correction : les dernières modifications de la Saisie sont bien enregistrées quand on quitte l'écran.
+- Correction : le glisser-déposer des postes d'un salarié était instable (lignes qui se chevauchaient, glissé qui démarrait à vide).
+- Correction : export .ics — ré-exporter un mois ressaisi met à jour les événements au lieu de les dupliquer, et deux collègues exportés dans le même agenda ne s'écrasent plus.
+
 ## 1.4.0 — 2026-08-28
 
 - Nouveau : identité visuelle Sodexo — nouvelle icône, écran de démarrage (avec variante sombre) et en-têtes bleu Sodexo dans toute l'app.
