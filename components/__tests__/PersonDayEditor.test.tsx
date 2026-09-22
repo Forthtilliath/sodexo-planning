@@ -57,6 +57,26 @@ describe('PersonDayEditor', () => {
     expect(flatStyle.some((s) => typeof s === 'object' && 'backgroundColor' in s)).toBe(true);
   });
 
+  it('colore les chips de codes avec la couleur de leur poste', async () => {
+    await render(
+      <PersonDayEditor
+        days={days}
+        codes={emptyCodes()}
+        codeOptions={['E1', 'F1']}
+        allCodes={['E1', 'F1']}
+        groups={groups}
+        holidays={new Set()}
+        onChangeCode={jest.fn()}
+      />
+    );
+
+    const chipBorder = (code: string) =>
+      Object.assign({}, ...[screen.getByText(code).parent?.props.style].flat(Infinity).filter(Boolean)).borderColor;
+    expect(chipBorder('E1')).toBe('#c9a227');
+    // F1 n'appartient à aucun groupe : couleur d'accent par défaut.
+    expect(chipBorder('F1')).not.toBe('#c9a227');
+  });
+
   it("ne propose que les codes normaux quand la sélection est un jour de semaine", async () => {
     await render(
       <PersonDayEditor
