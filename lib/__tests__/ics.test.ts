@@ -1,4 +1,4 @@
-import { buildIcs } from '@/lib/ics';
+import { buildEventUid, buildIcs, slugifyName } from '@/lib/ics';
 import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
 const groups: TeamGroup[] = [{ id: 'd1-d4', label: 'D1-D4', codes: ['D1', 'D2', 'D3', 'D4'] }];
@@ -15,6 +15,16 @@ const scan: ScanRecord = {
     ['D2', 'X'],
   ],
 };
+
+describe('slugifyName / buildEventUid', () => {
+  it('retire accents, casse et caractères spéciaux', () => {
+    expect(slugifyName('  Marie-Hélène   DUPONT ')).toBe('marie-helene-dupont');
+  });
+
+  it('retombe sur un préfixe générique quand le nom est vide', () => {
+    expect(buildEventUid('', '2026-07-01')).toBe('planning-2026-07-01@rn-planning');
+  });
+});
 
 describe('buildIcs', () => {
   it('génère un VCALENDAR valide avec un VEVENT par jour', () => {
@@ -82,7 +92,25 @@ describe('buildIcs', () => {
     const uidAfter = icsAfter.match(/UID:([^\r\n]+)/)?.[1];
 
     expect(uidBefore).toBe(uidAfter);
-    expect(uidBefore).toBe('scan-1-2026-07-01@rn-planning');
+    expect(uidBefore).toBe('moi-2026-07-01@rn-planning');
+  });
+
+  it("garde le même UID après un nouveau scan du même mois (id de scan différent)", () => {
+    const rescan: ScanRecord = { ...scan, id: 'scan-2' };
+    const uid = (ics: string) => ics.match(/UID:([^\r\n]+)/)?.[1];
+    expect(uid(buildIcs(rescan, groups, 0))).toBe(uid(buildIcs(scan, groups, 0)));
+  });
+
+  it('donne des UID différents à deux personnes pour le même jour', () => {
+    const uid = (ics: string) => ics.match(/UID:([^\r\n]+)/)?.[1];
+    expect(uid(buildIcs(scan, groups, 0))).not.toBe(uid(buildIcs(scan, groups, 1)));
+  });
+
+  it("finit l'événement le lendemain pour un horaire de nuit", () => {
+    const schedules: CodeSchedule[] = [{ codes: ['D1'], start: '20:00', end: '02:00' }];
+    const ics = buildIcs(scan, groups, 0, schedules);
+    expect(ics).toContain('DTSTART:20260701T200000');
+    expect(ics).toContain('DTEND:20260702T020000');
   });
 
   it('inclut un SEQUENCE et METHOD:PUBLISH pour que le calendrier remplace plutôt que doublonne', () => {
