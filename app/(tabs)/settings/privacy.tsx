@@ -30,6 +30,13 @@ export default function PrivacyScreen() {
               "La seule façon pour une donnée de quitter cet appareil, c'est quand tu choisis toi-même de la partager (export d'une sauvegarde, export d'un planning au format .ics), via le sélecteur de partage natif d'Android.",
             ],
           },
+          {
+            title: 'Accès à ton agenda',
+            paragraphs: [
+              "Si tu utilises « Synchroniser avec mon agenda », l'application te demande l'accès à ton agenda. Elle s'en sert uniquement pour écrire ton planning dans un calendrier « Sodexo Planning » créé sur ce téléphone, sans compte en ligne : elle ne lit ni ne modifie tes autres calendriers.",
+              'Tu peux refuser cet accès et utiliser l’export .ics à la place, ou le retirer à tout moment dans les réglages Android de l’application.',
+            ],
+          },
         ]}
         styles={{
           title: { color: colors.text },

@@ -9,7 +9,8 @@ Application mobile personnelle (React Native / Expo) pour gérer un planning de 
 - **Horaires par poste** — heures de début/fin associées à chaque code, affichées à la demande et utilisées dans l'export agenda.
 - **Jours fériés** — marquage manuel par mois, mis en évidence dans le calendrier.
 - **Mon planning** — vue personnelle (liste ou calendrier) avec les coéquipiers du jour, et consultation du planning d'un(e) collègue.
-- **Export .ics** — génère un fichier d'agenda avec les vrais horaires quand ils sont connus.
+- **Synchro agenda (Android)** — écrit son propre planning dans un calendrier local « Sodexo Planning » du téléphone ; une nouvelle synchro remplace le mois, sans doublon.
+- **Export .ics** — génère un fichier d'agenda avec les vrais horaires quand ils sont connus (pour un/une collègue, ou si l'accès à l'agenda est refusé). Les identifiants d'événements dépendent de la personne et de la date, pour qu'un ré-export mette à jour au lieu de dupliquer.
 - **Rappel local** — notification la veille de chaque jour travaillé, heure configurable.
 - **Sauvegarde / restauration** — export/import de toutes les données au format JSON (l'app ne stocke rien ailleurs que sur l'appareil).
 
@@ -43,7 +44,7 @@ npx tsc --noEmit
 
 ## Confidentialité
 
-Toutes les données (salariés, plannings, réglages) restent stockées uniquement sur l'appareil. Rien n'est envoyé à un serveur. La seule donnée qui quitte l'appareil est celle que l'utilisateur partage explicitement (export de sauvegarde ou d'un planning au format `.ics`).
+Toutes les données (salariés, plannings, réglages) restent stockées uniquement sur l'appareil. Rien n'est envoyé à un serveur. La seule donnée qui quitte l'appareil est celle que l'utilisateur partage explicitement (export de sauvegarde ou d'un planning au format `.ics`). L'accès à l'agenda, s'il est accordé, sert uniquement à écrire dans le calendrier local « Sodexo Planning ».
 
 ## Projet personnel
 
