@@ -1,17 +1,15 @@
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 const mockRouterPush = jest.fn();
-const mockSetParams = jest.fn();
 const mockSetOptions = jest.fn();
-let mockSearchParams: Record<string, string> = {};
+const mockCaptureRef = jest.fn();
 
 jest.mock('expo-router', () => {
   const React = require('react');
   return {
-    router: { push: (...a: unknown[]) => mockRouterPush(...a), setParams: (...a: unknown[]) => mockSetParams(...a) },
-    useLocalSearchParams: () => mockSearchParams,
+    router: { push: (...a: unknown[]) => mockRouterPush(...a) },
     useNavigation: () => ({ setOptions: mockSetOptions }),
     useFocusEffect: (cb: () => void | (() => void)) => {
       React.useEffect(() => cb(), []);
@@ -19,15 +17,29 @@ jest.mock('expo-router', () => {
   };
 });
 
-jest.mock('@/lib/notifications', () => ({
-  rescheduleWorkReminders: jest.fn().mockResolvedValue(undefined),
+jest.mock('react-native-view-shot', () => ({
+  captureRef: (...a: unknown[]) => mockCaptureRef(...a),
 }));
 
-import PlanningEditorScreen from '@/app/(tabs)/index';
+jest.mock('@/lib/exportIcs', () => ({
+  buildIcsFilename: jest.fn(() => 'planning.ics'),
+  shareIcs: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/lib/exportImage', () => ({
+  savePlanningImage: jest.fn().mockResolvedValue(undefined),
+  sharePlanningImage: jest.fn().mockResolvedValue(undefined),
+}));
+
+import PlanningScreen from '@/app/(tabs)/index';
 import { saveScan } from '@/lib/db';
+import { shareIcs } from '@/lib/exportIcs';
+import { savePlanningImage, sharePlanningImage } from '@/lib/exportImage';
 import type { ScanRecord } from '@/types';
 
-const NOW = new Date(2026, 6, 15, 12, 0, 0); // 15 juillet 2026
+const shareIcsMock = shareIcs as jest.Mock;
+const savePlanningImageMock = savePlanningImage as jest.Mock;
+const sharePlanningImageMock = sharePlanningImage as jest.Mock;
 
 function makeScan(overrides: Partial<ScanRecord> = {}): ScanRecord {
   return {
@@ -35,13 +47,13 @@ function makeScan(overrides: Partial<ScanRecord> = {}): ScanRecord {
     year: 2026,
     month: 7,
     createdAt: 1,
-    days: ['2026-07-01', '2026-07-02'],
+    days: ['2026-07-01', '2026-07-02', '2026-07-03'],
     employees: ['Moi', 'Alice'],
     grid: [
-      ['D1', ''],
-      ['', 'C2'],
+      ['D1', 'D1', ''],
+      ['D2', '', 'D2'],
     ],
-    holidays: [],
+    holidays: ['2026-07-02'],
     ...overrides,
   };
 }
@@ -49,121 +61,92 @@ function makeScan(overrides: Partial<ScanRecord> = {}): ScanRecord {
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
-  mockSearchParams = {};
-  jest.useFakeTimers();
-  jest.setSystemTime(NOW);
+  mockCaptureRef.mockResolvedValue('file:///tmp/planning.png');
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-describe('PlanningEditorScreen — accueil', () => {
-  it('propose de créer un planning pour le mois courant quand il n\'en existe pas', async () => {
-    await render(<PlanningEditorScreen />);
-
-    expect(await screen.findByText('✏️ Créer le planning')).toBeTruthy();
-    expect(screen.getByText('Juillet')).toBeTruthy();
-    expect(screen.getByText('2026')).toBeTruthy();
+describe('PlanningScreen', () => {
+  it('affiche un état vide tant qu\'aucun planning n\'existe', async () => {
+    await render(<PlanningScreen />);
+    expect(await screen.findByText("Aucun planning pour l'instant.")).toBeTruthy();
   });
 
-  it('bascule sur "Modifier" et rappelle le planning existant du mois sélectionné', async () => {
+  it('se met à jour en direct quand un planning est enregistré ailleurs', async () => {
+    await render(<PlanningScreen />);
+    expect(await screen.findByText("Aucun planning pour l'instant.")).toBeTruthy();
+
+    await act(async () => {
+      await saveScan(makeScan());
+    });
+
+    expect((await screen.findAllByText('Juillet 2026')).length).toBeGreaterThan(0);
+  });
+
+  it('affiche mon planning du mois en vue liste', async () => {
     await saveScan(makeScan());
-    await render(<PlanningEditorScreen />);
+    await render(<PlanningScreen />);
 
-    expect(await screen.findByText('✏️ Modifier ce planning')).toBeTruthy();
-    expect(screen.getByText(/Un planning existe déjà pour Juillet 2026 \(2 salarié\(s\)\)/)).toBeTruthy();
+    expect((await screen.findAllByText('Juillet 2026')).length).toBeGreaterThan(0);
+    await fireEvent.press(await screen.findByText('📋 Liste'));
+    // Les postes de "Moi" (ligne 0) : D1 les 1er et 3.
+    expect(screen.getAllByText('D1').length).toBeGreaterThan(0);
+    // Jour férié marqué.
+    expect(screen.getByText('Férié')).toBeTruthy();
   });
 
-  it('liste les plannings enregistrés dans "Reprendre un planning"', async () => {
-    await saveScan(makeScan({ id: 'a', month: 7 }));
-    await render(<PlanningEditorScreen />);
+  it('affiche la vue calendrier par défaut', async () => {
+    await saveScan(makeScan());
+    await render(<PlanningScreen />);
 
-    expect(await screen.findByText('Reprendre un planning')).toBeTruthy();
-    expect(screen.getByText('Juillet 2026')).toBeTruthy();
-  });
-});
+    expect(await screen.findByText('📅 Calendrier')).toBeTruthy();
 
-describe('PlanningEditorScreen — création', () => {
-  it('ouvre la revue pré-remplie avec la liste des salariés au clic sur "Créer"', async () => {
-    await render(<PlanningEditorScreen />);
-
-    await fireEvent.press(await screen.findByText('✏️ Créer le planning'));
-
-    // Étape "revue" : la grille pré-remplie apparaît.
-    expect(await screen.findAllByText('Planning →')).not.toHaveLength(0);
-    expect(screen.getByText('Moi')).toBeTruthy();
-    expect(screen.getByText('BICE Cécilia')).toBeTruthy();
-  });
-
-  it('ouvre l\'éditeur par personne au clic sur "Planning →" puis en ressort', async () => {
-    await render(<PlanningEditorScreen />);
-    await fireEvent.press(await screen.findByText('✏️ Créer le planning'));
-    await screen.findAllByText('Planning →');
-
-    await fireEvent.press(screen.getAllByText('Planning →')[0]);
-
-    // L'éditeur par personne remplace la grille (plus de "Planning →").
-    await waitFor(() => expect(screen.queryByText('Planning →')).toBeNull());
-    // La grille du mois affiche les quantièmes (15 = milieu de juillet).
-    expect(screen.getByText('15')).toBeTruthy();
-  });
-
-  it('ouvre directement le bon planning sur la bonne ligne via les paramètres de navigation', async () => {
-    await saveScan(makeScan({ id: 'scan-x' }));
-    mockSearchParams = { scanId: 'scan-x', editRow: '1' };
-
-    await render(<PlanningEditorScreen />);
-
-    // Éditeur par personne ouvert d'emblée sur la ligne 1 (Alice).
-    await waitFor(() => expect(mockSetParams).toHaveBeenCalledWith({ scanId: undefined, editRow: undefined }));
+    // La grille calendrier affiche les quantièmes.
     expect(screen.getByText('1')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
   });
 
-  it('demande confirmation avant de créer un planning pour un mois déjà terminé', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    await render(<PlanningEditorScreen />);
+  it('exporte le planning en .ics', async () => {
+    await saveScan(makeScan());
+    await render(<PlanningScreen />);
 
-    // Recule sur un mois passé (juin 2026).
-    await fireEvent.press(await screen.findByText('Juillet'));
-    await fireEvent.press(screen.getByText('Juin'));
-    await fireEvent.press(screen.getByText('✏️ Créer le planning'));
+    await fireEvent.press(await screen.findByText('📤 Exporter en fichier agenda (.ics)'));
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Mois déjà terminé',
-      expect.stringContaining('Juin 2026'),
-      expect.arrayContaining([expect.objectContaining({ text: 'Créer quand même' })])
-    );
+    await waitFor(() => expect(shareIcsMock).toHaveBeenCalledTimes(1));
+    expect(shareIcsMock).toHaveBeenCalledWith('planning.ics', expect.stringContaining('BEGIN:VCALENDAR'));
+  });
+
+  it('propose enregistrer / partager pour le planning en image', async () => {
+    await saveScan(makeScan());
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => {
+      buttons?.find((b) => b.text === 'Enregistrer')?.onPress?.();
+    });
+    await render(<PlanningScreen />);
+
+    await fireEvent.press(await screen.findByText('🖼️ Planning en image'));
+
+    await waitFor(() => expect(mockCaptureRef).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(savePlanningImageMock).toHaveBeenCalledWith('file:///tmp/planning.png'));
+    expect(sharePlanningImageMock).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
-});
 
-describe('PlanningEditorScreen — suppression', () => {
-  it('affiche un bandeau "Annuler" après suppression par le bouton du swipe', async () => {
-    await saveScan(makeScan({ id: 'a', month: 7 }));
-    await render(<PlanningEditorScreen />);
+  it('laisse choisir sa ligne quand aucune ne porte mon nom', async () => {
+    await saveScan(makeScan({ employees: ['Alice', 'Bob'] }));
+    await render(<PlanningScreen />);
 
-    await screen.findByText('Juillet 2026');
-    await fireEvent.press(screen.getByLabelText('Supprimer'));
-    jest.advanceTimersByTime(200); // animation de sortie (150 ms)
+    expect(await screen.findByText(/Aucune ligne "Moi" dans ce planning/)).toBeTruthy();
+    await fireEvent.press(screen.getByText('Bob'));
 
-    await waitFor(() => expect(screen.getByText('Juillet 2026 supprimé')).toBeTruthy());
-    expect(await AsyncStorage.getItem('@rn-planning/scans')).toBe('[]');
+    // Après sélection, la vue du planning s'affiche (bouton d'export visible).
+    expect(await screen.findByText('📤 Exporter en fichier agenda (.ics)')).toBeTruthy();
   });
 
-  it('restaure le planning au clic sur "Annuler"', async () => {
-    await saveScan(makeScan({ id: 'a', month: 7 }));
-    await render(<PlanningEditorScreen />);
+  it('permet de consulter le planning d\'un collègue', async () => {
+    await saveScan(makeScan());
+    await render(<PlanningScreen />);
 
-    await screen.findByText('Juillet 2026');
-    await fireEvent.press(screen.getByLabelText('Supprimer'));
-    jest.advanceTimersByTime(200);
-    await waitFor(() => screen.getByText('Annuler'));
+    await fireEvent.press(await screen.findByText('👥 Un collègue'));
+    await fireEvent.press(await screen.findByText(/^Alice/));
 
-    await fireEvent.press(screen.getByText('Annuler'));
-
-    await waitFor(async () =>
-      expect(JSON.parse((await AsyncStorage.getItem('@rn-planning/scans')) ?? '[]')).toHaveLength(1)
-    );
+    expect(await screen.findByText('Planning de Alice')).toBeTruthy();
   });
 });
