@@ -26,7 +26,7 @@ const eslintConfig = defineConfig([
     // Tests : require() est imposé par le hoisting des factories jest.mock(),
     // et les mocks de libs tierces (react-native-draggable-flatlist...) n'ont
     // pas de types officiels pratiques à réimporter juste pour un test.
-    files: ['**/*.{test,spec}.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}'],
+    files: ['**/*.{test,spec}.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}', 'jest.setup.ts'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',

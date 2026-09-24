@@ -73,6 +73,9 @@
     "moduleNameMapper": {
       "^@react-native-async-storage/async-storage$": "@react-native-async-storage/async-storage/jest/async-storage-mock"
     },
+    "setupFiles": [
+      "<rootDir>/jest.setup.ts"
+    ],
     "testTimeout": 15000,
     "transformIgnorePatterns": [
       "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@forthtilliath|react-native-gesture-handler|react-native-reanimated|react-native-draggable-flatlist))",
