@@ -22,21 +22,22 @@ export default function TabLayout() {
         ...headerOptions,
       }}>
       <Tabs.Screen
-        name="index"
+        name="saisie"
         options={{
           title: 'Saisie',
           // Le libellé de l'onglet reste fixe même quand l'en-tête devient
-          // "Planning de X" (titre mis à jour dans index.tsx).
+          // "Planning de X" (titre mis à jour dans saisie.tsx).
           tabBarLabel: 'Saisie',
           tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
         }}
       />
+      {/* "Mon planning" est la route index : c'est l'écran affiché au lancement. */}
       <Tabs.Screen
-        name="planning"
+        name="index"
         options={{
           title: 'Mon planning',
           // Libellé d'onglet fixe même quand l'en-tête devient "Planning de X"
-          // (titre mis à jour dans planning.tsx).
+          // (titre mis à jour dans index.tsx).
           tabBarLabel: 'Mon planning',
           tabBarIcon: ({ color }) => <TabIcon emoji="📅" color={color} />,
         }}
