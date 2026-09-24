@@ -114,7 +114,7 @@ export default function PlanningScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>Aucun planning pour l'instant.</Text>
-        <Text style={styles.emptyHint}>Va dans l'onglet Planning pour en créer un.</Text>
+        <Text style={styles.emptyHint}>Va dans l'onglet Saisie pour en créer un.</Text>
       </View>
     );
   }
