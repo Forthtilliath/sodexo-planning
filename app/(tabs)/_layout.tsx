@@ -43,6 +43,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="tools"
+        options={{
+          title: 'Outils',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabIcon emoji="🧰" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Réglages',
