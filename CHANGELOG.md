@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## 1.6.0 — 2026-10-11
+
+- Nouveau : onglet "Outils", avec le calcul des collations ambu et des petits-déjeuners — indique le nombre de menus demandés et l'app liste tous les produits à préparer, plus le matériel des collations ambu.
+- Nouveau : la liste des produits à préparer se partage en un geste (message, note...).
+- Nouveau : l'app s'ouvre directement sur "Mon planning".
+- Correction : le message affiché quand il n'y a pas encore de planning renvoie bien vers l'onglet Saisie.
+- Correction : le contenu des fiches en bas d'écran ne passe plus sous la barre de navigation Android.
+
 ## 1.5.0 — 2026-09-23
 
 - Nouveau : synchronisation de "Mon planning" avec l'agenda du téléphone — tes jours travaillés sont ajoutés dans un calendrier "Sodexo Planning", et une nouvelle synchro remplace le mois sans créer de doublons.
