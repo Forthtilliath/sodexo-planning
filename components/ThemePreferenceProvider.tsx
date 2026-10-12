@@ -1,24 +1,23 @@
-import { type ReactNode,useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 
-import { type ThemePreference,ThemePreferenceContext } from '@/hooks/useThemeColors';
+import { ThemePreferenceProvider as KitThemePreferenceProvider } from '@forthtilliath/react-native-kit/components/theme/ThemePreferenceProvider';
+
+import type { ThemePreference } from '@/hooks/useThemeColors';
 import { getSettings, saveSettings } from '@/lib/db';
+
+async function loadTheme() {
+  return (await getSettings()).theme;
+}
+
+async function saveTheme(theme: ThemePreference) {
+  await saveSettings({ ...(await getSettings()), theme });
+}
 
 /** Charge la préférence de thème enregistrée et la rend disponible (+ modifiable) à toute l'app. */
 export default function ThemePreferenceProvider({ children }: { children: ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>('system');
-
-  useEffect(() => {
-    getSettings().then((settings) => {
-      if (settings.theme) setPreferenceState(settings.theme);
-    });
-  }, []);
-
-  const setPreference = useCallback((next: ThemePreference) => {
-    setPreferenceState(next);
-    getSettings().then((settings) => saveSettings({ ...settings, theme: next }));
-  }, []);
-
   return (
-    <ThemePreferenceContext.Provider value={{ preference, setPreference }}>{children}</ThemePreferenceContext.Provider>
+    <KitThemePreferenceProvider load={loadTheme} save={saveTheme}>
+      {children}
+    </KitThemePreferenceProvider>
   );
 }

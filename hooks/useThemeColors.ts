@@ -1,32 +1,14 @@
-import { createContext, useContext } from 'react';
-
-import { useEffectiveColorScheme } from '@forthtilliath/react-native-kit/hooks/useEffectiveColorScheme';
+import { useResolvedScheme } from '@forthtilliath/react-native-kit/components/theme/themePreferenceContext';
 
 import Colors from '@/constants/Colors';
 
-export type ThemePreference = 'light' | 'dark' | 'system';
+export {
+  ThemePreferenceContext,
+  useResolvedScheme,
+  useThemePreference,
+} from '@forthtilliath/react-native-kit/components/theme/themePreferenceContext';
+export type { ThemePreference } from '@forthtilliath/react-native-kit/hooks/useEffectiveColorScheme';
 export type ResolvedScheme = 'light' | 'dark';
-
-type ThemePreferenceContextValue = {
-  preference: ThemePreference;
-  setPreference: (preference: ThemePreference) => void;
-};
-
-/** Valeur par défaut utilisée si jamais consommée hors du Provider (ne devrait pas arriver). */
-export const ThemePreferenceContext = createContext<ThemePreferenceContextValue>({
-  preference: 'system',
-  setPreference: () => {},
-});
-
-/** Préférence de thème choisie dans Réglages (clair/sombre/système), avec le setter pour la changer. */
-export function useThemePreference(): ThemePreferenceContextValue {
-  return useContext(ThemePreferenceContext);
-}
-
-/** Thème réellement appliqué : la préférence choisie, ou le thème système si "système" est sélectionné. */
-export function useResolvedScheme(): ResolvedScheme {
-  return useEffectiveColorScheme(useThemePreference().preference);
-}
 
 /** Palette de couleurs adaptée au thème actuellement appliqué. */
 export function useThemeColors() {
