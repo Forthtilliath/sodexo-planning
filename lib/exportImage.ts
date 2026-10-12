@@ -1,5 +1,6 @@
 import { Asset, requestPermissionsAsync } from 'expo-media-library';
-import * as Sharing from 'expo-sharing';
+
+import { shareFile } from '@forthtilliath/react-native-kit/utils/helpers/shareFile';
 
 /** "2026, 7, D2 Person" -> "sodexo-planning-202607-D2-Person.png" (espaces remplacés par des tirets). */
 export function buildImageFilename(year: number, month: number, employeeName: string): string {
@@ -18,10 +19,6 @@ export async function savePlanningImage(uri: string): Promise<void> {
 }
 
 /** Ouvre le partage natif avec le PNG capturé. */
-export async function sharePlanningImage(uri: string): Promise<void> {
-  const available = await Sharing.isAvailableAsync();
-  if (!available) {
-    throw new Error("Le partage n'est pas disponible sur cet appareil.");
-  }
-  await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Partager le planning' });
+export function sharePlanningImage(uri: string): Promise<void> {
+  return shareFile(uri, { mimeType: 'image/png', dialogTitle: 'Partager le planning' });
 }
