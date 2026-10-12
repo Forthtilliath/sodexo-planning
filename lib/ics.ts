@@ -1,37 +1,12 @@
+import { escapeIcsText } from '@forthtilliath/ts-kit/ics/escapeIcsText';
+import { foldIcsLine } from '@forthtilliath/ts-kit/ics/foldIcsLine';
+import { icsTimestamp } from '@forthtilliath/ts-kit/ics/icsTimestamp';
+import { toIcsDate } from '@forthtilliath/ts-kit/ics/toIcsDate';
+import { toIcsDateTime } from '@forthtilliath/ts-kit/ics/toIcsDateTime';
 import { slugify } from '@forthtilliath/ts-kit/string/slugify';
 
 import { buildPlanningEvents, endsNextDay, nextDay } from '@/lib/planningEvents';
 import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
-
-function toIcsDate(isoDate: string): string {
-  return isoDate.replace(/-/g, '');
-}
-
-function toIcsDateTime(isoDate: string, hhmm: string): string {
-  const [h, m] = hhmm.split(':');
-  return `${toIcsDate(isoDate)}T${h.padStart(2, '0')}${m.padStart(2, '0')}00`;
-}
-
-function escapeIcsText(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-}
-
-function foldLine(line: string): string {
-  // RFC5545 : les lignes de plus de 75 octets doivent être repliées.
-  if (line.length <= 75) return line;
-  const parts: string[] = [];
-  let rest = line;
-  while (rest.length > 75) {
-    parts.push(rest.slice(0, 75));
-    rest = ' ' + rest.slice(75);
-  }
-  parts.push(rest);
-  return parts.join('\r\n');
-}
-
-function dtstamp(): string {
-  return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-}
 
 // Secondes depuis l'epoch : toujours croissant, ce qui satisfait la sémantique
 // RFC5545 de SEQUENCE sans mémoriser de compteur.
@@ -61,7 +36,7 @@ export function buildIcs(
   schedules: CodeSchedule[] = []
 ): string {
   const employeeName = scan.employees[myRowIndex] ?? '';
-  const stamp = dtstamp();
+  const stamp = icsTimestamp();
   const sequence = sequenceNumber();
 
   const events = buildPlanningEvents(scan, groups, myRowIndex, schedules).map((event) => {
@@ -84,7 +59,7 @@ export function buildIcs(
       lines.push(`DESCRIPTION:${escapeIcsText(event.description)}`);
     }
     lines.push('END:VEVENT');
-    return lines.map(foldLine).join('\r\n');
+    return lines.map((line) => foldIcsLine(line)).join('\r\n');
   });
 
   return [
