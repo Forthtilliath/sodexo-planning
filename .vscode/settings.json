@@ -3,5 +3,8 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
-  }
+  },
+  // android/ est généré par `expo prebuild` : sans ça, l'extension Java importe le projet Gradle et
+  // lance ses propres daemons, qui verrouillent les caches Kotlin pendant `gradlew assembleRelease`.
+  "java.import.gradle.enabled": false
 }
