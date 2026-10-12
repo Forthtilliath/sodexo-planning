@@ -1,11 +1,12 @@
+import { mondayFirstWeekday } from '@forthtilliath/ts-kit/date/mondayFirstWeekday';
+import { parseIsoDate } from '@forthtilliath/ts-kit/date/parseIsoDate';
+import { capitalize } from '@forthtilliath/ts-kit/string/capitalize';
+
 /** Index du jour de la semaine avec lundi = 0 ... dimanche = 6 (au lieu du dimanche = 0 par défaut de JS). */
-export function mondayFirstWeekday(iso: string): number {
-  const jsDay = new Date(`${iso}T00:00:00`).getDay();
-  return (jsDay + 6) % 7;
-}
+export { mondayFirstWeekday };
 
 export function dayNumber(iso: string): number {
-  return new Date(`${iso}T00:00:00`).getDate();
+  return parseIsoDate(iso).getDate();
 }
 
 const WEEKDAY_NAMES = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
@@ -14,12 +15,8 @@ const MONTH_NAMES_LOWER = [
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ];
 
-function capitalize(word: string): string {
-  return word.charAt(0).toUpperCase() + word.slice(1);
-}
-
 /** Noms des mois en français, capitalisés ("Janvier", "Février", ...) — source unique pour tout l'affichage mois/année. */
-export const MONTH_NAMES = MONTH_NAMES_LOWER.map(capitalize);
+export const MONTH_NAMES = MONTH_NAMES_LOWER.map((name) => capitalize(name));
 
 /** "Août 2026" à partir d'une année et d'un mois (1-12) — libellé court utilisé pour les sélecteurs de planning. */
 export function monthYearLabel(year: number, month: number): string {

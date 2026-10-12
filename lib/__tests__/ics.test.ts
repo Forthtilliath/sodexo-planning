@@ -1,4 +1,4 @@
-import { buildEventUid, buildIcs, slugifyName } from '@/lib/ics';
+import { buildEventUid, buildIcs } from '@/lib/ics';
 import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
 const groups: TeamGroup[] = [{ id: 'd1-d4', label: 'D1-D4', codes: ['D1', 'D2', 'D3', 'D4'] }];
@@ -16,9 +16,11 @@ const scan: ScanRecord = {
   ],
 };
 
-describe('slugifyName / buildEventUid', () => {
-  it('retire accents, casse et caractères spéciaux', () => {
-    expect(slugifyName('  Marie-Hélène   DUPONT ')).toBe('marie-helene-dupont');
+describe('buildEventUid', () => {
+  it('retire accents, casse et caractères spéciaux du nom', () => {
+    expect(buildEventUid('  Marie-Hélène   DUPONT ', '2026-07-01')).toBe(
+      'marie-helene-dupont-2026-07-01@rn-planning'
+    );
   });
 
   it('retombe sur un préfixe générique quand le nom est vide', () => {
