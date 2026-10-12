@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
 
-import type { ThemeColors } from '@/constants/Colors';
+import { AddButton as KitAddButton } from '@forthtilliath/react-native-kit/components/list/AddButton';
+
 import { useThemeColors } from '@/hooks/useThemeColors';
 
 type Props = {
@@ -13,29 +13,12 @@ type Props = {
 /** Bouton pointillé "+ ..." réutilisé partout où on ajoute une ligne (salarié, groupe...). */
 export default function AddButton({ label, onPress, style }: Props) {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <Pressable style={[styles.button, style]} onPress={onPress}>
-      <Text style={styles.text}>{label}</Text>
-    </Pressable>
+    <KitAddButton
+      label={label}
+      onPress={onPress}
+      styles={{ button: [{ borderColor: colors.border }, style], text: { color: colors.text } }}
+    />
   );
-}
-
-function createStyles(colors: ThemeColors) {
-  return StyleSheet.create({
-    button: {
-      marginTop: 4,
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.border,
-      alignItems: 'center',
-    },
-    text: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-  });
 }
