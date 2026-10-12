@@ -60,6 +60,7 @@
         }
       ],
       "./plugins/withShortCxxPath.js",
+      ["./plugins/withReleaseSigning.js", { "propertyPrefix": "SODEXOPLANNING" }],
       "expo-sharing",
       "expo-web-browser"
     ],
