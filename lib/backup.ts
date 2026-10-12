@@ -48,7 +48,9 @@ export function buildBackupFilename(date = new Date()): string {
 }
 
 /** Exporte les catégories cochées dans un fichier JSON et ouvre le partage natif (mail, Drive, fichiers...). */
-export async function shareBackup(selection: BackupSelection = FULL_BACKUP_SELECTION): Promise<void> {
+export async function shareBackup(
+  selection: BackupSelection = FULL_BACKUP_SELECTION,
+): Promise<void> {
   const data = await exportAllData(selection);
   const filename = buildBackupFilename();
   const file = new File(Paths.cache, filename);
@@ -62,7 +64,10 @@ export async function shareBackup(selection: BackupSelection = FULL_BACKUP_SELEC
   if (!available) {
     throw new Error("Le partage n'est pas disponible sur cet appareil.");
   }
-  await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Exporter mes données' });
+  await Sharing.shareAsync(file.uri, {
+    mimeType: 'application/json',
+    dialogTitle: 'Exporter mes données',
+  });
 }
 
 export type BackupImportResult = {
@@ -76,7 +81,7 @@ export type BackupImportResult = {
  * l'utilisateur annule le choix du fichier.
  */
 export async function pickAndImportBackup(
-  selection: BackupSelection = FULL_BACKUP_SELECTION
+  selection: BackupSelection = FULL_BACKUP_SELECTION,
 ): Promise<BackupImportResult | null> {
   const picked = await File.pickFileAsync({ mimeTypes: 'application/json' });
   if (picked.canceled) return null;
