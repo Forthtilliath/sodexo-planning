@@ -62,7 +62,8 @@ import * as Sharing from 'expo-sharing';
 const mockPickFileAsync = (MockFileClass as unknown as { pickFileAsync: jest.Mock }).pickFileAsync;
 const mockShareAsync = Sharing.shareAsync as jest.Mock;
 const mockIsAvailableAsync = Sharing.isAvailableAsync as jest.Mock;
-const mockFileInstances = (jest.requireMock('expo-file-system') as { __instances: MockFile[] }).__instances;
+const mockFileInstances = (jest.requireMock('expo-file-system') as { __instances: MockFile[] })
+  .__instances;
 void _Paths;
 
 import {
@@ -72,7 +73,14 @@ import {
   shareBackup,
 } from '@/lib/backup';
 import type { BackupData } from '@/lib/db';
-import { FULL_BACKUP_SELECTION, getEmployeeRoster, getScans, getSettings, saveScan, saveSettings } from '@/lib/db';
+import {
+  FULL_BACKUP_SELECTION,
+  getEmployeeRoster,
+  getScans,
+  getSettings,
+  saveScan,
+  saveSettings,
+} from '@/lib/db';
 
 function fileTextResult(text: string) {
   return { canceled: false, result: { text: () => Promise.resolve(text) } };
@@ -116,7 +124,7 @@ describe('buildBackupFilename', () => {
 describe('BACKUP_CATEGORY_LABELS', () => {
   it('couvre exactement les quatre catégories triables', () => {
     expect(Object.keys(BACKUP_CATEGORY_LABELS).sort()).toEqual(
-      ['employees', 'groups', 'plannings', 'settings'].sort()
+      ['employees', 'groups', 'plannings', 'settings'].sort(),
     );
   });
 });
@@ -138,7 +146,7 @@ describe('shareBackup', () => {
 
     expect(mockShareAsync).toHaveBeenCalledWith(
       file.uri,
-      expect.objectContaining({ mimeType: 'application/json' })
+      expect.objectContaining({ mimeType: 'application/json' }),
     );
   });
 
@@ -175,7 +183,7 @@ describe('shareBackup', () => {
     }
   });
 
-  it('échoue explicitement si le partage est indisponible sur l\'appareil', async () => {
+  it("échoue explicitement si le partage est indisponible sur l'appareil", async () => {
     mockIsAvailableAsync.mockResolvedValue(false);
 
     await expect(shareBackup(FULL_BACKUP_SELECTION)).rejects.toThrow(/partage/i);
@@ -194,33 +202,35 @@ describe('shareBackup', () => {
 });
 
 describe('pickAndImportBackup', () => {
-  it('renvoie null si l\'utilisateur annule le choix du fichier', async () => {
+  it("renvoie null si l'utilisateur annule le choix du fichier", async () => {
     mockPickFileAsync.mockResolvedValue({ canceled: true });
 
     expect(await pickAndImportBackup()).toBeNull();
   });
 
-  it('rejette un fichier qui n\'est pas du JSON', async () => {
+  it("rejette un fichier qui n'est pas du JSON", async () => {
     mockPickFileAsync.mockResolvedValue(fileTextResult('pas du json {'));
 
     await expect(pickAndImportBackup()).rejects.toThrow(/JSON/i);
   });
 
-  it('rejette un JSON valide qui n\'a pas la forme d\'une sauvegarde', async () => {
+  it("rejette un JSON valide qui n'a pas la forme d'une sauvegarde", async () => {
     mockPickFileAsync.mockResolvedValue(fileTextResult(JSON.stringify({ hello: 'world' })));
 
     await expect(pickAndImportBackup()).rejects.toThrow(/sauvegarde valide/i);
   });
 
-  it('rejette une sauvegarde d\'une version inconnue', async () => {
-    mockPickFileAsync.mockResolvedValue(fileTextResult(JSON.stringify({ ...makeBackup(), version: 2 })));
+  it("rejette une sauvegarde d'une version inconnue", async () => {
+    mockPickFileAsync.mockResolvedValue(
+      fileTextResult(JSON.stringify({ ...makeBackup(), version: 2 })),
+    );
 
     await expect(pickAndImportBackup()).rejects.toThrow(/sauvegarde valide/i);
   });
 
   it('rejette une sauvegarde dont une catégorie présente a le mauvais type', async () => {
     mockPickFileAsync.mockResolvedValue(
-      fileTextResult(JSON.stringify({ version: 1, exportedAt: 1, roster: 'pas un tableau' }))
+      fileTextResult(JSON.stringify({ version: 1, exportedAt: 1, roster: 'pas un tableau' })),
     );
 
     await expect(pickAndImportBackup()).rejects.toThrow(/sauvegarde valide/i);
@@ -229,12 +239,14 @@ describe('pickAndImportBackup', () => {
   it('rejette quand aucune des catégories cochées ne figure dans le fichier', async () => {
     // Fichier ne contenant que les salariés...
     mockPickFileAsync.mockResolvedValue(
-      fileTextResult(JSON.stringify({ version: 1, exportedAt: 1, roster: [{ name: 'Alice', active: true }] }))
+      fileTextResult(
+        JSON.stringify({ version: 1, exportedAt: 1, roster: [{ name: 'Alice', active: true }] }),
+      ),
     );
 
     // ...mais on ne coche que les réglages.
     await expect(
-      pickAndImportBackup({ settings: true, employees: false, groups: false, plannings: false })
+      pickAndImportBackup({ settings: true, employees: false, groups: false, plannings: false }),
     ).rejects.toThrow(/aucune des catégories cochées/i);
   });
 
@@ -279,7 +291,9 @@ describe('pickAndImportBackup', () => {
       grid: [['D1']],
       holidays: [],
     };
-    mockPickFileAsync.mockResolvedValue(fileTextResult(JSON.stringify(makeBackup({ scans: [scan] }))));
+    mockPickFileAsync.mockResolvedValue(
+      fileTextResult(JSON.stringify(makeBackup({ scans: [scan] }))),
+    );
 
     const result = await pickAndImportBackup({
       settings: false,
