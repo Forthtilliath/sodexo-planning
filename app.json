@@ -59,9 +59,9 @@
           "calendarPermission": "Autorise Sodexo Planning à écrire ton planning dans ton agenda."
         }
       ],
-      "./plugins/withShortCxxPath.js",
-      ["./plugins/withReleaseSigning.js", { "propertyPrefix": "SODEXOPLANNING" }],
-      "./plugins/withAndroidAbis.js",
+      "@forthtilliath/expo-config-plugins/withShortCxxPath",
+      ["@forthtilliath/expo-config-plugins/withReleaseSigning", { "propertyPrefix": "SODEXOPLANNING" }],
+      "@forthtilliath/expo-config-plugins/withAndroidAbis",
       "expo-sharing",
       "expo-web-browser"
     ],

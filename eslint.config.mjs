@@ -13,7 +13,7 @@ const eslintConfig = defineConfig([
   },
   {
     // Scripts Node CJS (package.json n'a pas "type": "module") : require() y est légitime.
-    files: ['scripts/**/*.js', 'plugins/**/*.js'],
+    files: ['scripts/**/*.js'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   {
