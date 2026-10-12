@@ -1,12 +1,9 @@
 import type { ReactNode } from 'react';
-import { useMemo, useRef } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
 
-import type { ThemeColors } from '@/constants/Colors';
+import { SwipeableRow as KitSwipeableRow } from '@forthtilliath/react-native-kit/components/list/SwipeableRow';
+
 import { useThemeColors } from '@/hooks/useThemeColors';
-
-// Relâcher au-delà de cette fraction de la largeur supprime directement.
-const DELETE_THRESHOLD_RATIO = 0.5;
 
 type Props = {
   children: ReactNode;
@@ -15,108 +12,29 @@ type Props = {
 };
 
 /**
- * Ligne qu'on swipe vers la gauche pour supprimer : dépasser
- * DELETE_THRESHOLD_RATIO puis relâcher supprime directement (à l'appelant de
- * proposer un "Annuler" après coup). PanResponder + Animated plutôt qu'une lib
- * de gestes, pour ne pas ajouter de dépendance native.
+ * Ligne qu'on swipe vers la gauche pour supprimer : dépasser la moitié de la
+ * largeur puis relâcher supprime directement (à l'appelant de proposer un
+ * "Annuler" après coup). Le geste tourne sur le thread UI (gesture-handler).
  */
 export default function SwipeableRow({ children, onDelete, deleteLabel = 'Supprimer' }: Props) {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const translateX = useMemo(() => new Animated.Value(0), []);
-  // Largeur de la carte (via onLayout), lue en synchrone pendant le geste :
-  // un state ne serait pas assez frais au début d'un drag après re-render.
-  const cardWidthRef = useRef(0);
-
-  function animateClosed() {
-    Animated.spring(translateX, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
-  }
-
-  function animateDeleted() {
-    Animated.timing(translateX, {
-      toValue: -cardWidthRef.current,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => onDelete());
-  }
-
-  const panResponder = useMemo(
-    () =>
-      // PanResponder est une API opaque pour le compilateur : ses handlers lisent
-      // cardWidthRef.current de façon asynchrone (pendant un geste, jamais au
-      // render), mais le compilateur ne peut pas le garantir pour une fonction
-      // qu'il ne connaît pas — faux positif inhérent à ce pattern RN standard.
-      // eslint-disable-next-line react-hooks/refs
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-        onPanResponderMove: (_, gesture) => {
-          translateX.setValue(Math.min(0, Math.max(-cardWidthRef.current, gesture.dx)));
-        },
-        onPanResponderRelease: (_, gesture) => {
-          const width = cardWidthRef.current;
-          if (width > 0 && -gesture.dx >= width * DELETE_THRESHOLD_RATIO) {
-            animateDeleted();
-          } else {
-            animateClosed();
-          }
-        },
-        onPanResponderTerminate: animateClosed,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps, @eslint-react/exhaustive-deps -- créé une seule fois, comme l'ancien useRef(...).current ; animateDeleted/animateClosed/translateX sont capturées à ce moment-là, exactement comme avant.
-    []
+  const styles = useMemo(
+    () => ({
+      container: { marginBottom: 8, borderRadius: 8, overflow: 'hidden' as const },
+      deleteAction: { backgroundColor: colors.dangerStrong },
+      deleteActionText: { color: colors.onTint },
+    }),
+    [colors]
   );
 
   return (
-    <View
-      style={styles.container}
-      onLayout={(e) => {
-        cardWidthRef.current = e.nativeEvent.layout.width;
-      }}>
-      <Pressable
-        style={styles.deleteBackground}
-        accessibilityRole="button"
-        accessibilityLabel={deleteLabel}
-        onPress={animateDeleted}>
-        <Text style={styles.deleteButtonText} numberOfLines={1}>
-          {deleteLabel}
-        </Text>
-      </Pressable>
-      {/* width explicite : sinon la vue se contracte à son contenu et laisse
-          voir le fond rouge en permanence au lieu de le masquer. */}
-      <Animated.View style={[styles.row, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
-        {children}
-      </Animated.View>
-    </View>
+    <KitSwipeableRow
+      fullSwipeToDelete
+      onDelete={onDelete}
+      deleteLabel={deleteLabel}
+      deleteText={deleteLabel}
+      styles={styles}>
+      {children}
+    </KitSwipeableRow>
   );
-}
-
-function createStyles(colors: ThemeColors) {
-  return StyleSheet.create({
-    container: {
-      marginBottom: 8,
-      borderRadius: 8,
-      overflow: 'hidden',
-    },
-    row: {
-      width: '100%',
-    },
-    deleteBackground: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.dangerStrong,
-    },
-    deleteButtonText: {
-      color: colors.onTint,
-      fontWeight: '700',
-      fontSize: 15,
-      alignSelf: 'flex-end',
-      paddingEnd: 16
-    },
-  });
 }
