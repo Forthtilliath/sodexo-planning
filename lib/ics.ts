@@ -1,3 +1,5 @@
+import { slugify } from '@forthtilliath/ts-kit/string/slugify';
+
 import { buildPlanningEvents, endsNextDay, nextDay } from '@/lib/planningEvents';
 import type { CodeSchedule, ScanRecord, TeamGroup } from '@/types';
 
@@ -37,16 +39,6 @@ function sequenceNumber(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-/** "Marie-Hélène  Dupont" -> "marie-helene-dupont" (sans accents ni caractères spéciaux). */
-export function slugifyName(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
 /**
  * UID basé sur la personne et la date, pas sur le scan : stable d'un export à
  * l'autre même après un nouveau scan du mois, pour que le calendrier remplace
@@ -54,7 +46,7 @@ export function slugifyName(name: string): string {
  * dans le même agenda s'écrasent.
  */
 export function buildEventUid(employeeName: string, isoDate: string): string {
-  return `${slugifyName(employeeName) || 'planning'}-${isoDate}@rn-planning`;
+  return `${slugify(employeeName) || 'planning'}-${isoDate}@rn-planning`;
 }
 
 /**
