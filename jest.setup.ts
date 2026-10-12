@@ -10,9 +10,13 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   return {
     __esModule: true,
     default: function ReanimatedSwipeable(props: {
-      children?: unknown;
+      children?: React.ReactNode;
       onSwipeableOpen?: (direction: 'left' | 'right') => void;
-      renderRightActions?: (progress: unknown, translation: unknown, methods: Record<string, () => void>) => unknown;
+      renderRightActions?: (
+        progress: unknown,
+        translation: unknown,
+        methods: Record<string, () => void>
+      ) => React.ReactNode;
     }) {
       const methods = {
         close: () => undefined,
