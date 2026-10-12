@@ -236,6 +236,52 @@ describe('pickAndImportBackup', () => {
     await expect(pickAndImportBackup()).rejects.toThrow(/sauvegarde valide/i);
   });
 
+  it.each([
+    ['un salarié sans nom', { roster: [{ active: true }] }],
+    ['une heure de rappel impossible', { settings: { reminderHour: 99 } }],
+    ['un horaire mal formé', { codeSchedules: [{ codes: ['C2'], start: '6h45', end: '14:45' }] }],
+    ['un code de poste qui n’est pas du texte', { teamGroups: [{ id: 'g', codes: [42] }] }],
+    ['un nom démesuré', { roster: [{ name: 'x'.repeat(5000), active: true }] }],
+    [
+      'un planning au mois impossible',
+      {
+        scans: [
+          { id: 's', year: 2026, month: 13, createdAt: 1, days: [], employees: [], grid: [] },
+        ],
+      },
+    ],
+  ])(
+    'rejette en entier une sauvegarde contenant %s, sans rien importer',
+    async (_label, overrides) => {
+      await saveSettings({ reminderHour: 8 });
+      mockPickFileAsync.mockResolvedValue(
+        fileTextResult(JSON.stringify(makeBackup(overrides as Partial<BackupData>))),
+      );
+
+      await expect(pickAndImportBackup()).rejects.toThrow(/sauvegarde corrompue/i);
+      expect(await getSettings()).toEqual({ reminderHour: 8 });
+      expect(await getEmployeeRoster()).not.toContainEqual(
+        expect.objectContaining({ name: 'Alice' }),
+      );
+    },
+  );
+
+  it('ignore les champs inconnus d’une sauvegarde valide', async () => {
+    const backup = makeBackup({
+      settings: { reminderHour: 21, injected: 'x' } as BackupData['settings'],
+    });
+    mockPickFileAsync.mockResolvedValue(fileTextResult(JSON.stringify(backup)));
+
+    await pickAndImportBackup({
+      settings: true,
+      employees: false,
+      groups: false,
+      plannings: false,
+    });
+
+    expect(await getSettings()).toEqual({ reminderHour: 21 });
+  });
+
   it('rejette quand aucune des catégories cochées ne figure dans le fichier', async () => {
     // Fichier ne contenant que les salariés...
     mockPickFileAsync.mockResolvedValue(
