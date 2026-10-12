@@ -1,6 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
+import { validateBackupData } from './backupSchema';
 import { timestampCompact } from './dates';
 import {
   type BackupData,
@@ -96,12 +97,15 @@ export async function pickAndImportBackup(
   if (!isValidBackup(data)) {
     throw new Error("Ce fichier ne semble pas être une sauvegarde valide de l'app.");
   }
+  // Forme générale reconnue : chaque entrée est maintenant vérifiée avant
+  // de remplacer quoi que ce soit (rien n'est importé à la moindre anomalie).
+  const backup = validateBackupData(data);
 
-  const categories = resolveImportedCategories(data, selection);
+  const categories = resolveImportedCategories(backup, selection);
   if (categories.length === 0) {
     throw new Error('Aucune des catégories cochées ne figure dans ce fichier.');
   }
 
-  await importAllData(data, selection);
+  await importAllData(backup, selection);
   return { restored: categories.map((key) => BACKUP_CATEGORY_LABELS[key]) };
 }
