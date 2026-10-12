@@ -61,6 +61,7 @@
       ],
       "./plugins/withShortCxxPath.js",
       ["./plugins/withReleaseSigning.js", { "propertyPrefix": "SODEXOPLANNING" }],
+      "./plugins/withAndroidAbis.js",
       "expo-sharing",
       "expo-web-browser"
     ],
