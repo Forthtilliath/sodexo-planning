@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
+
+import { selectFeedback } from '@forthtilliath/react-native-kit/utils/helpers/haptics';
 
 import OptionsModal from '@/components/OptionsModal';
 import QuickCodeBar from '@/components/QuickCodeBar';
@@ -95,7 +96,7 @@ export default function PersonDayEditor({
   }
 
   function toggleCell(cell: Cell) {
-    Haptics.selectionAsync();
+    selectFeedback();
     const indices = cellIndices(cell);
     setSelected((prev) => {
       const next = new Set(prev);
