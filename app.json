@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sodexo Planning",
     "slug": "sodexo-planning",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rnplanning",
@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.forth.sodexoplanning",
-      "versionCode": 10,
+      "versionCode": 11,
       "allowBackup": false,
       "permissions": [
         "REQUEST_INSTALL_PACKAGES"
@@ -60,7 +60,12 @@
         }
       ],
       "@forthtilliath/expo-config-plugins/withShortCxxPath",
-      ["@forthtilliath/expo-config-plugins/withReleaseSigning", { "propertyPrefix": "SODEXOPLANNING" }],
+      [
+        "@forthtilliath/expo-config-plugins/withReleaseSigning",
+        {
+          "propertyPrefix": "SODEXOPLANNING"
+        }
+      ],
       "@forthtilliath/expo-config-plugins/withAndroidAbis",
       "expo-sharing",
       "expo-web-browser"

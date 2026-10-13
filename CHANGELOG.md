@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 1.7.0 — 2026-10-13
+
+- Important : cette version est signée avec une nouvelle clé, plus sûre, et Android ne peut pas l'installer par-dessus l'ancienne. Avant tout, fais une sauvegarde (Réglages > Sauvegarde), désinstalle l'app, installe cette version, puis restaure ta sauvegarde.
+- Amélioration : le glissement pour supprimer une ligne est plus fluide.
+- Amélioration : l'app est plus légère à télécharger.
+- Correction : failles de sécurité corrigées dans des bibliothèques utilisées par l'app.
+
 ## 1.6.0 — 2026-10-11
 
 - Nouveau : onglet "Outils", avec le calcul des collations ambu et des petits-déjeuners — indique le nombre de menus demandés et l'app liste tous les produits à préparer, plus le matériel des collations ambu.
