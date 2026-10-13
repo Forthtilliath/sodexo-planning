@@ -10,6 +10,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.7.0',
+    date: '2026-10-13',
+    changes: [
+      "Important : cette version est signée avec une nouvelle clé, plus sûre, et Android ne peut pas l'installer par-dessus l'ancienne. Avant tout, fais une sauvegarde (Réglages > Sauvegarde), désinstalle l'app, installe cette version, puis restaure ta sauvegarde.",
+      'Amélioration : le glissement pour supprimer une ligne est plus fluide.',
+      "Amélioration : l'app est plus légère à télécharger.",
+      "Correction : failles de sécurité corrigées dans des bibliothèques utilisées par l'app.",
+    ],
+  },
+  {
     version: '1.6.0',
     date: '2026-10-11',
     changes: [
