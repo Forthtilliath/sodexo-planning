@@ -32,7 +32,7 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
-  globalIgnores(['.expo/**', 'dist/**', 'android/**', 'ios/**']),
+  globalIgnores(['.expo/**', 'dist/**', 'android/**', 'ios/**', 'vendor/**']),
 ]);
 
 export default eslintConfig;
