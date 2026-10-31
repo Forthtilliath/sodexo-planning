@@ -3,30 +3,32 @@ const mockFetchReleaseHistory = jest.fn();
 const mockDownloadAndInstallApk = jest.fn();
 
 jest.mock('@forthtilliath/expo-release-updates', () => ({
+  ...jest.requireActual('@forthtilliath/expo-release-updates'),
   fetchLatestRelease: (...args: unknown[]) => mockFetchLatestRelease(...args),
   fetchReleaseHistory: (...args: unknown[]) => mockFetchReleaseHistory(...args),
   downloadAndInstallApk: (...args: unknown[]) => mockDownloadAndInstallApk(...args),
-  compareVersions: jest.fn(),
 }));
 
 import { downloadAndInstallApk, fetchLatestRelease, fetchReleaseHistory } from '@/lib/appUpdate';
 
 const REPO = { owner: 'Forthtilliath', repo: 'sodexo-planning' };
+const APK_URL =
+  'https://github.com/Forthtilliath/sodexo-planning/releases/download/v2.0.0/SodexoPlanning-2.0.0.apk';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('fetchLatestRelease', () => {
-  it('interroge le dépôt sodexo-planning', () => {
+  it('interroge le dépôt sodexo-planning, versions vérifiables seulement', () => {
     mockFetchLatestRelease.mockReturnValue('latest');
     expect(fetchLatestRelease()).toBe('latest');
-    expect(mockFetchLatestRelease).toHaveBeenCalledWith(REPO);
+    expect(mockFetchLatestRelease).toHaveBeenCalledWith({ ...REPO, requireVerifiedApk: true });
   });
 });
 
 describe('fetchReleaseHistory', () => {
-  it('limite l\'historique à 10 entrées par défaut', () => {
+  it("limite l'historique à 10 entrées par défaut", () => {
     fetchReleaseHistory();
     expect(mockFetchReleaseHistory).toHaveBeenCalledWith({ ...REPO, limit: 10 });
   });
@@ -38,14 +40,21 @@ describe('fetchReleaseHistory', () => {
 });
 
 describe('downloadAndInstallApk', () => {
-  it('passe l\'url, le nom de fichier fixe et le callback de progression', () => {
+  it("vérifie l'empreinte et limite le téléchargement aux releases du dépôt", async () => {
     const onProgress = jest.fn();
-    downloadAndInstallApk('https://example.com/app.apk', onProgress);
+    await downloadAndInstallApk(APK_URL, onProgress, 'a'.repeat(64));
 
     expect(mockDownloadAndInstallApk).toHaveBeenCalledWith({
-      apkUrl: 'https://example.com/app.apk',
+      apkUrl: APK_URL,
       fileName: 'sodexo-planning-update.apk',
       onProgress,
+      expectedSha256: 'a'.repeat(64),
+      allowedUrlPrefix: 'https://github.com/Forthtilliath/sodexo-planning/releases/download/',
     });
+  });
+
+  it('refuse une release sans empreinte, sans rien télécharger', async () => {
+    await expect(downloadAndInstallApk(APK_URL)).rejects.toThrow('Empreinte');
+    expect(mockDownloadAndInstallApk).not.toHaveBeenCalled();
   });
 });
