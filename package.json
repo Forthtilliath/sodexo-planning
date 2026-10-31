@@ -4,10 +4,10 @@
   "version": "1.7.0",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
-    "@forthtilliath/expo-release-updates": "^0.6.1",
-    "@forthtilliath/expo-release-updates-ui": "^0.4.0",
-    "@forthtilliath/react-native-kit": "^0.16.0",
-    "@forthtilliath/ts-kit": "^0.12.0",
+    "@forthtilliath/expo-release-updates": "^0.10.1",
+    "@forthtilliath/expo-release-updates-ui": "^0.5.2",
+    "@forthtilliath/react-native-kit": "^0.22.0",
+    "@forthtilliath/ts-kit": "^0.16.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "decode-uri-component": "file:vendor/decode-uri-component",
     "expo": "~57.0.24",
@@ -43,7 +43,7 @@
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^5.26.4",
     "@forthtilliath/eslint-config": "^0.9.0",
-    "@forthtilliath/expo-config-plugins": "^0.1.0",
+    "@forthtilliath/expo-config-plugins": "^0.3.0",
     "@react-native/jest-preset": "^0.86.3",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
