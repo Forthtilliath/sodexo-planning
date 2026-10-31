@@ -24,7 +24,7 @@ jest.mock('@/lib/notifications', () => ({
 }));
 
 import PlanningEditorScreen from '@/app/(tabs)/saisie';
-import { saveScan } from '@/lib/db';
+import { saveEmployeeRoster, saveScan } from '@/lib/db';
 import type { ScanRecord } from '@/types';
 
 const NOW = new Date(2026, 6, 15, 12, 0, 0); // 15 juillet 2026
@@ -86,6 +86,10 @@ describe('PlanningEditorScreen — accueil', () => {
 
 describe('PlanningEditorScreen — création', () => {
   it('ouvre la revue pré-remplie avec la liste des salariés au clic sur "Créer"', async () => {
+    await saveEmployeeRoster([
+      { name: 'Moi', active: true },
+      { name: 'DURAND Claire', active: true },
+    ]);
     await render(<PlanningEditorScreen />);
 
     await fireEvent.press(await screen.findByText('✏️ Créer le planning'));
