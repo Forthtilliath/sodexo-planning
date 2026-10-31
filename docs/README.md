@@ -84,10 +84,8 @@ Types dans `types.ts`, à la racine (alias `@/types`) :
 ## Stockage et réactivité
 
 - Tout passe par `lib/db.ts` (clés `@rn-planning/*` d'AsyncStorage). Chaque écriture incrémente une version et prévient les abonnés : `hooks/useDbData.ts` recharge les écrans concernés, donc une modification faite dans Réglages apparaît tout de suite dans Saisie et Mon planning.
-- Les valeurs par défaut (groupes de postes, horaires, liste de salariés) ne servent que si le stockage est vide.
+- Les valeurs par défaut (groupes de postes, horaires) ne servent que si le stockage est vide. La liste de salariés par défaut ne contient que « Moi » : **jamais de vrais noms dans le code**, le dépôt est public. Les collègues s'ajoutent dans l'app et voyagent avec la sauvegarde.
 - Renommer un salarié réécrit son nom dans tous les plannings et ses codes habituels.
-
-> **À revoir** : `DEFAULT_ROSTER` contient des noms de collègues réels, publiés avec le code. Voir `A-FAIRE.md`.
 
 ## Sauvegarde et import
 
@@ -141,9 +139,12 @@ L'APK de release est signé avec la clé de Sodexo Planning, jamais avec le `deb
 
 **Version** : écrire d'abord les nouveautés dans `lib/changelog.ts` (en français, pour l'écran de l'app), puis `npm run version:patch | minor | major` : version semver et `versionCode` dans `app.json`, et `CHANGELOG.md` régénéré depuis `lib/changelog.ts`.
 
-**Publication** : `npm run release [patch|minor|major]` enchaîne montée de version, `expo prebuild --clean`, `assembleRelease`, installation sur le téléphone branché, puis création de la release GitHub avec l'APK renommé `Sodexo-Planning-<version>.apk` et les notes du CHANGELOG.
+**Publication**, en deux temps, sans jamais pousser sur `main` :
 
-> ⚠️ Le script fait aussi un `git push origin main` : à remplacer par le circuit branche + PR (voir `A-FAIRE.md`). En attendant, publier depuis une branche fusionnée.
+1. `npm run release [patch|minor|major]`, depuis `main` à jour (seul `lib/changelog.ts` peut être modifié) : montée de version, branche `chore/release-v<version>`, `expo prebuild --clean` + `assembleRelease`, installation sur le téléphone branché, commit, push de la branche et ouverture de la PR.
+2. Une fois la PR fusionnée : `git switch main` puis `npm run release:publish` : rebuild du code fusionné, release GitHub `v<version>` avec l'APK renommé `Sodexo-Planning-<version>.apk` et les notes de `lib/changelog.ts`, puis branche `release/v<version>`.
+
+`npm run release` sans argument se contente de rebuilder et d'installer sur le téléphone.
 
 ## Captures d'écran du README
 
