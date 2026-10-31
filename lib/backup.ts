@@ -1,6 +1,8 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
+import { pickTextFile } from '@forthtilliath/react-native-kit/utils/files/pickTextFile';
+
 import { validateBackupData } from './backupSchema';
 import { timestampCompact } from './dates';
 import {
@@ -11,6 +13,9 @@ import {
   importAllData,
   resolveImportedCategories,
 } from './db';
+
+/** Plus grosse sauvegarde acceptée : une vraie pèse quelques centaines de Ko (texte seulement). */
+export const MAX_BACKUP_BYTES = 10_000_000;
 
 /** Libellés affichés pour chaque catégorie triable d'une sauvegarde. */
 export const BACKUP_CATEGORY_LABELS: Record<keyof BackupSelection, string> = {
@@ -84,13 +89,15 @@ export type BackupImportResult = {
 export async function pickAndImportBackup(
   selection: BackupSelection = FULL_BACKUP_SELECTION,
 ): Promise<BackupImportResult | null> {
-  const picked = await File.pickFileAsync({ mimeTypes: 'application/json' });
-  if (picked.canceled) return null;
+  // Taille vérifiée avant toute lecture (`pickTextFile` de react-native-kit) : un fichier énorme
+  // reçu par message saturerait la mémoire avant même d'être refusé.
+  const picked = await pickTextFile({ maxBytes: MAX_BACKUP_BYTES });
+  if (!picked) return null;
+  if (!picked.ok) throw new Error(picked.error);
 
-  const raw = await picked.result.text();
   let data: unknown;
   try {
-    data = JSON.parse(raw);
+    data = JSON.parse(picked.text);
   } catch {
     throw new Error("Ce fichier n'est pas un JSON valide.");
   }
