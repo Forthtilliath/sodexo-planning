@@ -39,6 +39,7 @@ describe('UpdateScreen', () => {
       version: '99.0.0',
       notes: '- Nouveauté',
       apkUrl: 'https://example.com/app.apk',
+      apkSha256: 'b'.repeat(64),
     });
     downloadAndInstallApkMock.mockResolvedValue(undefined);
 
@@ -47,10 +48,15 @@ describe('UpdateScreen', () => {
 
     await fireEvent.press(screen.getByText('Télécharger et installer'));
 
-    expect(downloadAndInstallApkMock).toHaveBeenCalledWith('https://example.com/app.apk', expect.any(Function));
+    // L'empreinte de la release est transmise : l'APK téléchargé est vérifié avant l'installation.
+    expect(downloadAndInstallApkMock).toHaveBeenCalledWith(
+      'https://example.com/app.apk',
+      expect.any(Function),
+      'b'.repeat(64),
+    );
   });
 
-  it('affiche un message d\'erreur si la vérification échoue', async () => {
+  it("affiche un message d'erreur si la vérification échoue", async () => {
     fetchLatestReleaseMock.mockRejectedValue(new Error('network error'));
     await render(<UpdateScreen />);
 
