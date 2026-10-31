@@ -69,6 +69,7 @@ void _Paths;
 import {
   BACKUP_CATEGORY_LABELS,
   buildBackupFilename,
+  MAX_BACKUP_BYTES,
   pickAndImportBackup,
   shareBackup,
 } from '@/lib/backup';
@@ -206,6 +207,17 @@ describe('pickAndImportBackup', () => {
     mockPickFileAsync.mockResolvedValue({ canceled: true });
 
     expect(await pickAndImportBackup()).toBeNull();
+  });
+
+  it('refuse un fichier trop volumineux sans le lire', async () => {
+    const text = jest.fn(() => Promise.resolve('{}'));
+    mockPickFileAsync.mockResolvedValue({
+      canceled: false,
+      result: { name: 'enorme.json', size: MAX_BACKUP_BYTES + 1, text },
+    });
+
+    await expect(pickAndImportBackup()).rejects.toThrow(/trop volumineux/i);
+    expect(text).not.toHaveBeenCalled();
   });
 
   it("rejette un fichier qui n'est pas du JSON", async () => {
