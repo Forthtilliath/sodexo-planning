@@ -45,28 +45,10 @@ const DEFAULT_CODE_SCHEDULES: CodeSchedule[] = [
 	{ codes: ["F4", "F5"], start: "09:19", end: "20:00" },
 ];
 
-// Filet de sécurité si le stockage est vide (réinstallation...) : au moins les
-// noms sans tout retaper. Jamais appliqué si une liste a déjà été sauvegardée.
-const DEFAULT_ROSTER: RosterEntry[] = [
-	MY_NAME,
-	"DURAND Claire",
-	"PETIT Hugo",
-	"LEROY Paul",
-	"Camille",
-	"Nolan",
-	"Sofia",
-	"Mathis",
-	"Emma",
-	"Lucas",
-	"Jade",
-	"Inès",
-	"Ethan",
-	"Léo",
-	"Chloé",
-	"Louis",
-	"Manon",
-	"Zoé",
-].map((name) => ({ name, active: true }));
+// Liste de départ quand rien n'est encore enregistré : seulement « Moi ». Jamais
+// de vrais noms ici, le dépôt est public : les collègues s'ajoutent dans
+// Réglages ▸ Salariés et voyagent avec la sauvegarde (fichier ou Google Drive).
+const DEFAULT_ROSTER: RosterEntry[] = [{ name: MY_NAME, active: true }];
 
 // --- Réactivité : toute écriture notifie les écrans abonnés ---------------
 // Chaque écran garde sa copie des données (useState) ; sans notification, une

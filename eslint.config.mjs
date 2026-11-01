@@ -12,9 +12,13 @@ const eslintConfig = defineConfig([
     rules: { 'react-native/no-unused-styles': 'off' },
   },
   {
-    // Scripts Node CJS (package.json n'a pas "type": "module") : require() y est légitime.
+    // Scripts Node CJS (package.json n'a pas "type": "module") : require() y est légitime,
+    // et cette règle React typée n'a pas de sens hors composants (pas d'infos de types en JS).
     files: ['scripts/**/*.js'],
-    rules: { '@typescript-eslint/no-require-imports': 'off' },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@eslint-react/no-leaked-conditional-rendering': 'off',
+    },
   },
   {
     // COLOR_PALETTE co-localisée avec le composant qui la consomme (une seule
