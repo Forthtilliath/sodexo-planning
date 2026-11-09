@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 1.7.1 — 2026-11-09
+
+- Sécurité : une mise à jour téléchargée depuis l'app est vérifiée (empreinte et provenance) avant d'être installée.
+- Sécurité : une sauvegarde importée est entièrement vérifiée avant d'être appliquée ; un fichier invalide ou trop gros est refusé sans rien modifier.
+- Confidentialité : l'app ne contient plus de liste d'équipe préremplie. Après une réinstallation, restaure ta sauvegarde pour retrouver ton équipe.
+- Correction : failles de sécurité corrigées dans des bibliothèques utilisées par l'app.
+
 ## 1.7.0 — 2026-10-13
 
 - Important : cette version est signée avec une nouvelle clé, plus sûre, et Android ne peut pas l'installer par-dessus l'ancienne. Avant tout, fais une sauvegarde (Réglages > Sauvegarde), désinstalle l'app, installe cette version, puis restaure ta sauvegarde.

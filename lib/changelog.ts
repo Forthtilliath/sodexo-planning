@@ -10,6 +10,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.7.1',
+    date: '2026-11-09',
+    changes: [
+      "Sécurité : une mise à jour téléchargée depuis l'app est vérifiée (empreinte et provenance) avant d'être installée.",
+      "Sécurité : une sauvegarde importée est entièrement vérifiée avant d'être appliquée ; un fichier invalide ou trop gros est refusé sans rien modifier.",
+      "Confidentialité : l'app ne contient plus de liste d'équipe préremplie. Après une réinstallation, restaure ta sauvegarde pour retrouver ton équipe.",
+      "Correction : failles de sécurité corrigées dans des bibliothèques utilisées par l'app.",
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2026-10-13',
     changes: [
